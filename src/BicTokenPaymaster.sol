@@ -7,7 +7,6 @@ import "./interfaces/IOracle.sol";
 import "@account-abstraction/contracts/core/BasePaymaster.sol";
 import "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
 import "@account-abstraction/contracts/interfaces/IPaymaster.sol";
-import "@account-abstraction/contracts/interfaces/UserOperation.sol";
 import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
@@ -53,10 +52,9 @@ contract BicTokenPaymaster is BasePaymaster, ERC20Votes, Pausable {
      * @dev BIC token required permit because of Account Abstraction feature
      * @dev Using ERC20Permit because it is require for forwarder from Entrypoint
      */
-    constructor(IEntryPoint _entryPoint, address _owner) ERC20("Beincom", "BIC") BasePaymaster(_entryPoint) EIP712("Beincom", "1") {
+    constructor(IEntryPoint _entryPoint, address _owner) Ownable(_owner) ERC20("Beincom", "BIC") BasePaymaster(_entryPoint) EIP712("Beincom", "1") {
         //owner is allowed to withdraw tokens from the paymaster's balance
         _approve(address(this), _owner, type(uint).max);
-        _transferOwnership(_owner);
         _mint(_owner, 5000000000 * 1e18);
     }
 
@@ -202,8 +200,8 @@ contract BicTokenPaymaster is BasePaymaster, ERC20Votes, Pausable {
      * @dev Hook that is called before any transfer of tokens.
      * Override existing hook to add additional checks: paused and blocked users.
      */
-    function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual override {
-        super._beforeTokenTransfer(from, to, amount);
+    function _update(address from, address to, uint256 amount) internal virtual override {
+        super._update(from, to, amount);
 
         require(!paused(), "BicTokenPaymaster: token transfer while paused");
         require(!isBlocked[from], "BicTokenPaymaster: sender is blocked");
