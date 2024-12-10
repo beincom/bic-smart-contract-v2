@@ -11,13 +11,15 @@ import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
+import "solady/utils/UUPSUpgradeable.sol";
+
 
 /**
  * @title A paymaster that defines itself also BIC main token
  * @notice Using this paymaster mechanism for Account Abstraction bundler v0.6,
  * when need to change to bundler v0.7 or higher, using TokenPaymaster instead
  */
-contract BicTokenPaymaster is BasePaymaster, ERC20Votes, Pausable {
+contract BicTokenPaymaster is BasePaymaster, ERC20Votes, Pausable, UUPSUpgradeable {
     /// Calculated cost of the postOp, minimum value that need verificationGasLimit to be higher than
     uint256 constant public COST_OF_POST = 60000;
 
@@ -206,4 +208,19 @@ contract BicTokenPaymaster is BasePaymaster, ERC20Votes, Pausable {
         require(!paused(), "BicTokenPaymaster: token transfer while paused");
         require(!isBlocked[from], "BicTokenPaymaster: sender is blocked");
     }
+
+    /// @notice Returns the implementation of the ERC1967 proxy.
+    ///
+    /// @return $ The address of implementation contract.
+    function implementation() public view returns (address $) {
+        assembly {
+            $ := sload(IMPLEMENTATION_SLOT)
+        }
+    }
+
+    /// @inheritdoc UUPSUpgradeable
+    ///
+    /// @dev Authorization logic is only based on the `msg.sender` being an owner of this account,
+    ///      or `address(this)`.
+    function _authorizeUpgrade(address) internal view virtual override(UUPSUpgradeable) onlyOwner {}
 }
