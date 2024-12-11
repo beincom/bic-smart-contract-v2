@@ -3,14 +3,14 @@ pragma solidity ^0.8.23;
 
 /* solhint-disable reason-string */
 
+import "./base/BasePaymaster.sol";
 import "./interfaces/IOracle.sol";
-import "@account-abstraction/contracts/core/BasePaymaster.sol";
 import "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
 import "@account-abstraction/contracts/interfaces/IPaymaster.sol";
-import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
+import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import "solady/utils/UUPSUpgradeable.sol";
 
 
@@ -53,12 +53,15 @@ contract BicTokenPaymaster is BasePaymaster, ERC20Votes, Pausable, UUPSUpgradeab
      * @param _owner is the owner of the paymaster. Using this param to set Safe wallet as default owner
      * @dev BIC token required permit because of Account Abstraction feature
      * @dev Using ERC20Permit because it is require for forwarder from Entrypoint
+     * @dev These feature no need to upgrade
      */
-    constructor(IEntryPoint _entryPoint, address _owner) Ownable(_owner) ERC20("Beincom", "BIC") BasePaymaster(_entryPoint) EIP712("Beincom", "1") {
+    constructor(IEntryPoint _entryPoint, address _owner) ERC20("Beincom", "BIC") BasePaymaster(_entryPoint, _owner) EIP712("Beincom", "1") {
         //owner is allowed to withdraw tokens from the paymaster's balance
         _approve(address(this), _owner, type(uint).max);
         _mint(_owner, 5000000000 * 1e18);
     }
+
+    function initialize() external payable virtual {}
 
     /**
      * @notice Set the oracle to use for token exchange rate.
@@ -214,7 +217,7 @@ contract BicTokenPaymaster is BasePaymaster, ERC20Votes, Pausable, UUPSUpgradeab
     /// @return $ The address of implementation contract.
     function implementation() public view returns (address $) {
         assembly {
-            $ := sload(IMPLEMENTATION_SLOT)
+            $ := sload(_ERC1967_IMPLEMENTATION_SLOT)
         }
     }
 

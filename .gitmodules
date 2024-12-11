@@ -13,3 +13,6 @@
 [submodule "lib/solady"]
 	path = lib/solady
 	url = https://github.com/vectorized/solady
+[submodule "lib/account-abstraction-v7"]
+	path = lib/account-abstraction-v7
+	url = https://github.com/eth-infinitism/account-abstraction
