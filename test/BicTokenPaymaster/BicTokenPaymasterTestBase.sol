@@ -3,6 +3,7 @@
 
 import "../../src/BicTokenPaymaster.sol";
 import "forge-std/Test.sol";
+import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 
 contract BicTokenPaymasterTestBase is Test {
     BicTokenPaymaster public bic;
@@ -11,9 +12,12 @@ contract BicTokenPaymasterTestBase is Test {
     uint256 public holder1_pkey = 0x1;
     address public holder1 = vm.addr(holder1_pkey);
     uint256 public holder1_init_amount = 10000 * 1e18;
-
     function setUp() public virtual {
-        bic = new BicTokenPaymaster(IEntryPoint(0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789), owner);
+        address proxy = Upgrades.deployUUPSProxy(
+            "BicTokenPaymaster.sol",
+            abi.encodeCall(BicTokenPaymaster.initialize, (IEntryPoint(0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789), owner))
+        );
+        bic = BicTokenPaymaster(proxy);
         vm.prank(owner);
         bic.transfer(holder1, holder1_init_amount);
     }

@@ -3,23 +3,23 @@ pragma solidity ^0.8.23;
 
 /* solhint-disable reason-string */
 
-import "./base/BasePaymaster.sol";
+import "./base/BasePaymasterUpgradeable.sol";
 import "./interfaces/IOracle.sol";
 import "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
 import "@account-abstraction/contracts/interfaces/IPaymaster.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import "solady/utils/UUPSUpgradeable.sol";
-
+import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20VotesUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 
 /**
  * @title A paymaster that defines itself also BIC main token
  * @notice Using this paymaster mechanism for Account Abstraction bundler v0.6,
  * when need to change to bundler v0.7 or higher, using TokenPaymaster instead
  */
-contract BicTokenPaymaster is BasePaymaster, ERC20Votes, Pausable, UUPSUpgradeable {
+contract BicTokenPaymaster is BasePaymasterUpgradeable, ERC20VotesUpgradeable, PausableUpgradeable, UUPSUpgradeable {
     /// Calculated cost of the postOp, minimum value that need verificationGasLimit to be higher than
     uint256 constant public COST_OF_POST = 60000;
 
@@ -47,21 +47,13 @@ contract BicTokenPaymaster is BasePaymaster, ERC20Votes, Pausable, UUPSUpgradeab
     /// @dev Emitted when a factory is added
     event AddFactory(address factory, address indexed _operator);
 
-    /**
-     * @notice Constructor that make this contract become ERC20 Paymaster and also Permit
-     * @param _entryPoint the entry point contract to use. Default is v0.6 public entry point: 0x5ff137d4b0fdcd49dca30c7cf57e578a026d2789
-     * @param _owner is the owner of the paymaster. Using this param to set Safe wallet as default owner
-     * @dev BIC token required permit because of Account Abstraction feature
-     * @dev Using ERC20Permit because it is require for forwarder from Entrypoint
-     * @dev These feature no need to upgrade
-     */
-    constructor(IEntryPoint _entryPoint, address _owner) ERC20("Beincom", "BIC") BasePaymaster(_entryPoint, _owner) EIP712("Beincom", "1") {
-        //owner is allowed to withdraw tokens from the paymaster's balance
+    function initialize(IEntryPoint _entryPoint, address _owner) external payable virtual {
+        __BasePaymasterUpgradeable_init(_entryPoint, _owner);
+        __ERC20_init("BIC Token", "BIC");
+        __ERC20Votes_init();
         _approve(address(this), _owner, type(uint).max);
         _mint(_owner, 5000000000 * 1e18);
     }
-
-    function initialize() external payable virtual {}
 
     /**
      * @notice Set the oracle to use for token exchange rate.

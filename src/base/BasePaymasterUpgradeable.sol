@@ -6,19 +6,30 @@ pragma solidity ^0.8.12;
 
 import "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
 import "@account-abstraction/contracts/interfaces/IPaymaster.sol";
-//import "@account-abstraction/contracts/Helpers.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 /**
  * Helper class for creating a paymaster.
  * provides helper methods for staking.
  * validates that the postOp is called only by the entryPoint
  */
-abstract contract BasePaymaster is IPaymaster, Ownable {
+abstract contract BasePaymasterUpgradeable is IPaymaster, OwnableUpgradeable {
+    IEntryPoint public entryPoint;
 
-    IEntryPoint immutable public entryPoint;
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
 
-    constructor(IEntryPoint _entryPoint, address _owner) Ownable(_owner) {
+    function __BasePaymasterUpgradeable_init(
+        IEntryPoint _entryPoint,
+        address _owner
+    ) internal onlyInitializing {
+        __Ownable_init(_owner);
+        setEntryPoint(_entryPoint);
+    }
+
+    function setEntryPoint(IEntryPoint _entryPoint) public onlyOwner {
         entryPoint = _entryPoint;
     }
 
