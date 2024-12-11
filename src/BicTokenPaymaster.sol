@@ -7,12 +7,12 @@ import "./base/BasePaymasterUpgradeable.sol";
 import "./interfaces/IOracle.sol";
 import "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
 import "@account-abstraction/contracts/interfaces/IPaymaster.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20VotesUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
-import "solady/utils/UUPSUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20VotesUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 /**
  * @title A paymaster that defines itself also BIC main token
@@ -20,6 +20,8 @@ import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
  * when need to change to bundler v0.7 or higher, using TokenPaymaster instead
  */
 contract BicTokenPaymaster is BasePaymasterUpgradeable, ERC20VotesUpgradeable, PausableUpgradeable, UUPSUpgradeable {
+    bytes32 public constant IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
+
     /// Calculated cost of the postOp, minimum value that need verificationGasLimit to be higher than
     uint256 constant public COST_OF_POST = 60000;
 
@@ -47,12 +49,18 @@ contract BicTokenPaymaster is BasePaymasterUpgradeable, ERC20VotesUpgradeable, P
     /// @dev Emitted when a factory is added
     event AddFactory(address factory, address indexed _operator);
 
-    function initialize(IEntryPoint _entryPoint, address _owner) external payable virtual {
-        __BasePaymasterUpgradeable_init(_entryPoint, _owner);
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(address _entryPoint, address _owner) public initializer {
+        __BasePaymasterUpgradeable_init(_entryPoint, _msgSender());
         __ERC20_init("BIC Token", "BIC");
         __ERC20Votes_init();
         _approve(address(this), _owner, type(uint).max);
         _mint(_owner, 5000000000 * 1e18);
+        transferOwnership(_owner);
     }
 
     /**
@@ -209,7 +217,7 @@ contract BicTokenPaymaster is BasePaymasterUpgradeable, ERC20VotesUpgradeable, P
     /// @return $ The address of implementation contract.
     function implementation() public view returns (address $) {
         assembly {
-            $ := sload(_ERC1967_IMPLEMENTATION_SLOT)
+            $ := sload(IMPLEMENTATION_SLOT)
         }
     }
 

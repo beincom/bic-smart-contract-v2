@@ -22,15 +22,15 @@ abstract contract BasePaymasterUpgradeable is IPaymaster, OwnableUpgradeable {
     }
 
     function __BasePaymasterUpgradeable_init(
-        IEntryPoint _entryPoint,
+        address _entryPoint,
         address _owner
     ) internal onlyInitializing {
         __Ownable_init(_owner);
         setEntryPoint(_entryPoint);
     }
 
-    function setEntryPoint(IEntryPoint _entryPoint) public onlyOwner {
-        entryPoint = _entryPoint;
+    function setEntryPoint(address _entryPoint) public onlyOwner {
+        entryPoint = IEntryPoint(_entryPoint);
     }
 
     /// @inheritdoc IPaymaster
