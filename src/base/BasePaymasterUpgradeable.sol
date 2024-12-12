@@ -16,16 +16,11 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 abstract contract BasePaymasterUpgradeable is IPaymaster, OwnableUpgradeable {
     IEntryPoint public entryPoint;
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
-        _disableInitializers();
-    }
 
     function __BasePaymasterUpgradeable_init(
-        address _entryPoint,
-        address _owner
+        address _entryPoint
     ) internal onlyInitializing {
-        __Ownable_init(_owner);
+        __Ownable_init(_msgSender());
         setEntryPoint(_entryPoint);
     }
 
