@@ -1,5 +1,0 @@
-forge-std/=lib/forge-std/src/
-@openzeppelin/=lib/@openzeppelin/
-contracts/core/=src/core/
-contracts/interfaces/=src/interfaces/
-contracts/utils/=src/utils/
