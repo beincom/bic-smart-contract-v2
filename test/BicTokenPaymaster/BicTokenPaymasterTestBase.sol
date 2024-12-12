@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
  pragma solidity ^0.8.23;
 
-import "../../EntryPointv0.6/src/core/EntryPoint.sol";
+import "@entrypoint-v6/core/EntryPoint.sol";
 import "../../src/BicTokenPaymaster.sol";
 import "forge-std/Test.sol";
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
