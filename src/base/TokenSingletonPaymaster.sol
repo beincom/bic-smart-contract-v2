@@ -11,9 +11,6 @@ import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20VotesUpgradeable.sol";
 
 abstract contract TokenSingletonPaymaster is BasePaymasterUpgradeable, MultiSigner, ERC20VotesUpgradeable {
-    /// Calculated cost of the postOp, minimum value that need verificationGasLimit to be higher than
-    uint256 constant public COST_OF_POST = 60000;
-
     /// The factory that creates accounts. used to validate account creation. Just to make sure not have any unexpected account creation trying to bug the system
     mapping(address => bool) public factories;
 
@@ -23,16 +20,19 @@ abstract contract TokenSingletonPaymaster is BasePaymasterUpgradeable, MultiSign
     /// The blocked users
     mapping (address => bool) public isBlocked;
 
-    uint256 private immutable PAYMASTER_DATA_OFFSET = 20;
+    /// Calculated cost of the postOp, minimum value that need verificationGasLimit to be higher than
+    uint256 public COST_OF_POST;
+
+    uint256 public PAYMASTER_DATA_OFFSET;
 
     /// @notice Mode indicating that the Paymaster is in Oracle mode.
-    uint8 immutable ORACLE_MODE = 0;
+    uint8 public ORACLE_MODE;
 
     /// @notice Mode indicating that the Paymaster is in Verifying mode.
-    uint8 immutable VERIFYING_MODE = 1;
+    uint8 public VERIFYING_MODE;
 
     /// @notice The length of the ERC-20 config without singature.
-    uint8 immutable VERIFYING_PAYMASTER_DATA_LENGTH = 60;
+    uint8 public VERIFYING_PAYMASTER_DATA_LENGTH;
 
     /// @dev Emitted when a user is charged, using for indexing on subgraph
     event ChargeFee( bytes32 indexed userOpHash, address sender, uint256 fee);
@@ -79,6 +79,11 @@ abstract contract TokenSingletonPaymaster is BasePaymasterUpgradeable, MultiSign
     ) public initializer {
         __BasePaymasterUpgradeable_init(_entryPoint);
         __MultiSigner_init(_singers);
+        COST_OF_POST = 60000;
+        PAYMASTER_DATA_OFFSET = 20;
+        ORACLE_MODE = 0;
+        VERIFYING_MODE = 1;
+        VERIFYING_PAYMASTER_DATA_LENGTH = 60;
     }
 
     /**
