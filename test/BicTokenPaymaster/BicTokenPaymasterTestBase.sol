@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
  pragma solidity ^0.8.23;
 
-import "@entrypoint-v6/core/EntryPoint.sol";
+import "@account-abstraction/contracts/core/EntryPoint.sol";
 import "../../src/BicTokenPaymaster.sol";
 import "forge-std/Test.sol";
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
@@ -17,9 +17,9 @@ contract BicTokenPaymasterTestBase is Test {
     uint256 public holder1_init_amount = 10000 * 1e18;
     address[] signers = [owner, dev];
 
-    EntryPoint entryPoint;
+    EntryPoint entrypoint;
     function setUp() public virtual {
-        entryPoint = new EntryPoint();
+        entrypoint = new EntryPoint();
 
         console.log("owner: ", owner);
         vm.prank(dev);
@@ -27,7 +27,7 @@ contract BicTokenPaymasterTestBase is Test {
             "BicTokenPaymaster.sol",
             abi.encodeCall(
                 BicTokenPaymaster.initialize,
-                (address(entryPoint), owner, signers)
+                (address(entrypoint), owner, signers)
             )
         );
         bic = BicTokenPaymaster(proxy);

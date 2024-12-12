@@ -1,4 +1,4 @@
 @account-abstraction/=lib/account-abstraction/
 @account-abstraction-v7/=lib/account-abstraction-v7/
-@openzeppelin/contracts/=lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/
+@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/
 @openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/

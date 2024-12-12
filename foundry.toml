@@ -14,3 +14,7 @@ optimizer_runs = 999999
 [fmt]
 sort_imports = true
 wrap_comments = true
+
+remappings = [
+    "@openzeppelin/contracts/security/ReentrancyGuard.sol=lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol"
+]
