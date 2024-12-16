@@ -224,7 +224,7 @@ abstract contract TokenSingletonPaymaster is BasePaymasterUpgradeable, MultiSign
 
         require(exchangeRate != 0, "TokenSingletonPaymaster: exchange rate is invalid");
 
-        require(signature.length != 64 && signature.length != 65, "TokenSingletonPaymaster: signature length is invalid");
+        require(signature.length == 64 || signature.length == 65, "TokenSingletonPaymaster: signature length is invalid");
 
         bytes32 hash = MessageHashUtils.toEthSignedMessageHash(getHash(VERIFYING_MODE, _userOp));
 
