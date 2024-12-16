@@ -48,6 +48,12 @@ contract BICTokenPaymaster is TokenSingletonPaymaster, PausableUpgradeable, UUPS
     uint256 public maxLF;
     uint256 public minLF;
 
+    /// liquidity treasury
+    address public liquidityTreasury;
+
+    /// accumulatedLF
+    uint256 public accumulatedLF;
+
 
     /// swap back and liquify
     /// Uniswap V2 router
@@ -145,6 +151,9 @@ contract BICTokenPaymaster is TokenSingletonPaymaster, PausableUpgradeable, UUPS
     /// @dev Emitted when changing liquidity fee period
     event LFPeriodUpdated(address updater, uint256 LFPeriod);
 
+    /// @dev Emitted when changing liquidity treasury
+    event LiquidityTreasuryUpdated(address updater, address newLFTreasury);
+
     /// @dev Emitted when changing LF start time
     event LFStartTimeUpdated(uint256 _newLFStartTime);
 
@@ -236,6 +245,7 @@ contract BICTokenPaymaster is TokenSingletonPaymaster, PausableUpgradeable, UUPS
         LFController = superController;
         maxAllocationController = superController;
         treasuryController = superController;
+        liquidityTreasury = superController;
 
         maxLF = 1500;
         minLF = 300;
@@ -253,7 +263,7 @@ contract BICTokenPaymaster is TokenSingletonPaymaster, PausableUpgradeable, UUPS
         maxAllocation = _totalSupply.mul(100).div(10000);
         enabledMaxAllocation = true;
 
-        uniswapV2Router = IUniswapV2Router(0x920b806E40A00E02E7D2b94fFc89860fDaEd3640);
+        uniswapV2Router = IUniswapV2Router(0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24);
         uniswapV2Pair = IUniswapV2Factory(uniswapV2Router.factory()).createPair(address(this), uniswapV2Router.WETH());
         tokenInPair = uniswapV2Router.WETH();
         _setPool(uniswapV2Pair, true);
@@ -430,6 +440,15 @@ contract BICTokenPaymaster is TokenSingletonPaymaster, PausableUpgradeable, UUPS
         uniswapV2Pair = pair;
         tokenInPair = tokenPair;
         emit UniswapV2PairUpdated(_msgSender(), pair, tokenPair);
+    }
+
+    /**
+     * @notice Update liquidity treasury.
+     * @param newLFTreasury new liquidity treasury.
+     */
+    function setLiquidityTreasury(address newLFTreasury) external onlyLFController {
+        liquidityTreasury = newLFTreasury;
+        emit LiquidityTreasuryUpdated(_msgSender(), newLFTreasury);
     }
 
     /**
@@ -639,7 +658,7 @@ contract BICTokenPaymaster is TokenSingletonPaymaster, PausableUpgradeable, UUPS
         address[] memory path = new address[](2);
         path[0] = address(this);
         path[1] = tokenInPair;
-
+        accumulatedLF -= _swapAmount;
         _approve(address(this), address(uniswapV2Router), _swapAmount);
 
         if (tokenInPair == uniswapV2Router.WETH()) {
@@ -667,6 +686,7 @@ contract BICTokenPaymaster is TokenSingletonPaymaster, PausableUpgradeable, UUPS
      * @param _liquidityToken1 token1 amount for LP.
      */
     function _addLiquidity(uint256 _liquidityToken0, uint256 _liquidityToken1) internal {
+        accumulatedLF -= _liquidityToken0;
         _approve(address(this), address(uniswapV2Router), _liquidityToken0);
         if (tokenInPair == uniswapV2Router.WETH()) {
             uniswapV2Router.addLiquidityETH{value: _liquidityToken1}(
@@ -674,7 +694,7 @@ contract BICTokenPaymaster is TokenSingletonPaymaster, PausableUpgradeable, UUPS
                 _liquidityToken0,
                 0,
                 0,
-                address(0),
+                liquidityTreasury,
                 block.timestamp
             );
         } else {
@@ -686,7 +706,7 @@ contract BICTokenPaymaster is TokenSingletonPaymaster, PausableUpgradeable, UUPS
                 _liquidityToken1,
                 0,
                 0,
-                address(0),
+                liquidityTreasury,
                 block.timestamp
             );
         }
@@ -733,6 +753,7 @@ contract BICTokenPaymaster is TokenSingletonPaymaster, PausableUpgradeable, UUPS
         if (!_isExcluded[from]) {
             require(!paused(), "B: paused transfer");
         }
+
         require(!isBlocked[from], "B: blocked from address");
         
         if (amount == 0) {
@@ -774,8 +795,7 @@ contract BICTokenPaymaster is TokenSingletonPaymaster, PausableUpgradeable, UUPS
         
         if (minLF > 0) {
             // swap back and liquify
-            uint256 contractTokenBalance = balanceOf(address(this));
-            bool canSwapBackAndLiquify = contractTokenBalance >= _minSwapBackAmount;
+            bool canSwapBackAndLiquify = accumulatedLF >= _minSwapBackAmount;
             if (
                 canSwapBackAndLiquify && 
                 _swapBackEnabled &&
@@ -806,14 +826,15 @@ contract BICTokenPaymaster is TokenSingletonPaymaster, PausableUpgradeable, UUPS
             }
 
             if (_LF > 0) {
-                super._transfer(from, address(this), _LF);
+                accumulatedLF += _LF;
+                super._update(from, address(this), _LF);
             }
 
             amount -= _LF;
             
         }
 
-        super._transfer(from, to, amount);
+        super._update(from, to, amount);
     }
 
     /// @inheritdoc UUPSUpgradeable
