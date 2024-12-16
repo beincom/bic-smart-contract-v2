@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import "@account-abstraction/contracts/samples/SimpleAccountFactory.sol";
+import "../../contracts/FixedFeeOracle.sol";
 import "@account-abstraction/contracts/samples/SimpleAccount.sol";
+import "@account-abstraction/contracts/samples/SimpleAccountFactory.sol";
 import {BicTokenPaymasterTestBase} from "../BicTokenPaymasterTestBase.sol";
+
 
 contract TestPaymaster is BicTokenPaymasterTestBase {
     SimpleAccountFactory smart_account_factory;
@@ -12,8 +14,9 @@ contract TestPaymaster is BicTokenPaymasterTestBase {
     uint256 public user1_init_amount = 10000 * 1e18;
     address user1AccountAddress;
 
-
     address public random_executor = address(0xeee);
+
+//    error FailedOp(uint256 opIndex, string reason);
 
     function setUp() public virtual override {
         super.setUp();
@@ -112,8 +115,6 @@ contract TestPaymaster is BicTokenPaymasterTestBase {
     function test_createVerifyingUserOp() public {
         bytes memory initCallData = abi.encodeWithSignature("createAccount(address,uint256)", user1, 0);
         bytes memory initCode = abi.encodePacked(abi.encodePacked(address(smart_account_factory)), initCallData);
-        user1AccountAddress = smart_account_factory.getAddress(user1, 0);
-
 
         bytes memory paymasterAndDataWithSig;
         {
@@ -166,6 +167,57 @@ contract TestPaymaster is BicTokenPaymasterTestBase {
         vm.prank(random_executor);
         entrypoint.handleOps(finalOps, payable(random_executor));
 
+        assertEq(isContract(user1AccountAddress), true);
+    }
+
+    function test_createOracleUserOp_failIfNoOracle() public {
+        bytes memory initCallData = abi.encodeWithSignature("createAccount(address,uint256)", user1, 0);
+        bytes memory initCode = abi.encodePacked(abi.encodePacked(address(smart_account_factory)), initCallData);
+
+        UserOperation[] memory userOps = _setupUserOpExecute(
+            user1_pkey,
+            initCode,
+            address(0),
+            0,
+            bytes(""),
+            user1AccountAddress,
+            abi.encodePacked(
+                address(bic),
+                bic.ORACLE_MODE()
+            )
+        );
+        vm.prank(random_executor);
+        vm.expectRevert(
+            abi.encodeWithSelector(IEntryPoint.FailedOp.selector, 0, "AA33 reverted: TokenSingletonPaymaster: no oracle")
+        );
+        entrypoint.handleOps(userOps, payable(random_executor));
+        assertEq(isContract(user1AccountAddress), false);
+    }
+    function test_createOracleUserOp_SuccessWithFixedFeeOracleAndFactory() public {
+        bytes memory initCallData = abi.encodeWithSignature("createAccount(address,uint256)", user1, 0);
+        bytes memory initCode = abi.encodePacked(abi.encodePacked(address(smart_account_factory)), initCallData);
+
+        FixedFeeOracle oracle = new FixedFeeOracle();
+
+        vm.prank(owner);
+        bic.setOracle(address(oracle));
+
+        vm.prank(owner);
+        bic.addFactory(address(smart_account_factory));
+        UserOperation[] memory userOps = _setupUserOpExecute(
+            user1_pkey,
+            initCode,
+            address(0),
+            0,
+            bytes(""),
+            user1AccountAddress,
+            abi.encodePacked(
+                address(bic),
+                bic.ORACLE_MODE()
+            )
+        );
+        vm.prank(random_executor);
+        entrypoint.handleOps(userOps, payable(random_executor));
         assertEq(isContract(user1AccountAddress), true);
     }
 }
