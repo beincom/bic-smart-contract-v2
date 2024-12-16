@@ -5,13 +5,17 @@ pragma solidity ^0.8.23;
 import {IUniswapV2Router} from "../interfaces/IUniswapV2Router.sol";
 import {IUniswapV2Factory} from "../interfaces/IUniswapV2Factory.sol";
 import {SafeMath} from "../utils/math/SafeMath.sol";
-import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import {TokenSingletonPaymaster} from "../base/TokenSingletonPaymaster.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-contract B139 is ERC20Upgradeable, PausableUpgradeable, UUPSUpgradeable {
+contract BICTokenPaymaster is TokenSingletonPaymaster, PausableUpgradeable, UUPSUpgradeable {
     using SafeMath for uint256;
+
+    /// implementation slot
+    bytes32 public constant IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
+
 
     /// DEX Pre-public
     /// Pre-public structure
@@ -215,9 +219,13 @@ contract B139 is ERC20Upgradeable, PausableUpgradeable, UUPSUpgradeable {
     function initialize(
         string memory name,
         string memory symbol,
-        address superController
+        address superController,
+        address entryPoint,
+        address[] memory signers
     ) public initializer {
+        __TokenSingletonPaymaster_init(entryPoint, signers);
         __ERC20_init(name, symbol);
+        __ERC20Votes_init();
         __Pausable_init();
 
         uint256 _totalSupply = 888 * 1e27;
@@ -249,6 +257,15 @@ contract B139 is ERC20Upgradeable, PausableUpgradeable, UUPSUpgradeable {
         uniswapV2Pair = IUniswapV2Factory(uniswapV2Router.factory()).createPair(address(this), uniswapV2Router.WETH());
         tokenInPair = uniswapV2Router.WETH();
         _setPool(uniswapV2Pair, true);
+    }
+
+    /// @notice Returns the implementation of the ERC1967 proxy.
+    ///
+    /// @return $ The address of implementation contract.
+    function implementation() public view returns (address $) {
+        assembly {
+            $ := sload(IMPLEMENTATION_SLOT)
+        }
     }
 
     /**

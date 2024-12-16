@@ -21,6 +21,9 @@ import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 contract BicTokenPaymaster is TokenSingletonPaymaster, PausableUpgradeable, UUPSUpgradeable {
     bytes32 public constant IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
 
+    /// The blocked users
+    mapping (address => bool) public isBlocked;
+
     /// @dev Emitted when a user is blocked
     event BlockPlaced(address indexed _user, address indexed _operator);
 

@@ -17,9 +17,6 @@ abstract contract TokenSingletonPaymaster is BasePaymasterUpgradeable, MultiSign
     /// The oracle to use for token exchange rate.
     address public oracle;
 
-    /// The blocked users
-    mapping (address => bool) public isBlocked;
-
     /// Calculated cost of the postOp, minimum value that need verificationGasLimit to be higher than
     uint256 public COST_OF_POST;
 
@@ -75,10 +72,10 @@ abstract contract TokenSingletonPaymaster is BasePaymasterUpgradeable, MultiSign
 
     function __TokenSingletonPaymaster_init(
         address _entryPoint,
-        address[] memory _singers
+        address[] memory _signers
     ) public initializer {
         __BasePaymasterUpgradeable_init(_entryPoint);
-        __MultiSigner_init(_singers);
+        __MultiSigner_init(_signers);
         COST_OF_POST = 60000;
         PAYMASTER_DATA_OFFSET = 20;
         ORACLE_MODE = 0;
