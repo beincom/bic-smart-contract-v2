@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.23;
 
-import "./base/BasePaymasterUpgradeable.sol";
-import "./base/MultiSigner.sol";
-import "./base/TokenSingletonPaymaster.sol";
-import "./lib/BicTokenPaymasterStorage.sol";
+import "../../src/base/BasePaymasterUpgradeable.sol";
+import "../../src/base/MultiSigner.sol";
+import "../../src/base/TokenSingletonPaymaster.sol";
+import "../lib/BicTokenPaymasterStorageV2.sol";
 
 import "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
 import "@account-abstraction/contracts/interfaces/IPaymaster.sol";
@@ -15,12 +15,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 
-/**
- * @title A paymaster that defines itself also BIC main token
- * @notice Using this paymaster mechanism for Account Abstraction bundler v0.6,
- * when need to change to bundler v0.7 or higher, using TokenPaymaster instead
- */
-contract BicTokenPaymaster is
+contract BicTokenPaymasterV2 is
     TokenSingletonPaymaster,
     PausableUpgradeable,
     UUPSUpgradeable
@@ -89,7 +84,7 @@ contract BicTokenPaymaster is
      * @dev Event already defined and emitted in Pausable.sol
      */
     function pause() public onlyOwner {
-        _pause();
+        revert();
     }
 
     /**
@@ -125,4 +120,16 @@ contract BicTokenPaymaster is
     function _authorizeUpgrade(
         address
     ) internal view virtual override(UUPSUpgradeable) onlyOwner {}
+
+    function getFee() public view returns (uint256) {
+        BicTokenPaymasterStorage.Data storage $ = BicTokenPaymasterStorage
+            ._getStorageLocation();
+        return $._fee;
+    }
+
+    function setFee(uint256 _fee) public onlyOwner {
+        BicTokenPaymasterStorage.Data storage $ = BicTokenPaymasterStorage
+            ._getStorageLocation();
+        $._fee = _fee;
+    }
 }
