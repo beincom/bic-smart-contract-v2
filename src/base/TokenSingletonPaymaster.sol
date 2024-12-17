@@ -10,12 +10,32 @@ import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20VotesUpgradeable.sol";
 
-abstract contract TokenSingletonPaymaster is BasePaymasterUpgradeable, MultiSigner, ERC20VotesUpgradeable {
-    /// The factory that creates accounts. used to validate account creation. Just to make sure not have any unexpected account creation trying to bug the system
-    mapping(address => bool) public factories;
+abstract contract TokenSingletonPaymaster is
+    BasePaymasterUpgradeable,
+    MultiSigner,
+    ERC20VotesUpgradeable
+{
+    /// @custom:storage-location erc7201:storage.TokenSingletonPaymaster
+    struct SingletonPaymasterStorage {
+        /// The factory that creates accounts. used to validate account creation. Just to make sure not have any unexpected account creation trying to bug the system
+        mapping(address => bool) _factories;
+        /// The oracle to use for token exchange rate.
+        address _oracle;
+    }
 
-    /// The oracle to use for token exchange rate.
-    address public oracle;
+    // keccak256(abi.encode(uint256(keccak256("storage.TokenSingletonPaymaster")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant SingletonPaymasterStorageLocation =
+        0xcff66a0bc9e58c2fefb38bcef8c7cb089e731fdccf5f5d396e8729b289677f00;
+
+    function _getSingletonPaymasterStorage()
+        private
+        pure
+        returns (SingletonPaymasterStorage storage $)
+    {
+        assembly {
+            $.slot := SingletonPaymasterStorageLocation
+        }
+    }
 
     /// Calculated cost of the postOp, minimum value that need verificationGasLimit to be higher than
     uint256 public COST_OF_POST;
@@ -32,10 +52,14 @@ abstract contract TokenSingletonPaymaster is BasePaymasterUpgradeable, MultiSign
     uint8 public VERIFYING_PAYMASTER_DATA_LENGTH;
 
     /// @dev Emitted when a user is charged, using for indexing on subgraph
-    event ChargeFee( bytes32 indexed userOpHash, address sender, uint256 fee);
+    event ChargeFee(bytes32 indexed userOpHash, address sender, uint256 fee);
 
     /// @dev Emitted when the oracle is set
-    event SetOracle(address oldOracle, address newOracle, address indexed _operator);
+    event SetOracle(
+        address oldOracle,
+        address newOracle,
+        address indexed _operator
+    );
 
     /// @dev Emitted when a factory is added
     event AddFactory(address factory, address indexed _operator);
@@ -72,10 +96,10 @@ abstract contract TokenSingletonPaymaster is BasePaymasterUpgradeable, MultiSign
 
     function __TokenSingletonPaymaster_init(
         address _entryPoint,
-        address[] memory _signers
+        address[] memory _singers
     ) public initializer {
         __BasePaymasterUpgradeable_init(_entryPoint);
-        __MultiSigner_init(_signers);
+        __MultiSigner_init(_singers);
         COST_OF_POST = 60000;
         PAYMASTER_DATA_OFFSET = 20;
         ORACLE_MODE = 0;
@@ -88,8 +112,9 @@ abstract contract TokenSingletonPaymaster is BasePaymasterUpgradeable, MultiSign
      * @param _oracle the oracle to use.
      */
     function setOracle(address _oracle) external onlyOwner {
-        emit SetOracle(oracle, _oracle, msg.sender);
-        oracle = _oracle;
+        SingletonPaymasterStorage storage $ = _getSingletonPaymasterStorage();
+        emit SetOracle($._oracle, _oracle, msg.sender);
+        $._oracle = _oracle;
     }
 
     /**
@@ -97,17 +122,20 @@ abstract contract TokenSingletonPaymaster is BasePaymasterUpgradeable, MultiSign
      * @param _factory the factory to add.
      */
     function addFactory(address _factory) external onlyOwner {
-        factories[_factory] = true;
+        SingletonPaymasterStorage storage $ = _getSingletonPaymasterStorage();
+        $._factories[_factory] = true;
         emit AddFactory(_factory, msg.sender);
     }
 
     /**
      * @notice Transfer paymaster ownership.
-       * owner of this paymaster is allowed to withdraw funds (tokens transferred to this paymaster's balance)
-       * when changing owner, the old owner's withdrawal rights are revoked.
+     * owner of this paymaster is allowed to withdraw funds (tokens transferred to this paymaster's balance)
+     * when changing owner, the old owner's withdrawal rights are revoked.
      * @param newOwner the new owner of the paymaster.
      */
-    function transferOwnership(address newOwner) public override virtual onlyOwner {
+    function transferOwnership(
+        address newOwner
+    ) public virtual override onlyOwner {
         // remove allowance of current owner
         _approve(address(this), owner(), 0);
         super.transferOwnership(newOwner);
@@ -120,28 +148,40 @@ abstract contract TokenSingletonPaymaster is BasePaymasterUpgradeable, MultiSign
      * @param valueEth the value in eth to convert to tokens.
      * @return valueToken the value in tokens.
      */
-    function getTokenValueOfEth(uint256 valueEth) internal view virtual returns (uint256 valueToken) {
-        return IOracle(oracle).getTokenValueOfEth(valueEth);
+    function getTokenValueOfEth(
+        uint256 valueEth
+    ) internal view virtual returns (uint256 valueToken) {
+        SingletonPaymasterStorage storage $ = _getSingletonPaymasterStorage();
+        return IOracle($._oracle).getTokenValueOfEth(valueEth);
     }
 
     /**
-      * @notice Validate the request:
-      *
-      * - If this is a constructor call, make sure it is a known account.
-      * - Verify the sender has enough tokens.
-      * @dev (since the paymaster is also the token, there is no notion of "approval")
-      * @param userOp the user operation to validate.
-      * @param requiredPreFund the required pre-fund for the operation.
-      * @return context the context to pass to postOp.
-      * @return validationData the validation data.
-      */
-    function _validatePaymasterUserOp(UserOperation calldata userOp, bytes32 userOpHash, uint256 requiredPreFund)
-    internal override view returns (bytes memory context, uint256 validationData) {
-        (uint8 mode, bytes calldata paymasterConfig) =
-                        _parsePaymasterAndData(userOp.paymasterAndData, PAYMASTER_DATA_OFFSET);
+     * @notice Validate the request:
+     *
+     * - If this is a constructor call, make sure it is a known account.
+     * - Verify the sender has enough tokens.
+     * @dev (since the paymaster is also the token, there is no notion of "approval")
+     * @param userOp the user operation to validate.
+     * @param requiredPreFund the required pre-fund for the operation.
+     * @return context the context to pass to postOp.
+     * @return validationData the validation data.
+     */
+    function _validatePaymasterUserOp(
+        UserOperation calldata userOp,
+        bytes32 userOpHash,
+        uint256 requiredPreFund
+    )
+        internal
+        view
+        override
+        returns (bytes memory context, uint256 validationData)
+    {
+        (uint8 mode, bytes calldata paymasterConfig) = _parsePaymasterAndData(
+            userOp.paymasterAndData,
+            PAYMASTER_DATA_OFFSET
+        );
 
-
-        if(mode == ORACLE_MODE) {
+        if (mode == ORACLE_MODE) {
             return _validateOracleMode(userOp, requiredPreFund, userOpHash);
         } else if (mode == VERIFYING_MODE) {
             return _validateVerifyingMode(userOp, paymasterConfig, userOpHash);
@@ -157,15 +197,23 @@ abstract contract TokenSingletonPaymaster is BasePaymasterUpgradeable, MultiSign
      * @return mode The paymaster mode.
      * @return paymasterConfig The paymaster config bytes.
      */
-    function _parsePaymasterAndData(bytes calldata _paymasterAndData, uint256 _paymasterDataOffset)
-    internal
-    pure
-    returns (uint8, bytes calldata)
-    {
-        require(_paymasterAndData.length > _paymasterDataOffset, "TokenSingletonPaymaster: invalid paymaster data length");
+    function _parsePaymasterAndData(
+        bytes calldata _paymasterAndData,
+        uint256 _paymasterDataOffset
+    ) internal pure returns (uint8, bytes calldata) {
+        require(
+            _paymasterAndData.length > _paymasterDataOffset,
+            "TokenSingletonPaymaster: invalid paymaster data length"
+        );
 
-        uint8 mode = uint8(bytes1(_paymasterAndData[_paymasterDataOffset:_paymasterDataOffset + 1]));
-        bytes calldata paymasterConfig = _paymasterAndData[_paymasterDataOffset + 1:];
+        uint8 mode = uint8(
+            bytes1(
+                _paymasterAndData[_paymasterDataOffset:_paymasterDataOffset + 1]
+            )
+        );
+        bytes
+            calldata paymasterConfig = _paymasterAndData[_paymasterDataOffset +
+                1:];
 
         return (mode, paymasterConfig);
     }
@@ -176,27 +224,54 @@ abstract contract TokenSingletonPaymaster is BasePaymasterUpgradeable, MultiSign
      * @dev We trust our factory (and that it doesn't have any other public methods)
      * @param _userOp the user operation to validate.
      */
-    function _validateConstructor(UserOperation calldata _userOp) internal virtual view {
-        address factory = address(bytes20(_userOp.initCode[0 : 20]));
-        require(factories[factory], "TokenSingletonPaymaster: wrong account factory");
+    function _validateConstructor(
+        UserOperation calldata _userOp
+    ) internal view virtual {
+        address factory = address(bytes20(_userOp.initCode[0:20]));
+        SingletonPaymasterStorage storage $ = _getSingletonPaymasterStorage();
+        require(
+            $._factories[factory],
+            "TokenSingletonPaymaster: wrong account factory"
+        );
     }
 
-    function _validateOracleMode(UserOperation calldata _userOp, uint256 _requiredPreFund, bytes32 _userOpHash)
-      internal view returns (bytes memory, uint256) {
-        require(oracle != address(0), "TokenSingletonPaymaster: no oracle");
+    function _validateOracleMode(
+        UserOperation calldata _userOp,
+        uint256 _requiredPreFund,
+        bytes32 _userOpHash
+    ) internal view returns (bytes memory, uint256) {
+        SingletonPaymasterStorage storage $ = _getSingletonPaymasterStorage();
+        require($._oracle != address(0), "TokenSingletonPaymaster: no oracle");
         uint256 tokenPrefund = getTokenValueOfEth(_requiredPreFund);
 
         // verificationGasLimit is dual-purposed, as gas limit for postOp. make sure it is high enough
         // make sure that verificationGasLimit is high enough to handle postOp
-        require(_userOp.verificationGasLimit > COST_OF_POST, "TokenSingletonPaymaster: gas too low for postOp");
+        require(
+            _userOp.verificationGasLimit > COST_OF_POST,
+            "TokenSingletonPaymaster: gas too low for postOp"
+        );
 
         if (_userOp.initCode.length != 0) {
             _validateConstructor(_userOp);
-            require(balanceOf(_userOp.sender) >= tokenPrefund, "TokenSingletonPaymaster: no balance (pre-create)");
+            require(
+                balanceOf(_userOp.sender) >= tokenPrefund,
+                "TokenSingletonPaymaster: no balance (pre-create)"
+            );
         } else {
-            require(balanceOf(_userOp.sender) >= tokenPrefund, "TokenSingletonPaymaster: no balance");
+            require(
+                balanceOf(_userOp.sender) >= tokenPrefund,
+                "TokenSingletonPaymaster: no balance"
+            );
         }
-        return (_createPostOpContext(_userOp, getTokenValueOfEth(1e18), 0, _userOpHash), 0);
+        return (
+            _createPostOpContext(
+                _userOp,
+                getTokenValueOfEth(1e18),
+                0,
+                _userOpHash
+            ),
+            0
+        );
     }
 
     /**
@@ -211,7 +286,10 @@ abstract contract TokenSingletonPaymaster is BasePaymasterUpgradeable, MultiSign
         bytes calldata _paymasterConfig,
         bytes32 _userOpHash
     ) internal view returns (bytes memory, uint256) {
-        require(_paymasterConfig.length >= VERIFYING_PAYMASTER_DATA_LENGTH, "TokenSingletonPaymaster: invalid paymaster config length");
+        require(
+            _paymasterConfig.length >= VERIFYING_PAYMASTER_DATA_LENGTH,
+            "TokenSingletonPaymaster: invalid paymaster config length"
+        );
 
         uint48 validUntil = uint48(bytes6(_paymasterConfig[0:6]));
         uint48 validAfter = uint48(bytes6(_paymasterConfig[6:12]));
@@ -219,20 +297,35 @@ abstract contract TokenSingletonPaymaster is BasePaymasterUpgradeable, MultiSign
         uint256 exchangeRate = uint256(bytes32(_paymasterConfig[28:60]));
         bytes calldata signature = _paymasterConfig[60:];
 
-        require(exchangeRate != 0, "TokenSingletonPaymaster: exchange rate is invalid");
+        require(
+            exchangeRate != 0,
+            "TokenSingletonPaymaster: exchange rate is invalid"
+        );
 
-        require(signature.length != 64 && signature.length != 65, "TokenSingletonPaymaster: signature length is invalid");
+        require(
+            signature.length != 64 && signature.length != 65,
+            "TokenSingletonPaymaster: signature length is invalid"
+        );
 
-        bytes32 hash = MessageHashUtils.toEthSignedMessageHash(getHash(VERIFYING_MODE, _userOp));
+        bytes32 hash = MessageHashUtils.toEthSignedMessageHash(
+            getHash(VERIFYING_MODE, _userOp)
+        );
 
         bool isSignatureValid = signers[ECDSA.recover(hash, signature)];
-        uint256 validationData = _packValidationData(!isSignatureValid, validUntil, validAfter);
+        uint256 validationData = _packValidationData(
+            !isSignatureValid,
+            validUntil,
+            validAfter
+        );
 
-        return (_createPostOpContext(_userOp, exchangeRate, postOpGas, _userOpHash), validationData);
+        return (
+            _createPostOpContext(_userOp, exchangeRate, postOpGas, _userOpHash),
+            validationData
+        );
     }
 
     /**
- * @notice Helper function to encode the postOp context data for V6 userOperations.
+     * @notice Helper function to encode the postOp context data for V6 userOperations.
      * @param _userOp The userOperation.
      * @param _exchangeRate The token exchange rate.
      * @param _postOpGas The gas to cover the overhead of the postOp transferFrom call.
@@ -245,18 +338,18 @@ abstract contract TokenSingletonPaymaster is BasePaymasterUpgradeable, MultiSign
         uint128 _postOpGas,
         bytes32 _userOpHash
     ) internal pure returns (bytes memory) {
-        return abi.encode(
-            PostOpContext({
-                sender: _userOp.sender,
-                exchangeRate: _exchangeRate,
-                postOpGas: _postOpGas,
-                userOpHash: _userOpHash,
-                maxFeePerGas: _userOp.maxFeePerGas,
-                maxPriorityFeePerGas: _userOp.maxPriorityFeePerGas
-            })
-        );
+        return
+            abi.encode(
+                PostOpContext({
+                    sender: _userOp.sender,
+                    exchangeRate: _exchangeRate,
+                    postOpGas: _postOpGas,
+                    userOpHash: _userOpHash,
+                    maxFeePerGas: _userOp.maxFeePerGas,
+                    maxPriorityFeePerGas: _userOp.maxPriorityFeePerGas
+                })
+            );
     }
-
 
     /**
      * @notice Actual charge of user.
@@ -265,7 +358,11 @@ abstract contract TokenSingletonPaymaster is BasePaymasterUpgradeable, MultiSign
      * @param context the context to pass to postOp.
      * @param actualGasCost the actual gas cost of the operation.
      */
-    function _postOp(PostOpMode mode, bytes calldata context, uint256 actualGasCost) internal override {
+    function _postOp(
+        PostOpMode mode,
+        bytes calldata context,
+        uint256 actualGasCost
+    ) internal override {
         //we don't really care about the mode, we just pay the gas with the user's token.
         (mode);
 
@@ -283,21 +380,30 @@ abstract contract TokenSingletonPaymaster is BasePaymasterUpgradeable, MultiSign
             // chains that only support legacy (pre EIP-1559 transactions)
             actualUserOpFeePerGas = maxFeePerGas;
         } else {
-            actualUserOpFeePerGas = Math.min(maxFeePerGas, maxPriorityFeePerGas + block.basefee);
+            actualUserOpFeePerGas = Math.min(
+                maxFeePerGas,
+                maxPriorityFeePerGas + block.basefee
+            );
         }
 
-        uint256 costInToken = getCostInToken(actualGasCost, postOpGas, actualUserOpFeePerGas, exchangeRate);
-
+        uint256 costInToken = getCostInToken(
+            actualGasCost,
+            postOpGas,
+            actualUserOpFeePerGas,
+            exchangeRate
+        );
 
         _transfer(sender, address(this), costInToken);
 
         emit ChargeFee(userOpHash, sender, costInToken);
     }
 
-    function _parsePostOpContext(bytes calldata _context)
-      internal
-      pure
-      returns (address, uint256, uint128, bytes32, uint256, uint256)
+    function _parsePostOpContext(
+        bytes calldata _context
+    )
+        internal
+        pure
+        returns (address, uint256, uint128, bytes32, uint256, uint256)
     {
         PostOpContext memory ctx = abi.decode(_context, (PostOpContext));
 
@@ -325,16 +431,21 @@ abstract contract TokenSingletonPaymaster is BasePaymasterUpgradeable, MultiSign
         uint256 _actualUserOpFeePerGas,
         uint256 _exchangeRate
     ) public pure returns (uint256) {
-        return ((_actualGasCost + (_postOpGas * _actualUserOpFeePerGas)) * _exchangeRate) / 1e18;
+        return
+            ((_actualGasCost + (_postOpGas * _actualUserOpFeePerGas)) *
+                _exchangeRate) / 1e18;
     }
 
     /**
- * @notice Hashses the userOperation data when used in verifying mode.
+     * @notice Hashses the userOperation data when used in verifying mode.
      * @param _userOp The user operation data.
      * @param _mode The mode that we want to get the hash for.
      * @return bytes32 The hash that the signer should sign over.
      */
-    function getHash(uint8 _mode, UserOperation calldata _userOp) public view returns (bytes32) {
+    function getHash(
+        uint8 _mode,
+        UserOperation calldata _userOp
+    ) public view returns (bytes32) {
         if (_mode == VERIFYING_MODE) {
             return _getHash(_userOp, VERIFYING_PAYMASTER_DATA_LENGTH);
         } else {
@@ -348,7 +459,10 @@ abstract contract TokenSingletonPaymaster is BasePaymasterUpgradeable, MultiSign
      * @param paymasterDataLength The paymasterData length.
      * @return bytes32 The hash that the signer should sign over.
      */
-    function _getHash(UserOperation calldata _userOp, uint256 paymasterDataLength) internal view returns (bytes32) {
+    function _getHash(
+        UserOperation calldata _userOp,
+        uint256 paymasterDataLength
+    ) internal view returns (bytes32) {
         bytes32 userOpHash = keccak256(
             abi.encode(
                 _userOp.sender,
@@ -361,11 +475,13 @@ abstract contract TokenSingletonPaymaster is BasePaymasterUpgradeable, MultiSign
                 keccak256(_userOp.callData),
                 keccak256(_userOp.initCode),
                 // hashing over all paymaster fields besides signature
-                keccak256(_userOp.paymasterAndData[:PAYMASTER_DATA_OFFSET + paymasterDataLength])
+                keccak256(
+                    _userOp.paymasterAndData[:PAYMASTER_DATA_OFFSET +
+                        paymasterDataLength]
+                )
             )
         );
 
         return keccak256(abi.encode(userOpHash, block.chainid, address(this)));
     }
-
 }
