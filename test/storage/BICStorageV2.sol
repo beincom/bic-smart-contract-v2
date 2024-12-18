@@ -10,14 +10,18 @@ library BICStorage {
         bool _swapBackEnabled;
         bool _swapping;
         bool _enabledMaxAllocation;
+        // Controller
         address _upgradeController;
         address _prePublicController;
         address _LFController;
         address _maxAllocationController;
         address _treasuryController;
+        address _liquidityTreasury;
+        // Dex
         address _uniswapV2Pair;
         address _tokenInPair;
         IUniswapV2Router _uniswapV2Router;
+        // LF
         uint256 _LFStartTime;
         uint256 _LFReduction;
         uint256 _LFPeriod;
@@ -25,6 +29,7 @@ library BICStorage {
         uint256 _minLF;
         uint256 _minSwapBackAmount;
         uint256 _maxAllocation;
+        uint256 _accumulatedLF;
         mapping(address => uint256) _prePublicWhitelist;
         mapping(address => uint256) _coolDown;
         mapping(uint256 => PrePublic) _prePublicRounds;

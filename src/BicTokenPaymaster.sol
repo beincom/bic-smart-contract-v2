@@ -206,13 +206,13 @@ contract BicTokenPaymaster is
         $._maxAllocation = _totalSupply.mul(100).div(10000);
         $._enabledMaxAllocation = true;
 
-        $._uniswapV2Router = IUniswapV2Router(
-            0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24
-        );
-        $._uniswapV2Pair = IUniswapV2Factory($._uniswapV2Router.factory())
-            .createPair(address(this), $._uniswapV2Router.WETH());
-        $._tokenInPair = $._uniswapV2Router.WETH();
-        _setPool($._uniswapV2Pair, true);
+        // $._uniswapV2Router = IUniswapV2Router(
+        //     0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24
+        // );
+        // $._uniswapV2Pair = IUniswapV2Factory($._uniswapV2Router.factory())
+        //     .createPair(address(this), $._uniswapV2Router.WETH());
+        // $._tokenInPair = $._uniswapV2Router.WETH();
+        // _setPool($._uniswapV2Pair, true);
     }
 
     // VIEW FUNCTIONS
@@ -223,6 +223,15 @@ contract BicTokenPaymaster is
     function getWhitelistCategory(address user) public view returns (uint256) {
         BICStorage.Data storage $ = _storage();
         return $._prePublicWhitelist[user];
+    }
+
+    /**
+     * @notice Check if user is blocked
+     * @param user user address
+     */
+    function isBlocked(address user) public view returns (bool) {
+        BICStorage.Data storage $ = _storage();
+        return $._isBlocked[user];
     }
 
     /**

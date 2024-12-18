@@ -116,6 +116,9 @@ contract BicTokenPaymasterV2 is
     /// @dev Emitted when renouncing treasury
     event RenounceTreasury(address controller);
 
+    /// @dev Emitted when changing liquidity treasury
+    event LiquidityTreasuryUpdated(address updater, address newLFTreasury);
+
     // MODIFIERS
     modifier onlyUpgradeController() {
         BICStorage.Data storage $ = _storage();
@@ -166,11 +169,13 @@ contract BicTokenPaymasterV2 is
     }
 
     function initialize(
-        string memory name,
-        string memory symbol,
-        address superController
+        address _entryPoint,
+        address superController,
+        address[] memory _singers
     ) public initializer {
-        __ERC20_init(name, symbol);
+        __TokenSingletonPaymaster_init(_entryPoint, _singers);
+        __ERC20Votes_init();
+        __ERC20_init("Beincom", "BIC");
         __Pausable_init();
 
         BICStorage.Data storage $ = _storage();
@@ -200,13 +205,13 @@ contract BicTokenPaymasterV2 is
         $._maxAllocation = _totalSupply.mul(100).div(10000);
         $._enabledMaxAllocation = true;
 
-        $._uniswapV2Router = IUniswapV2Router(
-            0x920b806E40A00E02E7D2b94fFc89860fDaEd3640
-        );
-        $._uniswapV2Pair = IUniswapV2Factory($._uniswapV2Router.factory())
-            .createPair(address(this), $._uniswapV2Router.WETH());
-        $._tokenInPair = $._uniswapV2Router.WETH();
-        _setPool($._uniswapV2Pair, true);
+        // $._uniswapV2Router = IUniswapV2Router(
+        //     0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24
+        // );
+        // $._uniswapV2Pair = IUniswapV2Factory($._uniswapV2Router.factory())
+        //     .createPair(address(this), $._uniswapV2Router.WETH());
+        // $._tokenInPair = $._uniswapV2Router.WETH();
+        // _setPool($._uniswapV2Pair, true);
     }
 
     // VIEW FUNCTIONS
@@ -217,6 +222,15 @@ contract BicTokenPaymasterV2 is
     function getWhitelistCategory(address user) public view returns (uint256) {
         BICStorage.Data storage $ = _storage();
         return $._prePublicWhitelist[user];
+    }
+
+    /**
+     * @notice Check if user is blocked
+     * @param user user address
+     */
+    function isBlocked(address user) public view returns (bool) {
+        BICStorage.Data storage $ = _storage();
+        return $._isBlocked[user];
     }
 
     /**
@@ -446,6 +460,18 @@ contract BicTokenPaymasterV2 is
     }
 
     /**
+     * @notice Update liquidity treasury.
+     * @param newLFTreasury new liquidity treasury.
+     */
+    function setLiquidityTreasury(
+        address newLFTreasury
+    ) external onlyLFController {
+        BICStorage.Data storage $ = _storage();
+        $._liquidityTreasury = newLFTreasury;
+        emit LiquidityTreasuryUpdated(_msgSender(), newLFTreasury);
+    }
+
+    /**
      * @notice Update liquidity fee.
      * @param max max liquidity fee basic points.
      * @param min min liquidity fee basic points.
@@ -656,7 +682,7 @@ contract BicTokenPaymasterV2 is
         address[] memory path = new address[](2);
         path[0] = address(this);
         path[1] = $._tokenInPair;
-
+        $._accumulatedLF -= _swapAmount;
         _approve(address(this), address($._uniswapV2Router), _swapAmount);
 
         if ($._tokenInPair == $._uniswapV2Router.WETH()) {
@@ -699,7 +725,7 @@ contract BicTokenPaymasterV2 is
                 _liquidityToken0,
                 0,
                 0,
-                address(0),
+                $._liquidityTreasury,
                 block.timestamp
             );
         } else {
@@ -714,7 +740,7 @@ contract BicTokenPaymasterV2 is
                 _liquidityToken1,
                 0,
                 0,
-                address(0),
+                $._liquidityTreasury,
                 block.timestamp
             );
         }
@@ -821,8 +847,7 @@ contract BicTokenPaymasterV2 is
 
         if ($._minLF > 0) {
             // swap back and liquify
-            uint256 contractTokenBalance = balanceOf(address(this));
-            bool canSwapBackAndLiquify = contractTokenBalance >=
+            bool canSwapBackAndLiquify = $._accumulatedLF >=
                 $._minSwapBackAmount;
             if (
                 canSwapBackAndLiquify &&
@@ -852,13 +877,14 @@ contract BicTokenPaymasterV2 is
             }
 
             if (_LF > 0) {
-                super._transfer(from, address(this), _LF);
+                $._accumulatedLF += _LF;
+                super._update(from, address(this), _LF);
             }
 
             amount -= _LF;
         }
 
-        super._transfer(from, to, amount);
+        super._update(from, to, amount);
     }
 
     /// @inheritdoc UUPSUpgradeable
@@ -867,20 +893,19 @@ contract BicTokenPaymasterV2 is
     ) internal view virtual override(UUPSUpgradeable) onlyUpgradeController {}
 
     receive() external payable {}
+    function setNewValue(uint256 _value) external {
+        _storage()._newValue = _value;
+    }
 
-    // function setNewValue(uint256 _value) external {
-    //     _storage()._newValue = _value;
-    // }
+    function getNewValue() external view returns (uint256) {
+        return _storage()._newValue;
+    }
 
-    // function getNewValue() external view returns (uint256) {
-    //     return _storage()._newValue;
-    // }
+    function setNewAddress(address _addr) external {
+        _storage()._newAddress = _addr;
+    }
 
-    // function setNewAddress(address _addr) external {
-    //     _storage()._newAddress = _addr;
-    // }
-
-    // function getNewAddress() external view returns (address) {
-    //     return _storage()._newAddress;
-    // }
+    function getNewAddress() external view returns (address) {
+        return _storage()._newAddress;
+    }
 }
