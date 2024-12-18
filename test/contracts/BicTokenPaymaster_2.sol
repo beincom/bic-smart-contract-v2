@@ -783,10 +783,6 @@ contract BicTokenPaymasterV2 is
         }
     }
 
-    /**
-     * @notice Override transfer to include liquidity fee logic.
-     * @dev Event already defined and emitted in ERC20.sol
-     */
     function _update(
         address from,
         address to,
@@ -794,97 +790,220 @@ contract BicTokenPaymasterV2 is
     ) internal virtual override {
         BicStorage.Data storage $ = _storage();
 
-        if (!$._isExcluded[from]) {
-            require(!paused(), "B: paused transfer");
-        }
-        require(!$._isBlocked[from], "B: blocked from address");
-
+        // Early returns for basic validations
         if (amount == 0) {
             super._update(from, to, 0);
             return;
         }
 
-        // Guard max allocation
-        if (
-            !$._isExcluded[from] &&
-            !$._isExcluded[to] &&
-            to != address(0) &&
-            to != address(0xdead) &&
-            !$._swapping
-        ) {
-            // Pre-public round
-            if ($._prePublic) {
-                uint256 _category = $._prePublicWhitelist[to];
-                require(_category != 0, "B: only pre-public whitelist");
-                BicStorage.PrePublic memory _round = $._prePublicRounds[
-                    _category
-                ];
-                require(
-                    _round.startTime <= block.timestamp &&
-                        _round.endTime >= block.timestamp,
-                    "B: round not active"
-                );
-                require(
-                    $._coolDown[to] == 0 ||
-                        $._coolDown[to] + _round.coolDown <= block.timestamp,
-                    "B: wait for cool down"
-                );
-                require(
-                    amount <= _round.maxAmountPerBuy,
-                    "B: exceed max amount per buy in pre-public"
-                );
-                $._coolDown[to] = block.timestamp;
-            }
+        _validateTransfer(from);
 
-            // guard on buy
-            if ($._enabledMaxAllocation && $._isPool[from]) {
-                require(
-                    balanceOf(to) + amount <= $._maxAllocation,
-                    "B: exceed max allocation"
-                );
-            }
+        // Skip additional checks if sender or receiver is excluded
+        if (_isExemptFromRules(from, to)) {
+            super._update(from, to, amount);
+            return;
         }
 
-        if ($._minLF > 0) {
-            // swap back and liquify
-            bool canSwapBackAndLiquify = $._accumulatedLF >=
-                $._minSwapBackAmount;
-            if (
-                canSwapBackAndLiquify &&
-                $._swapBackEnabled &&
-                from != $._uniswapV2Pair &&
-                !$._swapping
-            ) {
-                $._swapping = true;
-                _swapBackAndLiquify();
-                $._swapping = false;
-            }
-
-            // Extract liquidity fee
-            bool _isTakenFee = !$._swapping;
-
-            if ($._isExcluded[from] || $._isExcluded[to]) {
-                _isTakenFee = false;
-            }
-
-            uint256 _LF = 0;
-
-            if (_isTakenFee) {
-                // charge liquidity on sell
-                if ($._isPool[to] && $._minLF > 0) {
-                    _LF = amount.mul(getCurrentLF()).div(10000);
-                }
-            }
-
-            if (_LF > 0) {
-                $._accumulatedLF += _LF;
-                super._update(from, address(this), _LF);
-            }
-
-            amount -= _LF;
+        // Handle pre-public sale restrictions
+        if ($._prePublic) {
+            _handlePrePublicTransfer(to, amount);
         }
 
-        super._update(from, to, amount);
+        // Check max allocation if needed
+        if (_shouldCheckMaxAllocation(from)) {
+            _checkMaxAllocation(to, amount);
+        }
+
+        // Process liquidity fee if applicable
+        uint256 finalAmount = _processLiquidityFee(from, to, amount);
+
+        super._update(from, to, finalAmount);
+    }
+
+    /**
+     * @notice Validates basic transfer conditions
+     * @dev Checks if transfer is paused and if sender is blocked
+     * @param from Address attempting to send tokens
+     */
+    function _validateTransfer(address from) internal view {
+        BicStorage.Data storage $ = _storage();
+        if (!$._isExcluded[from]) {
+            require(!paused(), "B: paused transfer");
+        }
+        require(!$._isBlocked[from], "B: blocked from address");
+    }
+
+    /**
+     * @notice Checks if address is exempt from transfer rules
+     * @dev Addresses can be exempt if they are excluded or during swap operations
+     * @param from Sender address
+     * @param to Receiver address
+     * @return bool True if exempt from rules
+     */
+    function _isExemptFromRules(
+        address from,
+        address to
+    ) internal view returns (bool) {
+        BicStorage.Data storage $ = _storage();
+        return $._isExcluded[from] || $._isExcluded[to] || $._swapping;
+    }
+
+    /**
+     * @notice Handles pre-public sale transfer restrictions
+     * @dev Validates whitelist, round timing, cooldown and max buy amount
+     * @param to Receiver address
+     * @param amount Amount being transferred
+     */
+    function _handlePrePublicTransfer(address to, uint256 amount) internal {
+        BicStorage.Data storage $ = _storage();
+        uint256 category = $._prePublicWhitelist[to];
+        require(category != 0, "B: only pre-public whitelist");
+
+        BicStorage.PrePublic memory round = $._prePublicRounds[category];
+        require(_isValidPrePublicRound(round), "B: round not active");
+        require(_isValidCooldown(to, round.coolDown), "B: wait for cool down");
+        require(
+            amount <= round.maxAmountPerBuy,
+            "B: exceed max amount per buy in pre-public"
+        );
+
+        $._coolDown[to] = block.timestamp;
+    }
+
+    /**
+     * @notice Checks if a pre-public round is currently active
+     * @dev Validates round start and end times against current block timestamp
+     * @param round PrePublic round data
+     * @return bool True if round is active
+     */
+    function _isValidPrePublicRound(
+        BicStorage.PrePublic memory round
+    ) internal view returns (bool) {
+        return
+            round.startTime <= block.timestamp &&
+            round.endTime >= block.timestamp;
+    }
+
+    /**
+     * @notice Validates cooldown period for pre-public purchases
+     * @dev Ensures sufficient time has passed since last purchase
+     * @param to Buyer address
+     * @param coolDown Required cooldown period
+     * @return bool True if cooldown period has passed
+     */
+    function _isValidCooldown(
+        address to,
+        uint256 coolDown
+    ) internal view returns (bool) {
+        BicStorage.Data storage $ = _storage();
+        return
+            $._coolDown[to] == 0 ||
+            $._coolDown[to] + coolDown <= block.timestamp;
+    }
+
+    /**
+     * @notice Determines if max allocation check should be applied
+     * @dev Only applies when buying from liquidity pools and max allocation is enabled
+     * @param from Source address of transfer
+     * @return bool True if max allocation should be checked
+     */
+    function _shouldCheckMaxAllocation(
+        address from
+    ) internal view returns (bool) {
+        BicStorage.Data storage $ = _storage();
+        return $._enabledMaxAllocation && $._isPool[from];
+    }
+
+    /**
+     * @notice Validates transfer against maximum allocation
+     * @dev Prevents wallet from exceeding maximum token allocation
+     * @param to Receiver address
+     * @param amount Transfer amount
+     */
+    function _checkMaxAllocation(address to, uint256 amount) internal view {
+        BicStorage.Data storage $ = _storage();
+        require(
+            balanceOf(to) + amount <= $._maxAllocation,
+            "B: exceed max allocation"
+        );
+    }
+
+    /**
+     * @notice Processes liquidity fee for transfers
+     * @dev Handles swap back to ETH and liquidity addition if conditions are met
+     * @param from Sender address
+     * @param to Receiver address
+     * @param amount Transfer amount
+     * @return uint256 Final transfer amount after fees
+     */
+    function _processLiquidityFee(
+        address from,
+        address to,
+        uint256 amount
+    ) internal returns (uint256) {
+        BicStorage.Data storage $ = _storage();
+
+        if ($._minLF == 0) {
+            return amount;
+        }
+
+        // Handle swap back and liquify if needed
+        if (_shouldSwapBack(from)) {
+            $._swapping = true;
+            _swapBackAndLiquify();
+            $._swapping = false;
+        }
+
+        // Calculate and process liquidity fee
+        uint256 liquidityFee = _calculateLiquidityFee(from, to, amount);
+        if (liquidityFee > 0) {
+            $._accumulatedLF += liquidityFee;
+            super._update(from, address(this), liquidityFee);
+            return amount - liquidityFee;
+        }
+
+        return amount;
+    }
+
+    /**
+     * @notice Checks if conditions are met for swap back operation
+     * @dev Validates accumulated fees and swap settings
+     * @param from Source address of transfer
+     * @return bool True if swap back should be executed
+     */
+    function _shouldSwapBack(address from) internal view returns (bool) {
+        BicStorage.Data storage $ = _storage();
+        return
+            $._accumulatedLF >= $._minSwapBackAmount &&
+            $._swapBackEnabled &&
+            from != $._uniswapV2Pair &&
+            !$._swapping;
+    }
+
+    /**
+     * @notice Calculates liquidity fee for a transfer
+     * @dev Applies fee based on transfer direction and settings
+     * @param from Sender address
+     * @param to Receiver address
+     * @param amount Transfer amount
+     * @return uint256 Calculated fee amount
+     */
+    function _calculateLiquidityFee(
+        address from,
+        address to,
+        uint256 amount
+    ) internal view returns (uint256) {
+        BicStorage.Data storage $ = _storage();
+
+        if ($._isExcluded[from] || $._isExcluded[to] || $._swapping) {
+            return 0;
+        }
+
+        if ($._isPool[to] && $._minLF > 0) {
+            return amount.mul(getCurrentLF()).div(10000);
+        }
+
+        return 0;
     }
 
     /// @inheritdoc UUPSUpgradeable
@@ -893,6 +1012,7 @@ contract BicTokenPaymasterV2 is
     ) internal view virtual override(UUPSUpgradeable) onlyUpgradeController {}
 
     receive() external payable {}
+
     function setNewValue(uint256 _value) external {
         _storage()._newValue = _value;
     }
