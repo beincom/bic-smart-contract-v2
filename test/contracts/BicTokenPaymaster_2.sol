@@ -1,18 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0
-
 pragma solidity ^0.8.23;
 
-import {IUniswapV2Router} from "./interfaces/IUniswapV2Router.sol";
-import {IUniswapV2Factory} from "./interfaces/IUniswapV2Factory.sol";
-import {SafeMath} from "./utils/math/SafeMath.sol";
-import {BICStorage} from "./storage/BICStorage.sol";
-import {TokenSingletonPaymaster} from "./base/TokenSingletonPaymaster.sol";
+import {IUniswapV2Router} from "../../src/interfaces/IUniswapV2Router.sol";
+import {IUniswapV2Factory} from "../../src/interfaces/IUniswapV2Factory.sol";
+import {SafeMath} from "../../src/utils/math/SafeMath.sol";
+import {BICStorage} from "../storage/BICStorageV2.sol";
+import {TokenSingletonPaymaster} from "../../src/base/TokenSingletonPaymaster.sol";
 
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-contract BicTokenPaymaster is
+contract BicTokenPaymasterV2 is
     TokenSingletonPaymaster,
     PausableUpgradeable,
     UUPSUpgradeable
@@ -894,4 +893,19 @@ contract BicTokenPaymaster is
     ) internal view virtual override(UUPSUpgradeable) onlyUpgradeController {}
 
     receive() external payable {}
+    function setNewValue(uint256 _value) external {
+        _storage()._newValue = _value;
+    }
+
+    function getNewValue() external view returns (uint256) {
+        return _storage()._newValue;
+    }
+
+    function setNewAddress(address _addr) external {
+        _storage()._newAddress = _addr;
+    }
+
+    function getNewAddress() external view returns (address) {
+        return _storage()._newAddress;
+    }
 }
