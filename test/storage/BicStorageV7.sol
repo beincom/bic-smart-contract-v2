@@ -3,7 +3,7 @@ pragma solidity ^0.8.23;
 
 import {IUniswapV2Router} from "../../src/interfaces/IUniswapV2Router.sol";
 
-library BICStorageV7 {
+library BicStorageV7 {
     struct Data {
         address entryPointv7;
     }
@@ -13,7 +13,7 @@ library BICStorageV7 {
     function _getStorageLocation()
         internal
         pure
-        returns (BICStorageV7.Data storage $)
+        returns (BicStorageV7.Data storage $)
     {
         assembly {
             $.slot := BicTokenPaymasterStorageLocation

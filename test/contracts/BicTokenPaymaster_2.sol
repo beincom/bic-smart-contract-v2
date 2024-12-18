@@ -4,7 +4,7 @@ pragma solidity ^0.8.23;
 import {IUniswapV2Router} from "../../src/interfaces/IUniswapV2Router.sol";
 import {IUniswapV2Factory} from "../../src/interfaces/IUniswapV2Factory.sol";
 import {SafeMath} from "../../src/utils/math/SafeMath.sol";
-import {BICStorage} from "../storage/BICStorageV2.sol";
+import {BicStorage} from "../storage/BicStorageV2.sol";
 import {TokenSingletonPaymaster} from "../../src/base/TokenSingletonPaymaster.sol";
 
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
@@ -17,16 +17,16 @@ contract BicTokenPaymasterV2 is
     UUPSUpgradeable
 {
     using SafeMath for uint256;
-    using BICStorage for BICStorage.Data;
+    using BicStorage for BicStorage.Data;
 
     // Get storage
     function _storage()
         internal
         pure
         virtual
-        returns (BICStorage.Data storage $)
+        returns (BicStorage.Data storage $)
     {
-        return BICStorage._getStorageLocation();
+        return BicStorage._getStorageLocation();
     }
 
     // EVENTS
@@ -121,7 +121,7 @@ contract BicTokenPaymasterV2 is
 
     // MODIFIERS
     modifier onlyUpgradeController() {
-        BICStorage.Data storage $ = _storage();
+        BicStorage.Data storage $ = _storage();
         require(
             _msgSender() == $._upgradeController,
             "B: only upgrade controller"
@@ -130,7 +130,7 @@ contract BicTokenPaymasterV2 is
     }
 
     modifier onlyPrePublicController() {
-        BICStorage.Data storage $ = _storage();
+        BicStorage.Data storage $ = _storage();
         require(
             _msgSender() == $._prePublicController,
             "B: only pre-public controller"
@@ -139,13 +139,13 @@ contract BicTokenPaymasterV2 is
     }
 
     modifier onlyLFController() {
-        BICStorage.Data storage $ = _storage();
+        BicStorage.Data storage $ = _storage();
         require(_msgSender() == $._LFController, "B: only LF controller");
         _;
     }
 
     modifier onlyMaxAllocationController() {
-        BICStorage.Data storage $ = _storage();
+        BicStorage.Data storage $ = _storage();
         require(
             _msgSender() == $._maxAllocationController,
             "B: only max allocation controller"
@@ -154,7 +154,7 @@ contract BicTokenPaymasterV2 is
     }
 
     modifier onlyTreasuryController() {
-        BICStorage.Data storage $ = _storage();
+        BicStorage.Data storage $ = _storage();
         require(
             _msgSender() == $._treasuryController,
             "B: only treasury controller"
@@ -178,7 +178,7 @@ contract BicTokenPaymasterV2 is
         __ERC20_init("Beincom", "BIC");
         __Pausable_init();
 
-        BICStorage.Data storage $ = _storage();
+        BicStorage.Data storage $ = _storage();
 
         uint256 _totalSupply = 5000000000 * 1e18;
         _mint(superController, _totalSupply);
@@ -220,7 +220,7 @@ contract BicTokenPaymasterV2 is
      * @param user user address.
      */
     function getWhitelistCategory(address user) public view returns (uint256) {
-        BICStorage.Data storage $ = _storage();
+        BicStorage.Data storage $ = _storage();
         return $._prePublicWhitelist[user];
     }
 
@@ -229,7 +229,7 @@ contract BicTokenPaymasterV2 is
      * @param user user address
      */
     function isBlocked(address user) public view returns (bool) {
-        BICStorage.Data storage $ = _storage();
+        BicStorage.Data storage $ = _storage();
         return $._isBlocked[user];
     }
 
@@ -238,7 +238,7 @@ contract BicTokenPaymasterV2 is
      * @return current liquidity fee
      */
     function getCurrentLF() public view returns (uint256) {
-        BICStorage.Data storage $ = _storage();
+        BicStorage.Data storage $ = _storage();
 
         if (!$._isEnabledLFReduction) {
             return $._minLF;
@@ -265,7 +265,7 @@ contract BicTokenPaymasterV2 is
     function setUpgradeController(
         address controller
     ) public onlyUpgradeController {
-        BICStorage.Data storage $ = _storage();
+        BicStorage.Data storage $ = _storage();
         $._upgradeController = controller;
         emit UpgradeControllerUpdated(_msgSender(), controller);
     }
@@ -277,7 +277,7 @@ contract BicTokenPaymasterV2 is
     function setPrePublicController(
         address controller
     ) public onlyPrePublicController {
-        BICStorage.Data storage $ = _storage();
+        BicStorage.Data storage $ = _storage();
         $._prePublicController = controller;
         emit PrePublicControllerUpdated(_msgSender(), controller);
     }
@@ -287,7 +287,7 @@ contract BicTokenPaymasterV2 is
      * @param controller controller address.
      */
     function setLFController(address controller) public onlyLFController {
-        BICStorage.Data storage $ = _storage();
+        BicStorage.Data storage $ = _storage();
         $._LFController = controller;
         emit LFControllerUpdated(_msgSender(), controller);
     }
@@ -299,7 +299,7 @@ contract BicTokenPaymasterV2 is
     function setMaxAllocationController(
         address controller
     ) public onlyMaxAllocationController {
-        BICStorage.Data storage $ = _storage();
+        BicStorage.Data storage $ = _storage();
         $._maxAllocationController = controller;
         emit MaxAllocationControllerUpdated(_msgSender(), controller);
     }
@@ -311,7 +311,7 @@ contract BicTokenPaymasterV2 is
     function setTreasuryController(
         address controller
     ) public onlyTreasuryController {
-        BICStorage.Data storage $ = _storage();
+        BicStorage.Data storage $ = _storage();
         $._treasuryController = controller;
         emit TreasuryControllerUpdated(_msgSender(), controller);
     }
@@ -320,7 +320,7 @@ contract BicTokenPaymasterV2 is
      * @notice Renounce upgrade feature.
      */
     function renounceUpgrade() public onlyUpgradeController {
-        BICStorage.Data storage $ = _storage();
+        BicStorage.Data storage $ = _storage();
         $._upgradeController = address(0);
         emit RenounceUpgrade(_msgSender());
     }
@@ -329,7 +329,7 @@ contract BicTokenPaymasterV2 is
      * @notice Renounce max allocation feature.
      */
     function renounceMaxAllocation() public onlyMaxAllocationController {
-        BICStorage.Data storage $ = _storage();
+        BicStorage.Data storage $ = _storage();
         $._enabledMaxAllocation = false;
         $._maxAllocation = totalSupply();
         $._maxAllocationController = address(0);
@@ -340,7 +340,7 @@ contract BicTokenPaymasterV2 is
      * @notice Renounce liquidity fee feature.
      */
     function renounceLF() public onlyLFController {
-        BICStorage.Data storage $ = _storage();
+        BicStorage.Data storage $ = _storage();
         $._minLF = 0;
         $._maxLF = 0;
         $._LFController = address(0);
@@ -351,7 +351,7 @@ contract BicTokenPaymasterV2 is
      * @notice Renounce pre-public feature.
      */
     function renouncePrePublic() public onlyPrePublicController {
-        BICStorage.Data storage $ = _storage();
+        BicStorage.Data storage $ = _storage();
         $._prePublic = false;
         $._prePublicController = address(0);
         emit RenouncePrePublic(_msgSender());
@@ -361,7 +361,7 @@ contract BicTokenPaymasterV2 is
      * @notice Renounce treasury.
      */
     function renounceTreasury() public onlyTreasuryController {
-        BICStorage.Data storage $ = _storage();
+        BicStorage.Data storage $ = _storage();
         $._treasuryController = address(0);
         emit RenounceTreasury(_msgSender());
     }
@@ -372,7 +372,7 @@ contract BicTokenPaymasterV2 is
      * @param status pre-public status.
      */
     function setPrePublic(bool status) external onlyPrePublicController {
-        BICStorage.Data storage $ = _storage();
+        BicStorage.Data storage $ = _storage();
         $._prePublic = status;
         emit PrePublicStatusUpdated(_msgSender(), status);
     }
@@ -394,7 +394,7 @@ contract BicTokenPaymasterV2 is
      * @param prePublicRound Pre-public round info.
      */
     function setPrePublicRound(
-        BICStorage.PrePublic memory prePublicRound
+        BicStorage.PrePublic memory prePublicRound
     ) external onlyPrePublicController {
         _setPrePublicRound(prePublicRound);
     }
@@ -406,7 +406,7 @@ contract BicTokenPaymasterV2 is
     function setMaxAllocation(
         uint256 newMaxAllocation
     ) external onlyMaxAllocationController {
-        BICStorage.Data storage $ = _storage();
+        BicStorage.Data storage $ = _storage();
         $._maxAllocation = newMaxAllocation;
         emit MaxAllocationUpdated(_msgSender(), newMaxAllocation);
     }
@@ -420,7 +420,7 @@ contract BicTokenPaymasterV2 is
         address[] memory _addresses,
         uint256[] memory _categories
     ) private {
-        BICStorage.Data storage $ = _storage();
+        BicStorage.Data storage $ = _storage();
         require(
             _addresses.length == _categories.length,
             "B: Mismatched length"
@@ -436,9 +436,9 @@ contract BicTokenPaymasterV2 is
      * @param _prePublicRound Pre-public round info.
      */
     function _setPrePublicRound(
-        BICStorage.PrePublic memory _prePublicRound
+        BicStorage.PrePublic memory _prePublicRound
     ) private {
-        BICStorage.Data storage $ = _storage();
+        BicStorage.Data storage $ = _storage();
         $._prePublicRounds[_prePublicRound.category] = _prePublicRound;
         emit PrePublicRoundUpdated(_msgSender(), _prePublicRound.category);
     }
@@ -453,7 +453,7 @@ contract BicTokenPaymasterV2 is
         address pair,
         address tokenPair
     ) external onlyLFController {
-        BICStorage.Data storage $ = _storage();
+        BicStorage.Data storage $ = _storage();
         $._uniswapV2Pair = pair;
         $._tokenInPair = tokenPair;
         emit UniswapV2PairUpdated(_msgSender(), pair, tokenPair);
@@ -466,7 +466,7 @@ contract BicTokenPaymasterV2 is
     function setLiquidityTreasury(
         address newLFTreasury
     ) external onlyLFController {
-        BICStorage.Data storage $ = _storage();
+        BicStorage.Data storage $ = _storage();
         $._liquidityTreasury = newLFTreasury;
         emit LiquidityTreasuryUpdated(_msgSender(), newLFTreasury);
     }
@@ -481,7 +481,7 @@ contract BicTokenPaymasterV2 is
         uint256 max
     ) external onlyLFController {
         require(min >= 0 && min <= max && max <= 5000, "B: invalid values");
-        BICStorage.Data storage $ = _storage();
+        BicStorage.Data storage $ = _storage();
         $._minLF = min;
         $._maxLF = max;
         emit LiquidityFeeUpdated(_msgSender(), min, max);
@@ -493,7 +493,7 @@ contract BicTokenPaymasterV2 is
      */
     function setLFReduction(uint256 _LFReduction) external onlyLFController {
         require(_LFReduction > 0, "B: 0 LF reduction");
-        BICStorage.Data storage $ = _storage();
+        BicStorage.Data storage $ = _storage();
         $._LFReduction = _LFReduction;
         emit LFReductionUpdated(_msgSender(), _LFReduction);
     }
@@ -504,7 +504,7 @@ contract BicTokenPaymasterV2 is
      */
     function setLFPeriod(uint256 _LFPeriod) external onlyLFController {
         require(_LFPeriod > 0, "B: 0 LF period");
-        BICStorage.Data storage $ = _storage();
+        BicStorage.Data storage $ = _storage();
         $._LFPeriod = _LFPeriod;
         emit LFPeriodUpdated(_msgSender(), _LFPeriod);
     }
@@ -515,7 +515,7 @@ contract BicTokenPaymasterV2 is
      * @param status swap back enabled status.
      */
     function setSwapBackEnabled(bool status) external onlyLFController {
-        BICStorage.Data storage $ = _storage();
+        BicStorage.Data storage $ = _storage();
         $._swapBackEnabled = status;
         emit SwapBackEnabledUpdated(_msgSender(), status);
     }
@@ -525,7 +525,7 @@ contract BicTokenPaymasterV2 is
      * @param amount min swap back amount.
      */
     function setMinSwapBackAmount(uint256 amount) external onlyLFController {
-        BICStorage.Data storage $ = _storage();
+        BicStorage.Data storage $ = _storage();
         $._minSwapBackAmount = amount;
         emit MinSwapBackAmountUpdated(_msgSender(), amount);
     }
@@ -536,7 +536,7 @@ contract BicTokenPaymasterV2 is
      */
     function setLFStartTime(uint256 _newLFStartTime) external onlyLFController {
         require(_newLFStartTime > block.timestamp, "B: invalid start time");
-        BICStorage.Data storage $ = _storage();
+        BicStorage.Data storage $ = _storage();
         $._LFStartTime = _newLFStartTime;
         emit LFStartTimeUpdated(_newLFStartTime);
     }
@@ -546,7 +546,7 @@ contract BicTokenPaymasterV2 is
      * @param status enabled liquidity fee status
      */
     function setIsEnabledLFReduction(bool status) external onlyLFController {
-        BICStorage.Data storage $ = _storage();
+        BicStorage.Data storage $ = _storage();
         $._isEnabledLFReduction = status;
         emit isEnabledLFReductionUpdated(_msgSender(), status);
     }
@@ -629,7 +629,7 @@ contract BicTokenPaymasterV2 is
         address addr,
         bool status
     ) public onlyTreasuryController {
-        BICStorage.Data storage $ = _storage();
+        BicStorage.Data storage $ = _storage();
         $._isBlocked[addr] = status;
         emit BlockUpdated(_msgSender(), addr, status);
     }
@@ -657,7 +657,7 @@ contract BicTokenPaymasterV2 is
      * @param _status status of excluded address
      */
     function _setIsExcluded(address _excludedAddress, bool _status) internal {
-        BICStorage.Data storage $ = _storage();
+        BicStorage.Data storage $ = _storage();
         $._isExcluded[_excludedAddress] = _status;
         emit ExcludedUpdated(_excludedAddress, _status);
     }
@@ -668,7 +668,7 @@ contract BicTokenPaymasterV2 is
      * @param _status status of the pool.
      */
     function _setPool(address _pool, bool _status) internal {
-        BICStorage.Data storage $ = _storage();
+        BicStorage.Data storage $ = _storage();
         $._isPool[_pool] = _status;
         emit PoolUpdated(_msgSender(), _pool, _status);
     }
@@ -678,7 +678,7 @@ contract BicTokenPaymasterV2 is
      * @param _swapAmount swap tokens amount for ETH.
      */
     function _swapBack(uint256 _swapAmount) internal {
-        BICStorage.Data storage $ = _storage();
+        BicStorage.Data storage $ = _storage();
         address[] memory path = new address[](2);
         path[0] = address(this);
         path[1] = $._tokenInPair;
@@ -717,7 +717,7 @@ contract BicTokenPaymasterV2 is
         uint256 _liquidityToken0,
         uint256 _liquidityToken1
     ) internal {
-        BICStorage.Data storage $ = _storage();
+        BicStorage.Data storage $ = _storage();
         _approve(address(this), address($._uniswapV2Router), _liquidityToken0);
         if ($._tokenInPair == $._uniswapV2Router.WETH()) {
             $._uniswapV2Router.addLiquidityETH{value: _liquidityToken1}(
@@ -747,7 +747,7 @@ contract BicTokenPaymasterV2 is
     }
 
     function _swapBackAndLiquify() internal {
-        BICStorage.Data storage $ = _storage();
+        BicStorage.Data storage $ = _storage();
         uint256 _initialToken1Balance;
 
         if ($._minSwapBackAmount == 0) {
@@ -792,7 +792,7 @@ contract BicTokenPaymasterV2 is
         address to,
         uint256 amount
     ) internal virtual override {
-        BICStorage.Data storage $ = _storage();
+        BicStorage.Data storage $ = _storage();
 
         if (!$._isExcluded[from]) {
             require(!paused(), "B: paused transfer");
@@ -816,7 +816,7 @@ contract BicTokenPaymasterV2 is
             if ($._prePublic) {
                 uint256 _category = $._prePublicWhitelist[to];
                 require(_category != 0, "B: only pre-public whitelist");
-                BICStorage.PrePublic memory _round = $._prePublicRounds[
+                BicStorage.PrePublic memory _round = $._prePublicRounds[
                     _category
                 ];
                 require(
