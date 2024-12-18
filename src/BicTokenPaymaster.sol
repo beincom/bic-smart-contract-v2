@@ -205,6 +205,7 @@ contract BicTokenPaymaster is
         $._minSwapBackAmount = _totalSupply.div(10000);
         $._maxAllocation = _totalSupply.mul(100).div(10000);
         $._enabledMaxAllocation = true;
+        transferOwnership(superController);
 
         // $._uniswapV2Router = IUniswapV2Router(
         //     0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24

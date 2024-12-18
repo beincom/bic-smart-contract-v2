@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.23;
 
-import "../lib/BicTokenPaymasterStorageV7.sol";
+import "../storage/BICStorageV7.sol";
 import "@account-abstraction-v7/contracts/interfaces/PackedUserOperation.sol";
 
 import {console} from "forge-std/console.sol";
@@ -10,16 +10,16 @@ import {BicTokenPaymaster} from "../../src/BicTokenPaymaster.sol";
 contract BicTokenPaymasterV7 is
     BicTokenPaymaster
 {
-    using BicTokenPaymasterStorageV7 for BicTokenPaymasterStorageV7.Data;
+    using BICStorageV7 for BICStorageV7.Data;
 
-    BicTokenPaymasterStorageV7.Data internal _storage;
+    BICStorageV7.Data internal _storageV7;
 
     function setEntryPointV7(address _entryPoint) external {
-        _storage.entryPointv7 = _entryPoint;
+        _storageV7.entryPointv7 = _entryPoint;
     }
 
     function _requireFromEntryPointV7() internal virtual {
-        require(msg.sender == address(_storage.entryPointv7), "Sender not EntryPoint");
+        require(msg.sender == address(_storageV7.entryPointv7), "Sender not EntryPoint");
     }
 
     function validatePaymasterUserOp(

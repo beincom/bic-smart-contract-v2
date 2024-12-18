@@ -639,7 +639,7 @@ contract BicTokenPaymasterV2 is
      * @dev Event already defined and emitted in Pausable.sol
      */
     function pause() public onlyTreasuryController {
-        _pause();
+        revert("pause() was removed");
     }
 
     /**

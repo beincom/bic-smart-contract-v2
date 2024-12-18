@@ -303,7 +303,7 @@ abstract contract TokenSingletonPaymaster is
         );
 
         require(
-            signature.length != 64 && signature.length != 65,
+            signature.length == 64 || signature.length == 65,
             "TokenSingletonPaymaster: signature length is invalid"
         );
 

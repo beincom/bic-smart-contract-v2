@@ -104,7 +104,7 @@ contract TestUpgradePaymaster is BicTokenPaymasterTestBase {
         address newImplementation = address(new BicTokenPaymasterV7());
         vm.prank(owner);
         bic.upgradeToAndCall(newImplementation, "");
-        BicTokenPaymasterV7 bicV7 = BicTokenPaymasterV7(address(bic));
+        BicTokenPaymasterV7 bicV7 = BicTokenPaymasterV7(payable(address(bic)));
 
         vm.prank(owner);
         bicV7.setEntryPointV7(address(entrypointv7));
