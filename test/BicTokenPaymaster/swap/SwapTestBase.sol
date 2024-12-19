@@ -3,9 +3,9 @@ pragma solidity ^0.8.23;
 
 import "../BicTokenPaymasterTestBase.sol";
 import "../../../script/UniswapV2Deployer.s.sol";
-import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
 import {WETH} from "solmate/tokens/WETH.sol";
-import {IUniswapV2Router02} from "../../../lib/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
+import {IUniswapV2Factory} from "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
+import {IUniswapV2Router02} from "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 
 contract SwapTestBase is BicTokenPaymasterTestBase {
     IUniswapV2Factory public uniswapV2Factory;

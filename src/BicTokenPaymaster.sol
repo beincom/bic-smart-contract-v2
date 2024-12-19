@@ -2,8 +2,8 @@
 
 pragma solidity ^0.8.23;
 
-import {IUniswapV2Router} from "./interfaces/IUniswapV2Router.sol";
-import {IUniswapV2Factory} from "./interfaces/IUniswapV2Factory.sol";
+import {IUniswapV2Factory} from "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
+import {IUniswapV2Router02} from "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 import {SafeMath} from "./utils/math/SafeMath.sol";
 import {BicStorage} from "./storage/BicStorage.sol";
 import {TokenSingletonPaymaster} from "./base/TokenSingletonPaymaster.sol";
@@ -205,15 +205,10 @@ contract BicTokenPaymaster is
         $._minSwapBackAmount = _totalSupply.div(10000);
         $._maxAllocation = _totalSupply.mul(100).div(10000);
         $._enabledMaxAllocation = true;
-        transferOwnership(superController);
 
-        // $._uniswapV2Router = IUniswapV2Router(
-        //     0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24
-        // );
-        // $._uniswapV2Pair = IUniswapV2Factory($._uniswapV2Router.factory())
-        //     .createPair(address(this), $._uniswapV2Router.WETH());
-        // $._tokenInPair = $._uniswapV2Router.WETH();
-        // _setPool($._uniswapV2Pair, true);
+        $._uniswapV2Router = 0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24;
+
+        transferOwnership(superController);
     }
 
     // VIEW FUNCTIONS
@@ -685,11 +680,10 @@ contract BicTokenPaymaster is
         path[0] = address(this);
         path[1] = $._tokenInPair;
         $._accumulatedLF -= _swapAmount;
-        _approve(address(this), address($._uniswapV2Router), _swapAmount);
+        _approve(address(this), $._uniswapV2Router, _swapAmount);
 
-        if ($._tokenInPair == $._uniswapV2Router.WETH()) {
-            $
-                ._uniswapV2Router
+        if ($._tokenInPair == IUniswapV2Router02($._uniswapV2Router).WETH()) {
+            IUniswapV2Router02($._uniswapV2Router)
                 .swapExactTokensForETHSupportingFeeOnTransferTokens(
                     _swapAmount,
                     0,
@@ -698,8 +692,7 @@ contract BicTokenPaymaster is
                     block.timestamp
                 );
         } else {
-            $
-                ._uniswapV2Router
+            IUniswapV2Router02($._uniswapV2Router)
                 .swapExactTokensForTokensSupportingFeeOnTransferTokens(
                     _swapAmount,
                     0,
@@ -720,9 +713,9 @@ contract BicTokenPaymaster is
         uint256 _liquidityToken1
     ) internal {
         BicStorage.Data storage $ = _storage();
-        _approve(address(this), address($._uniswapV2Router), _liquidityToken0);
-        if ($._tokenInPair == $._uniswapV2Router.WETH()) {
-            $._uniswapV2Router.addLiquidityETH{value: _liquidityToken1}(
+        _approve(address(this), $._uniswapV2Router, _liquidityToken0);
+        if ($._tokenInPair == IUniswapV2Router02($._uniswapV2Router).WETH()) {
+            IUniswapV2Router02($._uniswapV2Router).addLiquidityETH{value: _liquidityToken1}(
                 address(this),
                 _liquidityToken0,
                 0,
@@ -732,10 +725,10 @@ contract BicTokenPaymaster is
             );
         } else {
             IERC20($._tokenInPair).approve(
-                address($._uniswapV2Router),
+                $._uniswapV2Router,
                 _liquidityToken1
             );
-            $._uniswapV2Router.addLiquidity(
+            IUniswapV2Router02($._uniswapV2Router).addLiquidity(
                 address(this),
                 $._tokenInPair,
                 _liquidityToken0,
@@ -759,7 +752,7 @@ contract BicTokenPaymaster is
         uint256 liquidityTokens = $._minSwapBackAmount.div(2);
         uint256 amounTokensToSwap = $._minSwapBackAmount.sub(liquidityTokens);
 
-        if ($._tokenInPair == $._uniswapV2Router.WETH()) {
+        if ($._tokenInPair == IUniswapV2Router02($._uniswapV2Router).WETH()) {
             _initialToken1Balance = address(this).balance;
         } else {
             _initialToken1Balance = IERC20($._tokenInPair).balanceOf(
@@ -771,7 +764,7 @@ contract BicTokenPaymaster is
 
         uint256 _liquidityToken1;
 
-        if ($._tokenInPair == $._uniswapV2Router.WETH()) {
+        if ($._tokenInPair == IUniswapV2Router02($._uniswapV2Router).WETH()) {
             _liquidityToken1 = address(this).balance.sub(_initialToken1Balance);
         } else {
             _liquidityToken1 = IERC20($._tokenInPair)

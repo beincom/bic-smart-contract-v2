@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.23;
 
-import {IUniswapV2Router} from "../../src/interfaces/IUniswapV2Router.sol";
-
 library BicStorage {
     struct Data {
         bool _prePublic;
@@ -20,7 +18,7 @@ library BicStorage {
         // Dex
         address _uniswapV2Pair;
         address _tokenInPair;
-        IUniswapV2Router _uniswapV2Router;
+        address _uniswapV2Router;
         // LF
         uint256 _LFStartTime;
         uint256 _LFReduction;

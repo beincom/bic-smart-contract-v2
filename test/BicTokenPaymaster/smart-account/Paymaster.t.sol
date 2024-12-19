@@ -198,13 +198,10 @@ contract TestPaymaster is BicTokenPaymasterTestBase {
         bytes memory initCode = abi.encodePacked(abi.encodePacked(address(smart_account_factory)), initCallData);
 
         FixedFeeOracle oracle = new FixedFeeOracle();
-        console.log("die here");
         vm.prank(owner);
         bic.setOracle(address(oracle));
-        console.log("or here");
         vm.prank(owner);
         bic.addFactory(address(smart_account_factory));
-        console.log("or not");
         UserOperation[] memory userOps = _setupUserOpExecute(
             user1_pkey,
             initCode,
