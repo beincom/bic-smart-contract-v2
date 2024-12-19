@@ -6,6 +6,7 @@ ffi = true
 ast = true
 build_info = true
 extra_output = ["storageLayout"]
+unchecked_cheatcode_artifacts = true
 
 [profile.deploy]
 optimizer = true
