@@ -19,7 +19,7 @@ contract UniswapV2Deployer is Script, StdCheats {
         );
 
         deployCodeTo(
-            "WETH9.sol:WETH9",
+            "WETH.sol:WETH",
             WETH
         );
 
