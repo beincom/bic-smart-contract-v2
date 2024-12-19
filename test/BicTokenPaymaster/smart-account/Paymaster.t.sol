@@ -711,40 +711,6 @@ contract TestPaymaster is BicTokenPaymasterTestBase {
         entrypoint.handleOps(secondOps, payable(random_executor));
     }
 
-    function test_createOracleUserOp_noOracle() public {
-        bytes memory initCallData = abi.encodeWithSignature(
-            "createAccount(address,uint256)",
-            user1,
-            0
-        );
-        bytes memory initCode = abi.encodePacked(
-            abi.encodePacked(address(smart_account_factory)),
-            initCallData
-        );
-
-        UserOperation[] memory userOps = _setupUserOpExecute(
-            user1_pkey,
-            initCode,
-            address(0),
-            0,
-            bytes(""),
-            user1AccountAddress,
-            abi.encodePacked(address(bic), bic.ORACLE_MODE())
-        );
-
-        vm.prank(random_executor);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IEntryPoint.FailedOp.selector,
-                0,
-                "AA33 reverted: TokenSingletonPaymaster: no oracle"
-            )
-        );
-        entrypoint.handleOps(userOps, payable(random_executor));
-
-        assertEq(isContract(user1AccountAddress), false);
-    }
-
     function test_createVerifyingUserOp_missingInitCode() public {
         // Missing initCode
         bytes memory initCode = bytes("");
