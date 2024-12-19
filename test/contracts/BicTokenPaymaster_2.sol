@@ -638,7 +638,7 @@ contract BicTokenPaymasterV2 is
      * @notice Pause transfers using this token. For emergency use.
      * @dev Event already defined and emitted in Pausable.sol
      */
-    function pause() public onlyTreasuryController {
+    function pause() public view onlyTreasuryController {
         revert("pause() was removed");
     }
 
