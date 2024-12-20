@@ -206,6 +206,10 @@ contract BicTokenPaymasterV2 is
         $._enabledMaxAllocation = true;
 
         $._uniswapV2Router = 0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24;
+        $._uniswapV2Pair = IUniswapV2Factory(IUniswapV2Router02($._uniswapV2Router).factory())
+            .createPair(address(this), IUniswapV2Router02($._uniswapV2Router).WETH());
+        $._tokenInPair = IUniswapV2Router02($._uniswapV2Router).WETH();
+        _setPool($._uniswapV2Pair, true);
 
         transferOwnership(superController);
     }

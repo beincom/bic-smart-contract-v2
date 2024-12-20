@@ -5,6 +5,10 @@ import "@account-abstraction/contracts/core/EntryPoint.sol";
 import {BicTokenPaymaster} from "../../src/BicTokenPaymaster.sol";
 import "forge-std/Test.sol";
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
+import "../../script/UniswapV2Deployer.s.sol";
+import {WETH} from "solmate/tokens/WETH.sol";
+import {IUniswapV2Factory} from "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
+import {IUniswapV2Router02} from "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 
 contract BicTokenPaymasterTestBase is Test {
     BicTokenPaymaster public bic;
@@ -16,10 +20,19 @@ contract BicTokenPaymasterTestBase is Test {
     address public holder1 = vm.addr(holder1_pkey);
     uint256 public holder1_init_amount = 10000 * 1e18;
     address[] signers = [owner, dev];
-
+    IUniswapV2Factory public uniswapV2Factory;
+    IUniswapV2Router02 public uniswapV2Router;
+    WETH public weth;
     EntryPoint entrypoint;
+
     function setUp() public virtual {
         entrypoint = new EntryPoint();
+
+        UniswapV2Deployer deployer = new UniswapV2Deployer();
+        deployer.run();
+        uniswapV2Factory = IUniswapV2Factory(deployer.UNISWAP_V2_FACTORY());
+        uniswapV2Router = IUniswapV2Router02(deployer.UNISWAP_V2_ROUTER());
+        weth = WETH(payable(deployer.WETH()));
 
         vm.prank(dev);
         address proxy = Upgrades.deployUUPSProxy(
