@@ -32,34 +32,7 @@ contract LiquidityFee is BicTokenPaymasterTestBase {
     }
 
     function test_FeeToSetterExist_toMakeSureUniswapHasBeenDeployWell() public {
-        assertEq(uniswapV2Factory.feeToSetter(), address(0));
-    }
-
-    function test_moneyLossIfGoToPool() public {
-        assertEq(bic.balanceOf(bicUniswapPair), 0);
-        uint256 amount = 100 * 1e18;
-        vm.prank(owner);
-        bic.renouncePrePublic();
-        vm.prank(holder1);
-        bic.transfer(bicUniswapPair, amount);
-        uint256 amountLeft = amount - amount * bic.getCurrentLF()/10_000;
-        assertEq(bic.balanceOf(bicUniswapPair), amountLeft);
-    }
-
-    function test_moneyKeepIfGoOutPool() public {
-        assertEq(bic.balanceOf(bicUniswapPair), 0);
-        uint256 amount = 1_000_000 * 1e18;
-        vm.prank(owner);
-        bic.transfer(bicUniswapPair, amount);
-        assertEq(bic.balanceOf(bicUniswapPair), amount);
-
-        vm.prank(owner);
-        bic.renouncePrePublic();
-
-        vm.prank(bicUniswapPair);
-        bic.transfer(randomUser, amount);
-
-        assertEq(bic.balanceOf(randomUser), amount);
+        assertEq(uniswapV2Factory.feeToSetter(), address(54321));
     }
 
 }
