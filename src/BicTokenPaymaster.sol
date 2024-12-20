@@ -717,6 +717,7 @@ contract BicTokenPaymaster is
         uint256 _liquidityToken1
     ) internal {
         BicStorage.Data storage $ = _storage();
+        $._accumulatedLF -= _liquidityToken0;
         _approve(address(this), $._uniswapV2Router, _liquidityToken0);
         if ($._tokenInPair == IUniswapV2Router02($._uniswapV2Router).WETH()) {
             IUniswapV2Router02($._uniswapV2Router).addLiquidityETH{value: _liquidityToken1}(
