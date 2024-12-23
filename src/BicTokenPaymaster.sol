@@ -189,6 +189,7 @@ contract BicTokenPaymaster is
         $._LFController = superController;
         $._maxAllocationController = superController;
         $._treasuryController = superController;
+        $._liquidityTreasury = superController;
 
         $._maxLF = 1500;
         $._minLF = 300;
@@ -207,15 +208,91 @@ contract BicTokenPaymaster is
         $._enabledMaxAllocation = true;
 
         $._uniswapV2Router = 0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24;
-         $._uniswapV2Pair = IUniswapV2Factory(IUniswapV2Router02($._uniswapV2Router).factory())
-             .createPair(address(this), IUniswapV2Router02($._uniswapV2Router).WETH());
-         $._tokenInPair = IUniswapV2Router02($._uniswapV2Router).WETH();
-         _setPool($._uniswapV2Pair, true);
+        $._uniswapV2Pair = IUniswapV2Factory(
+            IUniswapV2Router02($._uniswapV2Router).factory()
+        ).createPair(
+                address(this),
+                IUniswapV2Router02($._uniswapV2Router).WETH()
+            );
+        $._tokenInPair = IUniswapV2Router02($._uniswapV2Router).WETH();
+        _setPool($._uniswapV2Pair, true);
 
         transferOwnership(superController);
     }
 
     // VIEW FUNCTIONS
+    /**
+     * @notice Get accumulated LF
+     */
+    function getAccumulatedLF() public view returns (uint256) {
+        BicStorage.Data storage $ = _storage();
+        return $._accumulatedLF;
+    }
+
+    /**
+     * @notice Get token in pair */
+    function getTokenInPair() public view returns (address) {
+        BicStorage.Data storage $ = _storage();
+        return $._tokenInPair;
+    }
+
+    /**
+     * @notice Get uniswap v2 pair
+     */
+    function getUniswapV2Pair() public view returns (address) {
+        BicStorage.Data storage $ = _storage();
+        return $._uniswapV2Pair;
+    }
+
+    /**
+     * @notice Get pre-public round
+     * @param category pre-public category
+     */
+    function getPrePublicRound(
+        uint256 category
+    ) public view returns (BicStorage.PrePublic memory) {
+        BicStorage.Data storage $ = _storage();
+        return $._prePublicRounds[category];
+    }
+
+    /**
+     * @notice Get LF reduction */
+    function LFReduction() public view returns (uint256) {
+        BicStorage.Data storage $ = _storage();
+        return $._LFReduction;
+    }
+
+    /**
+     * @notice Get LF period
+     */
+    function LFPeriod() public view returns (uint256) {
+        BicStorage.Data storage $ = _storage();
+        return $._LFPeriod;
+    }
+
+    /**
+     * @notice Get max LF
+     */
+    function maxLF() public view returns (uint256) {
+        BicStorage.Data storage $ = _storage();
+        return $._maxLF;
+    }
+
+    /**
+     * @notice Get min LF
+     */
+    function minLF() public view returns (uint256) {
+        BicStorage.Data storage $ = _storage();
+        return $._minLF;
+    }
+
+    /**
+     * @notice Get max allocation
+     */
+    function maxAllocation() public view returns (uint256) {
+        BicStorage.Data storage $ = _storage();
+        return $._maxAllocation;
+    }
     /**
      * @notice Get whitelist category.
      * @param user user address.
@@ -720,7 +797,9 @@ contract BicTokenPaymaster is
         $._accumulatedLF -= _liquidityToken0;
         _approve(address(this), $._uniswapV2Router, _liquidityToken0);
         if ($._tokenInPair == IUniswapV2Router02($._uniswapV2Router).WETH()) {
-            IUniswapV2Router02($._uniswapV2Router).addLiquidityETH{value: _liquidityToken1}(
+            IUniswapV2Router02($._uniswapV2Router).addLiquidityETH{
+                value: _liquidityToken1
+            }(
                 address(this),
                 _liquidityToken0,
                 0,
