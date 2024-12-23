@@ -888,7 +888,7 @@ contract BicTokenPaymaster is
         }
 
         // Handle pre-public sale restrictions
-        if ($._prePublic) {
+        if ($._prePublic && $._isPool[from]) {
             _handlePrePublicTransfer(to, amount);
         }
 
