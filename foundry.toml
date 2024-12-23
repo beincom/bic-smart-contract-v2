@@ -10,7 +10,13 @@ unchecked_cheatcode_artifacts = true
 
 [profile.deploy]
 optimizer = true
-optimizer_runs = 999999
+optimizer-runs = 10_000_000
+
+[rpc_endpoints]
+arbitrum_sepolia = "https://sepolia-rollup.arbitrum.io/rpc"
+
+[etherscan]
+arbitrum_sepolia = { key = "${ARBISCAN_API_KEY}", url = "https://api-sepolia.arbiscan.io/api" }
 
 [fmt]
 sort_imports = true
