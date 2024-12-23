@@ -323,11 +323,6 @@ contract BicForkUniswapV2 is BicTokenPaymasterTestBase {
         bic.setPrePublic(false);
         vm.stopPrank();
 
-        // Approve WETH spending
-        vm.startPrank(user1);
-        weth.approve(address(uniswapV2Router), type(uint256).max);
-        vm.stopPrank();
-
         // Set time and check LF
         uint256 currentTime = LFStartTime + LFPeriod * 2 + 1;
         vm.warp(currentTime);
@@ -362,10 +357,12 @@ contract BicForkUniswapV2 is BicTokenPaymasterTestBase {
             "Swap would exceed max allocation"
         );
 
+        // Give user1 some ETH for the swap
+        vm.deal(user1, 10 ether);
+
         // Execute swap
         vm.startPrank(user1);
-        uniswapV2Router.swapExactTokensForTokens(
-            swapAmount,
+        uniswapV2Router.swapExactETHForTokens{value: swapAmount}(
             0, // min amount out
             path,
             user1,
