@@ -234,7 +234,6 @@ contract BicForkUniswapV2 is BicTokenPaymasterTestBase {
         assertEq(bic.LFPeriod(), LFPeriod, "LFPeriod mismatch");
         assertEq(bic.maxLF(), maxLF, "maxLF mismatch");
         assertEq(bic.minLF(), minLF, "minLF mismatch");
-        assertEq(bic.maxAllocation(), maxAllocation, "maxAllocation mismatch");
         assertEq(
             bic.getUniswapV2Pair(),
             address(pair),

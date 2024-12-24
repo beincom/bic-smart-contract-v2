@@ -7,7 +7,6 @@ library BicStorage {
         bool _isEnabledLFReduction;
         bool _swapBackEnabled;
         bool _swapping;
-        bool _enabledMaxAllocation;
         // Controller
         address _manager;
         address _operator;
@@ -23,7 +22,6 @@ library BicStorage {
         uint256 _maxLF;
         uint256 _minLF;
         uint256 _minSwapBackAmount;
-        uint256 _maxAllocation;
         uint256 _accumulatedLF;
         mapping(address => uint256) _prePublicWhitelist;
         mapping(address => uint256) _coolDown;

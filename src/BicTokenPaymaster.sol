@@ -45,9 +45,6 @@ contract BicTokenPaymaster is
     /// @dev Emitted when changing a specific pre-public round info
     event PrePublicRoundUpdated(address updater, uint256 category);
 
-    /// @dev Emitted when changing max allocation per a wallet
-    event MaxAllocationUpdated(address updater, uint256 newMaxAllocation);
-
     /// @dev Emitted when swap back and liquify
     event SwapBackAndLiquify(uint256 liquidityTokens, uint256 ETHForLiquidity);
 
@@ -146,10 +143,8 @@ contract BicTokenPaymaster is
 
         $._swapBackEnabled = true;
         $._minSwapBackAmount = _totalSupply.div(10000);
-        $._maxAllocation = _totalSupply.mul(100).div(10000);
-        $._enabledMaxAllocation = true;
 
-        $._uniswapV2Router = 0x920b806E40A00E02E7D2b94fFc89860fDaEd3640;
+        $._uniswapV2Router = 0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24;
         $._uniswapV2Pair = IUniswapV2Factory(
             IUniswapV2Router02($._uniswapV2Router).factory()
         ).createPair(
@@ -220,13 +215,6 @@ contract BicTokenPaymaster is
         return $._minLF;
     }
 
-    /**
-     * @notice Get max allocation
-     */
-    function maxAllocation() public view returns (uint256) {
-        BicStorage.Data storage $ = _storage();
-        return $._maxAllocation;
-    }
     /**
      * @notice Get whitelist category.
      * @param user user address.
@@ -343,18 +331,6 @@ contract BicTokenPaymaster is
         BicStorage.PrePublic memory prePublicRound
     ) external onlyOperator {
         _setPrePublicRound(prePublicRound);
-    }
-
-    /**
-     * @notice Update max allocation per a wallet.
-     * @param newMaxAllocation new max allocation per a wallet.
-     */
-    function setMaxAllocation(
-        uint256 newMaxAllocation
-    ) external onlyOperator {
-        BicStorage.Data storage $ = _storage();
-        $._maxAllocation = newMaxAllocation;
-        emit MaxAllocationUpdated(_msgSender(), newMaxAllocation);
     }
 
     // LIQUIDITY FEE MANAGEMENT FUNCTIONS
