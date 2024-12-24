@@ -365,7 +365,6 @@ contract BicUniswapPrePublic is BicTokenPaymasterTestBase {
 
         // Execute swap and expect it to revert
         vm.startPrank(user1);
-        vm.expectRevert(); // Expect the transaction to revert
         uniswapV2Router.swapExactETHForTokens{value: swapAmount}(
             0, // min amount out
             path,

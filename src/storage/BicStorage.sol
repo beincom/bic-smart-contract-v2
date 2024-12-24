@@ -9,11 +9,9 @@ library BicStorage {
         bool _swapping;
         bool _enabledMaxAllocation;
         // Controller
-        address _upgradeController;
-        address _prePublicController;
-        address _LFController;
-        address _maxAllocationController;
-        address _treasuryController;
+        address _manager;
+        address _operator;
+        // Liquidity treasury
         address _liquidityTreasury;
         // Dex
         address _uniswapV2Pair;
