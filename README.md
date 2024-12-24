@@ -54,8 +54,7 @@ $ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --pri
 ### Deploy BIC Token in Unichain Sepolia
 
 ```shell
-$ source .env
-$ forge script script/BicTokenPaymaster.s.sol:BicDeployScript --rpc-url unichain_sepolia --broadcast -vvvv
+$ forge script script/BicDeployScript.s.sol:BicDeployScript --rpc-url unichain_sepolia --broadcast -vvvv
 
 ```
 

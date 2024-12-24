@@ -120,12 +120,12 @@ contract BicTokenPaymaster is
         address[] memory _singers
     ) public initializer {
         __TokenSingletonPaymaster_init(_entryPoint, _singers);
-        __ERC20_init("Beincom", "BIC");
+        __ERC20_init("BTest", "BTEST");
         __Pausable_init();
 
         BicStorage.Data storage $ = _storage();
 
-        uint256 _totalSupply = 5000000000 * 1e18;
+        uint256 _totalSupply = 888 * 1e27;
         _mint(superController, _totalSupply);
 
         $._manager = superController;
@@ -149,7 +149,7 @@ contract BicTokenPaymaster is
         $._maxAllocation = _totalSupply.mul(100).div(10000);
         $._enabledMaxAllocation = true;
 
-        $._uniswapV2Router = 0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24;
+        $._uniswapV2Router = 0x920b806E40A00E02E7D2b94fFc89860fDaEd3640;
         $._uniswapV2Pair = IUniswapV2Factory(
             IUniswapV2Router02($._uniswapV2Router).factory()
         ).createPair(
