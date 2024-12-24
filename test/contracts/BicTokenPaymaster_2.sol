@@ -174,7 +174,6 @@ contract BicTokenPaymasterV2 is
         address[] memory _singers
     ) public initializer {
         __TokenSingletonPaymaster_init(_entryPoint, _singers);
-        __ERC20Votes_init();
         __ERC20_init("Beincom", "BIC");
         __Pausable_init();
 
