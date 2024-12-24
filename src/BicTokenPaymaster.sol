@@ -213,7 +213,6 @@ contract BicTokenPaymaster is
                 address(this),
                 IUniswapV2Router02($._uniswapV2Router).WETH()
             );
-        $._tokenInPair = IUniswapV2Router02($._uniswapV2Router).WETH();
         _setPool($._uniswapV2Pair, true);
 
         transferOwnership(superController);
@@ -226,13 +225,6 @@ contract BicTokenPaymaster is
     function getAccumulatedLF() public view returns (uint256) {
         BicStorage.Data storage $ = _storage();
         return $._accumulatedLF;
-    }
-
-    /**
-     * @notice Get token in pair */
-    function getTokenInPair() public view returns (address) {
-        BicStorage.Data storage $ = _storage();
-        return $._tokenInPair;
     }
 
     /**
@@ -521,20 +513,6 @@ contract BicTokenPaymaster is
     }
 
     // LIQUIDITY FEE MANAGEMENT FUNCTIONS
-    /**
-     * @notice Updated uniswap V2 pair.
-     * @param pair uniswap V2 pair address.
-     * @param tokenPair token in uniswap V2 pair.
-     */
-    function setUniswapV2Pair(
-        address pair,
-        address tokenPair
-    ) external onlyLFController {
-        BicStorage.Data storage $ = _storage();
-        $._uniswapV2Pair = pair;
-        $._tokenInPair = tokenPair;
-        emit UniswapV2PairUpdated(_msgSender(), pair, tokenPair);
-    }
 
     /**
      * @notice Update liquidity treasury.
@@ -758,29 +736,18 @@ contract BicTokenPaymaster is
         BicStorage.Data storage $ = _storage();
         address[] memory path = new address[](2);
         path[0] = address(this);
-        path[1] = $._tokenInPair;
+        path[1] = IUniswapV2Router02($._uniswapV2Router).WETH();
         $._accumulatedLF -= _swapAmount;
         _approve(address(this), $._uniswapV2Router, _swapAmount);
 
-        if ($._tokenInPair == IUniswapV2Router02($._uniswapV2Router).WETH()) {
-            IUniswapV2Router02($._uniswapV2Router)
-                .swapExactTokensForETHSupportingFeeOnTransferTokens(
-                    _swapAmount,
-                    0,
-                    path,
-                    address(this),
-                    block.timestamp
-                );
-        } else {
-            IUniswapV2Router02($._uniswapV2Router)
-                .swapExactTokensForTokensSupportingFeeOnTransferTokens(
-                    _swapAmount,
-                    0,
-                    path,
-                    address(this),
-                    block.timestamp
-                );
-        }
+        IUniswapV2Router02($._uniswapV2Router)
+            .swapExactTokensForETHSupportingFeeOnTransferTokens(
+                _swapAmount,
+                0,
+                path,
+                address(this),
+                block.timestamp
+            );
     }
 
     /**
@@ -795,33 +762,16 @@ contract BicTokenPaymaster is
         BicStorage.Data storage $ = _storage();
         $._accumulatedLF -= _liquidityToken0;
         _approve(address(this), $._uniswapV2Router, _liquidityToken0);
-        if ($._tokenInPair == IUniswapV2Router02($._uniswapV2Router).WETH()) {
-            IUniswapV2Router02($._uniswapV2Router).addLiquidityETH{
-                value: _liquidityToken1
-            }(
-                address(this),
-                _liquidityToken0,
-                0,
-                0,
-                $._liquidityTreasury,
-                block.timestamp
-            );
-        } else {
-            IERC20($._tokenInPair).approve(
-                $._uniswapV2Router,
-                _liquidityToken1
-            );
-            IUniswapV2Router02($._uniswapV2Router).addLiquidity(
-                address(this),
-                $._tokenInPair,
-                _liquidityToken0,
-                _liquidityToken1,
-                0,
-                0,
-                $._liquidityTreasury,
-                block.timestamp
-            );
-        }
+        IUniswapV2Router02($._uniswapV2Router).addLiquidityETH{
+            value: _liquidityToken1
+        }(
+            address(this),
+            _liquidityToken0,
+            0,
+            0,
+            $._liquidityTreasury,
+            block.timestamp
+        );
     }
 
     function _swapBackAndLiquify() internal {
@@ -835,25 +785,13 @@ contract BicTokenPaymaster is
         uint256 liquidityTokens = $._minSwapBackAmount.div(2);
         uint256 amounTokensToSwap = $._minSwapBackAmount.sub(liquidityTokens);
 
-        if ($._tokenInPair == IUniswapV2Router02($._uniswapV2Router).WETH()) {
-            _initialToken1Balance = address(this).balance;
-        } else {
-            _initialToken1Balance = IERC20($._tokenInPair).balanceOf(
-                address(this)
-            );
-        }
+        _initialToken1Balance = address(this).balance;
 
         _swapBack(amounTokensToSwap);
 
         uint256 _liquidityToken1;
 
-        if ($._tokenInPair == IUniswapV2Router02($._uniswapV2Router).WETH()) {
-            _liquidityToken1 = address(this).balance.sub(_initialToken1Balance);
-        } else {
-            _liquidityToken1 = IERC20($._tokenInPair)
-                .balanceOf(address(this))
-                .sub(_initialToken1Balance);
-        }
+        _liquidityToken1 = address(this).balance.sub(_initialToken1Balance);
 
         if (liquidityTokens > 0 && _liquidityToken1 > 0) {
             _addLiquidity(liquidityTokens, _liquidityToken1);

@@ -17,7 +17,6 @@ library BicStorage {
         address _liquidityTreasury;
         // Dex
         address _uniswapV2Pair;
-        address _tokenInPair;
         address _uniswapV2Router;
         // LF
         uint256 _LFStartTime;
