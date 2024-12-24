@@ -90,7 +90,6 @@ contract BicTokenPaymaster is
     /// @dev Emitted when renouncing operator
     event RenounceOperator(address operator);
 
-
     /// @dev Emitted when changing liquidity treasury
     event LiquidityTreasuryUpdated(address updater, address newLFTreasury);
 
@@ -122,7 +121,8 @@ contract BicTokenPaymaster is
 
         BicStorage.Data storage $ = _storage();
 
-        uint256 _totalSupply = 888 * 1e27;
+        uint256 _totalSupply = 5000000000 * 1e18;
+
         _mint(superController, _totalSupply);
 
         $._manager = superController;
@@ -262,9 +262,7 @@ contract BicTokenPaymaster is
      * @notice Update manager.
      * @param manager manager address.
      */
-    function setManager(
-        address manager
-    ) public onlyManager {
+    function setManager(address manager) public onlyManager {
         BicStorage.Data storage $ = _storage();
         $._manager = manager;
         emit ManagerUpdated(_msgSender(), manager);
@@ -274,9 +272,7 @@ contract BicTokenPaymaster is
      * @notice Update operator.
      * @param operator operator address.
      */
-    function setOperator(
-        address operator
-    ) public onlyManager {
+    function setOperator(address operator) public onlyManager {
         BicStorage.Data storage $ = _storage();
         $._operator = operator;
         emit OperatorUpdated(_msgSender(), operator);
@@ -339,9 +335,7 @@ contract BicTokenPaymaster is
      * @notice Update liquidity treasury.
      * @param newLFTreasury new liquidity treasury.
      */
-    function setLiquidityTreasury(
-        address newLFTreasury
-    ) external onlyManager {
+    function setLiquidityTreasury(address newLFTreasury) external onlyManager {
         BicStorage.Data storage $ = _storage();
         $._liquidityTreasury = newLFTreasury;
         emit LiquidityTreasuryUpdated(_msgSender(), newLFTreasury);
@@ -352,10 +346,7 @@ contract BicTokenPaymaster is
      * @param max max liquidity fee basic points.
      * @param min min liquidity fee basic points.
      */
-    function setLiquidityFee(
-        uint256 min,
-        uint256 max
-    ) external onlyOperator {
+    function setLiquidityFee(uint256 min, uint256 max) external onlyOperator {
         require(min >= 0 && min <= max && max <= 5000, "B: invalid values");
         BicStorage.Data storage $ = _storage();
         $._minLF = min;
@@ -506,10 +497,7 @@ contract BicTokenPaymaster is
      * @notice Block malicious address.
      * @param addr blacklist address.
      */
-    function blockAddress(
-        address addr,
-        bool status
-    ) public onlyManager {
+    function blockAddress(address addr, bool status) public onlyManager {
         BicStorage.Data storage $ = _storage();
         $._isBlocked[addr] = status;
         emit BlockUpdated(_msgSender(), addr, status);
