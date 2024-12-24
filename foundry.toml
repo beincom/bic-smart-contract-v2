@@ -4,7 +4,7 @@ out = "out"
 libs = ["lib"]
 via_ir = true
 optimizer = true
-optimizer_runs = 200
+optimizer_runs = 999999
 ffi = true
 ast = true
 build_info = true
@@ -14,6 +14,14 @@ unchecked_cheatcode_artifacts = true
 [profile.deploy]
 optimizer = true
 optimizer_runs = 999999
+
+[rpc_endpoints]
+unichain_sepolia = "https://sepolia.unichain.org"
+arbitrum_sepolia = "https://sepolia-rollup.arbitrum.io/rpc"
+
+[etherscan]
+unichain_sepolia = { key = "${ETHERSCAN_API_KEY}" }
+arbitrum_sepolia = { key = "${ETHERSCAN_API_KEY}" }
 
 [fmt]
 sort_imports = true
