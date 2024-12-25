@@ -6,9 +6,6 @@ library BicStorage {
         bool _isEnabledLFReduction;
         bool _swapBackEnabled;
         bool _swapping;
-        // Controller
-        address _manager;
-        address _operator;
         // Liquidity treasury
         address _liquidityTreasury;
         // Dex

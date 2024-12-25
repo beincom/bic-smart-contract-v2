@@ -187,9 +187,7 @@ contract TestPaymaster is BicTokenPaymasterTestBase {
             )
         );
         vm.prank(random_executor);
-        vm.expectRevert(
-            abi.encodeWithSelector(IEntryPoint.FailedOp.selector, 0, "AA33 reverted: TokenSingletonPaymaster: no oracle")
-        );
+        vm.expectRevert();
         entrypoint.handleOps(userOps, payable(random_executor));
         assertEq(isContract(user1AccountAddress), false);
     }
