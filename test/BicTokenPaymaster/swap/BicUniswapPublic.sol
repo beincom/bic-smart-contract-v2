@@ -194,6 +194,7 @@ contract BicForkUniswapV2 is BicTokenPaymasterTestBase {
     function test_simulate_swap_weth_to_bic_at_max_lf() public {
         // Disable pre-public
         vm.startPrank(owner);
+        bic.setPrePublic(false);
         vm.stopPrank();
 
         // Approve WETH spending
@@ -246,6 +247,7 @@ contract BicForkUniswapV2 is BicTokenPaymasterTestBase {
     function test_simulate_swap_weth_to_bic_at_current_lf() public {
         // Disable pre-public
         vm.startPrank(owner);
+        bic.setPrePublic(false);
         vm.stopPrank();
 
         // Set time and check LF
@@ -311,6 +313,7 @@ contract BicForkUniswapV2 is BicTokenPaymasterTestBase {
     function test_simulate_swap_weth_to_bic_over_max_allocation() public {
         // Disable pre-public
         vm.startPrank(owner);
+        bic.setPrePublic(false);
         vm.stopPrank();
 
         // Approve WETH spending
@@ -367,6 +370,7 @@ contract BicForkUniswapV2 is BicTokenPaymasterTestBase {
     function test_simulate_swap_bic_to_weth_at_current_lf() public {
         // Disable pre-public
         vm.startPrank(owner);
+        bic.setPrePublic(false);
         vm.stopPrank();
 
         // Approve BIC spending
@@ -430,6 +434,7 @@ contract BicForkUniswapV2 is BicTokenPaymasterTestBase {
     function test_simulate_swap_back_and_liquify_with_eth() public {
         // Disable pre-public
         vm.startPrank(owner);
+        bic.setPrePublic(false);
         vm.stopPrank();
 
         // Approve BIC spending for user1

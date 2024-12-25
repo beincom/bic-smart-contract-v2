@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {B139Storage} from "../../../src/storage/B139Storage.sol";
-import "../B139TestBase.sol";
+import {BicStorage} from "../../../src/storage/BicStorage.sol";
+import "../BicTokenPaymasterTestBase.sol";
 import {IUniswapV2Pair} from "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 
-contract BicUniswapPrePublic is B139TestBase {
+contract BicUniswapPrePublic is BicTokenPaymasterTestBase {
     // Constants
     uint256 constant INIT_BIC_AMOUNT = 500000000 * 1e18;
     uint256 constant INIT_ETH_AMOUNT = 100 ether;
@@ -137,7 +137,7 @@ contract BicUniswapPrePublic is B139TestBase {
         bic.setPrePublicWhitelist(addresses, categories);
 
         // Setup pre-public rounds
-        B139Storage.PrePublic memory round1 = B139Storage.PrePublic({
+        BicStorage.PrePublic memory round1 = BicStorage.PrePublic({
             category: 1,
             startTime: LFStartTime + 10,
             endTime: LFStartTime + 10 + round1Duration,
@@ -145,7 +145,7 @@ contract BicUniswapPrePublic is B139TestBase {
             maxAmountPerBuy: maxAmountPerBuy1
         });
 
-        B139Storage.PrePublic memory round2 = B139Storage.PrePublic({
+        BicStorage.PrePublic memory round2 = BicStorage.PrePublic({
             category: 2,
             startTime: round1.endTime,
             endTime: round1.endTime + round2Duration,

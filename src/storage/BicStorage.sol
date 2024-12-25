@@ -3,7 +3,7 @@ pragma solidity ^0.8.23;
 
 library BicStorage {
     struct Data {
-        bool _isEnabledLFReduction;
+        bool _prePublic;
         bool _swapBackEnabled;
         bool _swapping;
         // Liquidity treasury
@@ -19,9 +19,21 @@ library BicStorage {
         uint256 _minLF;
         uint256 _minSwapBackAmount;
         uint256 _accumulatedLF;
+        mapping(address => uint256) _prePublicWhitelist;
+        mapping(address => uint256) _coolDown;
+        mapping(uint256 => PrePublic) _prePublicRounds;
         mapping(address => bool) _isExcluded;
         mapping(address => bool) _isPool;
         mapping(address => bool) _isBlocked;
+    }
+
+    // Pre-public structure
+    struct PrePublic {
+        uint256 category;
+        uint256 startTime;
+        uint256 endTime;
+        uint256 coolDown;
+        uint256 maxAmountPerBuy;
     }
 
     // keccak256(abi.encode(uint256(keccak256("storage.B139Storage")) - 1)) & ~bytes32(uint256(0xff))
