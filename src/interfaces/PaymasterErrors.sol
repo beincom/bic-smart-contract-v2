@@ -11,4 +11,5 @@ interface PaymasterErrors {
     error PaymasterVerifyingModeDataLength(uint256 length);
     error PaymasterExchangeRate(uint256 exchangeRate);
     error PaymasterUnauthorizedVerifying();
+    error PaymasterInvalidVerifyingMode(uint8 mode);
 }

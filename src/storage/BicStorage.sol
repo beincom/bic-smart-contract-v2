@@ -3,15 +3,7 @@ pragma solidity ^0.8.23;
 
 library BicStorage {
     struct Data {
-        bool _prePublic;
-        bool _swapBackEnabled;
-        bool _swapping;
-        // Liquidity treasury
-        address _liquidityTreasury;
-        // Dex
-        address _uniswapV2Pair;
-        address _uniswapV2Router;
-        // LF
+        // LF (Liquidity Fee) Variables
         uint256 _LFStartTime;
         uint256 _LFReduction;
         uint256 _LFPeriod;
@@ -19,6 +11,15 @@ library BicStorage {
         uint256 _minLF;
         uint256 _minSwapBackAmount;
         uint256 _accumulatedLF;
+        // Addresses
+        address _liquidityTreasury;
+        address _uniswapV2Pair;
+        address _uniswapV2Router;
+        // Status Flags (packed into a single storage slot)
+        bool _prePublic;
+        bool _swapBackEnabled;
+        bool _swapping;
+        // Mappings
         mapping(address => uint256) _prePublicWhitelist;
         mapping(address => uint256) _coolDown;
         mapping(uint256 => PrePublic) _prePublicRounds;
@@ -36,9 +37,9 @@ library BicStorage {
         uint256 maxAmountPerBuy;
     }
 
-    // keccak256(abi.encode(uint256(keccak256("storage.B139Storage")) - 1)) & ~bytes32(uint256(0xff))
+    // Keccak-256 hash of "storage.B139Storage" minus 1, masked to fit storage slot
     bytes32 private constant BicTokenPaymasterStorageLocation =
-        0xd959cca23720948e5f992e1bef099a518994cc8b384c796f2b25ba30718fb300;
+    0xd959cca23720948e5f992e1bef099a518994cc8b384c796f2b25ba30718fb300;
 
     function _getStorageLocation()
         internal
