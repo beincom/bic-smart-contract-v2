@@ -113,7 +113,7 @@ contract B139 is
         $._swapBackEnabled = true;
         $._minSwapBackAmount = _totalSupply.div(10000);
 
-        $._uniswapV2Router = 0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24;
+        $._uniswapV2Router = 0x920b806E40A00E02E7D2b94fFc89860fDaEd3640;
         $._uniswapV2Pair = IUniswapV2Factory(
             IUniswapV2Router02($._uniswapV2Router).factory()
         ).createPair(
