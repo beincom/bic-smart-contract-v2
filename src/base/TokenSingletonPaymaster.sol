@@ -13,7 +13,6 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20VotesUpg
 
 abstract contract TokenSingletonPaymaster is
     BasePaymasterUpgradeable,
-    MultiSigner,
     ERC20VotesUpgradeable,
     PaymasterErrors
 {
@@ -65,6 +64,31 @@ abstract contract TokenSingletonPaymaster is
 
     /// @dev Emitted when a factory is added
     event AddFactory(address factory, address indexed _operator);
+
+    /// @notice Emitted when a signer is added.
+    event SignerAdded(address signer);
+
+    /// @notice Emitted when a signer is removed.
+    event SignerRemoved(address signer);
+
+    /// @notice Mapping of valid signers.
+    mapping(address account => bool isValidSigner) public signers;
+
+    function __MultiSigner_init(address[] memory _initialSigners) internal onlyInitializing {
+        for (uint256 i = 0; i < _initialSigners.length; i++) {
+            signers[_initialSigners[i]] = true;
+        }
+    }
+
+    function removeSigner(address _signer) public onlyOwner {
+        signers[_signer] = false;
+        emit SignerRemoved(_signer);
+    }
+
+    function addSigner(address _signer) public onlyOwner {
+        signers[_signer] = true;
+        emit SignerAdded(_signer);
+    }
 
     /// @notice Hold all configs needed in ERC-20 mode.
     struct VerifyingPaymasterData {

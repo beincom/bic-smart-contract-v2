@@ -4,12 +4,8 @@ pragma solidity ^0.8.23;
 library B139Storage {
     struct Data {
         bool _prePublic;
-        bool _isEnabledLFReduction;
         bool _swapBackEnabled;
         bool _swapping;
-        // Controller
-        address _manager;
-        address _operator;
         // Liquidity treasury
         address _liquidityTreasury;
         // Dex

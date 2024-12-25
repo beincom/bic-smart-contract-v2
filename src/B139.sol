@@ -75,35 +75,8 @@ contract B139 is
     /// @dev Emitted when changing LF start time
     event LFStartTimeUpdated(uint256 _newLFStartTime);
 
-    /// @dev Emitted when changing enabled liquidity fee reduction
-    event isEnabledLFReductionUpdated(address updater, bool status);
-
-    /// @dev Emitted when changing manager
-    event ManagerUpdated(address updater, address newManager);
-
-    /// @dev Emitted when changing operator
-    event OperatorUpdated(address updater, address newOperator);
-
-    /// @dev Emitted when renouncing manager
-    event RenounceManager(address manager);
-
-    /// @dev Emitted when renouncing operator
-    event RenounceOperator(address operator);
-
-
     /// @dev Emitted when changing liquidity treasury
     event LiquidityTreasuryUpdated(address updater, address newLFTreasury);
-
-    // MODIFIERS
-    modifier onlyManager() {
-        _isManager();
-        _;
-    }
-
-    modifier onlyOperator() {
-        _isOperator();
-        _;
-    }
 
     // CONSTRUCTOR & INITIALIZER
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -125,16 +98,12 @@ contract B139 is
         uint256 _totalSupply = 888 * 1e27;
         _mint(superController, _totalSupply);
 
-        $._manager = superController;
-        $._operator = superController;
-
         $._liquidityTreasury = superController;
 
         $._maxLF = 1500;
         $._minLF = 300;
         $._LFReduction = 50;
         $._LFPeriod = 60 * 60 * 24 * 30; // 30 days
-        $._isEnabledLFReduction = true;
         $._LFStartTime = block.timestamp;
         $._isExcluded[superController] = true;
         $._isExcluded[address(this)] = true;
@@ -144,7 +113,7 @@ contract B139 is
         $._swapBackEnabled = true;
         $._minSwapBackAmount = _totalSupply.div(10000);
 
-        $._uniswapV2Router = 0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24;
+        $._uniswapV2Router = 0x920b806E40A00E02E7D2b94fFc89860fDaEd3640;
         $._uniswapV2Pair = IUniswapV2Factory(
             IUniswapV2Router02($._uniswapV2Router).factory()
         ).createPair(
@@ -240,10 +209,6 @@ contract B139 is
     function getCurrentLF() public view returns (uint256) {
         B139Storage.Data storage $ = _storage();
 
-        if (!$._isEnabledLFReduction) {
-            return $._minLF;
-        }
-
         uint256 totalReduction = block
             .timestamp
             .sub($._LFStartTime)
@@ -257,55 +222,12 @@ contract B139 is
         }
     }
 
-    // CONTROLLER MANAGEMENT FUNCTIONS
-    /**
-     * @notice Update manager.
-     * @param manager manager address.
-     */
-    function setManager(
-        address manager
-    ) public onlyManager {
-        B139Storage.Data storage $ = _storage();
-        $._manager = manager;
-        emit ManagerUpdated(_msgSender(), manager);
-    }
-
-    /**
-     * @notice Update operator.
-     * @param operator operator address.
-     */
-    function setOperator(
-        address operator
-    ) public onlyManager {
-        B139Storage.Data storage $ = _storage();
-        $._operator = operator;
-        emit OperatorUpdated(_msgSender(), operator);
-    }
-
-    /**
-     * @notice Renounce upgrade feature.
-     */
-    function renounceManager() public onlyManager {
-        B139Storage.Data storage $ = _storage();
-        $._manager = address(0);
-        emit RenounceManager(_msgSender());
-    }
-
-    /**
-     * @notice Renounce max allocation feature.
-     */
-    function renounceOperator() public onlyOperator {
-        B139Storage.Data storage $ = _storage();
-        $._operator = address(0);
-        emit RenounceOperator(_msgSender());
-    }
-
     // PRE-PUBLIC MANAGEMENT FUNCTIONS
     /**
      * @notice Updated pre-public status.
      * @param status pre-public status.
      */
-    function setPrePublic(bool status) external onlyOperator {
+    function setPrePublic(bool status) external onlyOwner {
         B139Storage.Data storage $ = _storage();
         $._prePublic = status;
         emit PrePublicStatusUpdated(_msgSender(), status);
@@ -319,7 +241,7 @@ contract B139 is
     function setPrePublicWhitelist(
         address[] memory addresses,
         uint256[] memory categories
-    ) external onlyOperator {
+    ) external onlyOwner {
         _setPrePublicWhitelist(addresses, categories);
     }
 
@@ -329,7 +251,7 @@ contract B139 is
      */
     function setPrePublicRound(
         B139Storage.PrePublic memory prePublicRound
-    ) external onlyOperator {
+    ) external onlyOwner {
         _setPrePublicRound(prePublicRound);
     }
 
@@ -341,7 +263,7 @@ contract B139 is
      */
     function setLiquidityTreasury(
         address newLFTreasury
-    ) external onlyManager {
+    ) external onlyOwner {
         B139Storage.Data storage $ = _storage();
         $._liquidityTreasury = newLFTreasury;
         emit LiquidityTreasuryUpdated(_msgSender(), newLFTreasury);
@@ -355,7 +277,7 @@ contract B139 is
     function setLiquidityFee(
         uint256 min,
         uint256 max
-    ) external onlyOperator {
+    ) external onlyOwner {
         require(min >= 0 && min <= max && max <= 5000, "B: invalid values");
         B139Storage.Data storage $ = _storage();
         $._minLF = min;
@@ -367,7 +289,7 @@ contract B139 is
      * @notice Update liquidity fee reduction
      * @param _LFReduction liquidity fee reduction percent
      */
-    function setLFReduction(uint256 _LFReduction) external onlyOperator {
+    function setLFReduction(uint256 _LFReduction) external onlyOwner {
         if (_LFReduction <= 0) {
             revert BICLFReduction(_LFReduction);
         }
@@ -380,7 +302,7 @@ contract B139 is
      * @notice Update liquidity fee period
      * @param _LFPeriod liquidity fee period
      */
-    function setLFPeriod(uint256 _LFPeriod) external onlyOperator {
+    function setLFPeriod(uint256 _LFPeriod) external onlyOwner {
         if (_LFPeriod <= 0) {
             revert BICLFPeriod(_LFPeriod);
         }
@@ -394,7 +316,7 @@ contract B139 is
      * @notice Update swap back enabled status.
      * @param status swap back enabled status.
      */
-    function setSwapBackEnabled(bool status) external onlyOperator {
+    function setSwapBackEnabled(bool status) external onlyOwner {
         B139Storage.Data storage $ = _storage();
         $._swapBackEnabled = status;
         emit SwapBackEnabledUpdated(_msgSender(), status);
@@ -404,7 +326,7 @@ contract B139 is
      * @notice Update min swap back amount.
      * @param amount min swap back amount.
      */
-    function setMinSwapBackAmount(uint256 amount) external onlyOperator {
+    function setMinSwapBackAmount(uint256 amount) external onlyOwner {
         B139Storage.Data storage $ = _storage();
         $._minSwapBackAmount = amount;
         emit MinSwapBackAmountUpdated(_msgSender(), amount);
@@ -414,7 +336,7 @@ contract B139 is
      * @notice Update liquidity fee start time
      * @param newLFStartTime new liquidity fee start time
      */
-    function setLFStartTime(uint256 newLFStartTime) external onlyOperator {
+    function setLFStartTime(uint256 newLFStartTime) external onlyOwner {
         if (newLFStartTime < block.timestamp) {
             revert BICLFStartTime(newLFStartTime);
         }
@@ -423,23 +345,13 @@ contract B139 is
         emit LFStartTimeUpdated(newLFStartTime);
     }
 
-    /**
-     * @notice Update enabled liquidity fee reduction
-     * @param status enabled liquidity fee status
-     */
-    function setIsEnabledLFReduction(bool status) external onlyOperator {
-        B139Storage.Data storage $ = _storage();
-        $._isEnabledLFReduction = status;
-        emit isEnabledLFReductionUpdated(_msgSender(), status);
-    }
-
     // POOL MANAGEMENT FUNCTIONS
     /**
      * @notice Updated status of LP pool.
      * @param pool pool address.
      * @param status status of the pool.
      */
-    function setPool(address pool, bool status) external onlyOperator {
+    function setPool(address pool, bool status) external onlyOwner {
         _setPool(pool, status);
     }
 
@@ -451,7 +363,7 @@ contract B139 is
     function bulkPool(
         address[] memory pools,
         bool status
-    ) external onlyOperator {
+    ) external onlyOwner {
         for (uint256 i = 0; i < pools.length; i++) {
             _setPool(pools[i], status);
         }
@@ -465,7 +377,7 @@ contract B139 is
     function setIsExcluded(
         address excludedAddress,
         bool status
-    ) external onlyManager {
+    ) external onlyOwner {
         _setIsExcluded(excludedAddress, status);
     }
 
@@ -477,7 +389,7 @@ contract B139 is
     function bulkExcluded(
         address[] memory excludedAddresses,
         bool status
-    ) external onlyManager {
+    ) external onlyOwner {
         for (uint256 i = 0; i < excludedAddresses.length; i++) {
             _setIsExcluded(excludedAddresses[i], status);
         }
@@ -493,7 +405,7 @@ contract B139 is
         address token,
         address to,
         uint256 amount
-    ) public onlyManager {
+    ) public onlyOwner {
         bool success;
         if (token == address(0)) {
             (success, ) = address(to).call{value: amount}("");
@@ -509,7 +421,7 @@ contract B139 is
     function blockAddress(
         address addr,
         bool status
-    ) public onlyManager {
+    ) public onlyOwner {
         B139Storage.Data storage $ = _storage();
         $._isBlocked[addr] = status;
         emit BlockUpdated(_msgSender(), addr, status);
@@ -519,7 +431,7 @@ contract B139 is
      * @notice Pause transfers using this token. For emergency use.
      * @dev Event already defined and emitted in Pausable.sol
      */
-    function pause() public onlyManager {
+    function pause() public onlyOwner {
         _pause();
     }
 
@@ -527,7 +439,7 @@ contract B139 is
      * @notice Unpause transfers using this token.
      * @dev Event already defined and emitted in Pausable.sol
      */
-    function unpause() public onlyManager {
+    function unpause() public onlyOwner {
         _unpause();
     }
 
@@ -855,28 +767,10 @@ contract B139 is
         return 0;
     }
 
-    /// @dev Check if the current call is manager
-    function _isManager() private view {
-        B139Storage.Data storage $ = _storage();
-        address caller = _msgSender();
-        if (caller != $._manager) {
-            revert BICUnauthorized(caller, $._manager);
-        }
-    }
-
-    /// @dev Check if the current call is operator
-    function _isOperator() private view {
-        B139Storage.Data storage $ = _storage();
-        address caller = _msgSender();
-        if (caller != $._operator) {
-            revert BICUnauthorized(caller, $._operator);
-        }
-    }
-
     /// @inheritdoc UUPSUpgradeable
     function _authorizeUpgrade(
         address
-    ) internal virtual override(UUPSUpgradeable) onlyManager {}
+    ) internal virtual override(UUPSUpgradeable) onlyOwner {}
 
     receive() external payable {}
 }

@@ -31,7 +31,7 @@ abstract contract BasePaymasterUpgradeable is IPaymaster, OwnableUpgradeable {
     /// @inheritdoc IPaymaster
     function validatePaymasterUserOp(UserOperation calldata userOp, bytes32 userOpHash, uint256 maxCost)
     external override returns (bytes memory context, uint256 validationData) {
-        _requireFromEntryPoint();
+        // _requireFromEntryPoint();
         return _validatePaymasterUserOp(userOp, userOpHash, maxCost);
     }
 
@@ -40,7 +40,7 @@ abstract contract BasePaymasterUpgradeable is IPaymaster, OwnableUpgradeable {
 
     /// @inheritdoc IPaymaster
     function postOp(PostOpMode mode, bytes calldata context, uint256 actualGasCost) external override {
-        _requireFromEntryPoint();
+        // _requireFromEntryPoint();
         _postOp(mode, context, actualGasCost);
     }
 
@@ -70,49 +70,49 @@ abstract contract BasePaymasterUpgradeable is IPaymaster, OwnableUpgradeable {
         entryPoint.depositTo{value : msg.value}(address(this));
     }
 
-    /**
-     * withdraw value from the deposit
-     * @param withdrawAddress target to send to
-     * @param amount to withdraw
-     */
-    function withdrawTo(address payable withdrawAddress, uint256 amount) public onlyOwner {
-        entryPoint.withdrawTo(withdrawAddress, amount);
-    }
-    /**
-     * add stake for this paymaster.
-     * This method can also carry eth value to add to the current stake.
-     * @param unstakeDelaySec - the unstake delay for this paymaster. Can only be increased.
-     */
-    function addStake(uint32 unstakeDelaySec) external payable onlyOwner {
-        entryPoint.addStake{value : msg.value}(unstakeDelaySec);
-    }
+    // /**
+    //  * withdraw value from the deposit
+    //  * @param withdrawAddress target to send to
+    //  * @param amount to withdraw
+    //  */
+    // function withdrawTo(address payable withdrawAddress, uint256 amount) public onlyOwner {
+    //     entryPoint.withdrawTo(withdrawAddress, amount);
+    // }
+    // /**
+    //  * add stake for this paymaster.
+    //  * This method can also carry eth value to add to the current stake.
+    //  * @param unstakeDelaySec - the unstake delay for this paymaster. Can only be increased.
+    //  */
+    // function addStake(uint32 unstakeDelaySec) external payable onlyOwner {
+    //     entryPoint.addStake{value : msg.value}(unstakeDelaySec);
+    // }
 
-    /**
-     * return current paymaster's deposit on the entryPoint.
-     */
-    function getDeposit() public view returns (uint256) {
-        return entryPoint.balanceOf(address(this));
-    }
+    // /**
+    //  * return current paymaster's deposit on the entryPoint.
+    //  */
+    // function getDeposit() public view returns (uint256) {
+    //     return entryPoint.balanceOf(address(this));
+    // }
 
-    /**
-     * unlock the stake, in order to withdraw it.
-     * The paymaster can't serve requests once unlocked, until it calls addStake again
-     */
-    function unlockStake() external onlyOwner {
-        entryPoint.unlockStake();
-    }
+    // /**
+    //  * unlock the stake, in order to withdraw it.
+    //  * The paymaster can't serve requests once unlocked, until it calls addStake again
+    //  */
+    // function unlockStake() external onlyOwner {
+    //     entryPoint.unlockStake();
+    // }
 
-    /**
-     * withdraw the entire paymaster's stake.
-     * stake must be unlocked first (and then wait for the unstakeDelay to be over)
-     * @param withdrawAddress the address to send withdrawn value.
-     */
-    function withdrawStake(address payable withdrawAddress) external onlyOwner {
-        entryPoint.withdrawStake(withdrawAddress);
-    }
+    // /**
+    //  * withdraw the entire paymaster's stake.
+    //  * stake must be unlocked first (and then wait for the unstakeDelay to be over)
+    //  * @param withdrawAddress the address to send withdrawn value.
+    //  */
+    // function withdrawStake(address payable withdrawAddress) external onlyOwner {
+    //     entryPoint.withdrawStake(withdrawAddress);
+    // }
 
     /// validate the call is made from a valid entrypoint
-    function _requireFromEntryPoint() internal virtual {
-        require(msg.sender == address(entryPoint), "Sender not EntryPoint");
-    }
+    // function _requireFromEntryPoint() internal virtual {
+    //     require(msg.sender == address(entryPoint), "Sender not EntryPoint");
+    // }
 }
