@@ -3,28 +3,23 @@ pragma solidity ^0.8.23;
 
 library BicStorage {
     struct Data {
-        bool _prePublic;
-        bool _isEnabledLFReduction;
-        bool _swapBackEnabled;
-        bool _swapping;
-        bool _enabledMaxAllocation;
-        // Controller
-        address _manager;
-        address _operator;
-        // Liquidity treasury
-        address _liquidityTreasury;
-        // Dex
-        address _uniswapV2Pair;
-        address _uniswapV2Router;
-        // LF
+        // LF (Liquidity Fee) Variables
         uint256 _LFStartTime;
         uint256 _LFReduction;
         uint256 _LFPeriod;
         uint256 _maxLF;
         uint256 _minLF;
         uint256 _minSwapBackAmount;
-        uint256 _maxAllocation;
         uint256 _accumulatedLF;
+        // Addresses
+        address _liquidityTreasury;
+        address _uniswapV2Pair;
+        address _uniswapV2Router;
+        // Status Flags (packed into a single storage slot)
+        bool _prePublic;
+        bool _swapBackEnabled;
+        bool _swapping;
+        // Mappings
         mapping(address => uint256) _prePublicWhitelist;
         mapping(address => uint256) _coolDown;
         mapping(uint256 => PrePublic) _prePublicRounds;

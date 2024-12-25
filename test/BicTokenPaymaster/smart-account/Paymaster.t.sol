@@ -21,7 +21,7 @@ contract TestPaymaster is BicTokenPaymasterTestBase {
     function setUp() public virtual override {
         super.setUp();
         smart_account_factory = new SimpleAccountFactory(entrypoint);
-        bic.deposit{value: 1*1e18}();
+        entrypoint.depositTo{value: 1*1e18}(address(bic));
         user1AccountAddress = smart_account_factory.getAddress(user1, 0);
 
         vm.prank(owner);

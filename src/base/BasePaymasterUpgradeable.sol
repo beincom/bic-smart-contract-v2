@@ -63,13 +63,6 @@ abstract contract BasePaymasterUpgradeable is IPaymaster, OwnableUpgradeable {
         revert("must override");
     }
 
-    /**
-     * add a deposit for this paymaster, used for paying for transaction fees
-     */
-    function deposit() public payable {
-        entryPoint.depositTo{value : msg.value}(address(this));
-    }
-
      /**
       * withdraw value from the deposit
       * @param withdrawAddress target to send to
@@ -85,13 +78,6 @@ abstract contract BasePaymasterUpgradeable is IPaymaster, OwnableUpgradeable {
       */
      function addStake(uint32 unstakeDelaySec) external payable onlyOwner {
          entryPoint.addStake{value : msg.value}(unstakeDelaySec);
-     }
-
-     /**
-      * return current paymaster's deposit on the entryPoint.
-      */
-     function getDeposit() public view returns (uint256) {
-         return entryPoint.balanceOf(address(this));
      }
 
      /**
