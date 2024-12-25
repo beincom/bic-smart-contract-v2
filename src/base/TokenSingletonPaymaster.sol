@@ -8,12 +8,12 @@ import "@account-abstraction/contracts/samples/IOracle.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20VotesUpgradeable.sol";
 
 abstract contract TokenSingletonPaymaster is
     BasePaymasterUpgradeable,
     MultiSigner,
-    ERC20Upgradeable
+    ERC20VotesUpgradeable
 {
     /// @custom:storage-location erc7201:storage.TokenSingletonPaymaster
     struct SingletonPaymasterStorage {
