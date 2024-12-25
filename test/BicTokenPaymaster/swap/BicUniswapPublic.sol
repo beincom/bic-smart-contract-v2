@@ -121,37 +121,7 @@ contract BicForkUniswapV2 is BicTokenPaymasterTestBase {
         console.log("Reserves after - BIC:", reserve0, "WETH:", reserve1);
         console.log("LP tokens owned by owner:", pair.balanceOf(owner));
 
-        // Setup pre-public whitelist
-        address[] memory addresses = new address[](2);
-        addresses[0] = user1;
-        addresses[1] = user2;
-        uint256[] memory categories = new uint256[](2);
-        categories[0] = 1;
-        categories[1] = 2;
-
-        vm.prank(owner);
-        bic.setPrePublicWhitelist(addresses, categories);
-
-        // Setup pre-public rounds
-        BicStorage.PrePublic memory round1 = BicStorage.PrePublic({
-            category: 1,
-            startTime: LFStartTime + 10,
-            endTime: LFStartTime + 10 + round1Duration,
-            coolDown: coolDown1,
-            maxAmountPerBuy: maxAmountPerBuy1
-        });
-
-        BicStorage.PrePublic memory round2 = BicStorage.PrePublic({
-            category: 2,
-            startTime: round1.endTime,
-            endTime: round1.endTime + round2Duration,
-            coolDown: coolDown2,
-            maxAmountPerBuy: maxAmountPerBuy2
-        });
-
         vm.startPrank(owner);
-        bic.setPrePublicRound(round1);
-        bic.setPrePublicRound(round2);
         // Transfer initial balances
         bic.transfer(user1, user1Balance);
         bic.transfer(user2, user2Balance);
@@ -185,47 +155,6 @@ contract BicForkUniswapV2 is BicTokenPaymasterTestBase {
         pair = IUniswapV2Pair(pool);
         // Verify pool setup
         assertTrue(pair.balanceOf(owner) > 0, "Pool setup failed");
-    }
-
-    function test_check_pre_public_round() public view {
-        // Check whitelist categories
-        uint256 user1Category = bic.getWhitelistCategory(user1);
-        assertEq(user1Category, 1, "User1 category should be 1");
-
-        uint256 user2Category = bic.getWhitelistCategory(user2);
-        assertEq(user2Category, 2, "User2 category should be 2");
-
-        // Get round info from storage
-        BicStorage.PrePublic memory round1Info = bic.getPrePublicRound(1);
-        BicStorage.PrePublic memory round2Info = bic.getPrePublicRound(2);
-
-        // Check round1 info
-        assertEq(
-            round1Info.startTime,
-            LFStartTime + 10,
-            "Round1 start time mismatch"
-        );
-        assertEq(
-            round1Info.maxAmountPerBuy,
-            maxAmountPerBuy1,
-            "Round1 max amount mismatch"
-        );
-        assertTrue(
-            round1Info.coolDown != round2Info.coolDown,
-            "Round cooldowns should be different"
-        );
-
-        // Check round2 info
-        assertEq(
-            round2Info.startTime,
-            round1Info.endTime,
-            "Round2 start time mismatch"
-        );
-        assertEq(
-            round2Info.maxAmountPerBuy,
-            maxAmountPerBuy2,
-            "Round2 max amount mismatch"
-        );
     }
 
     function test_checking_fee() public view {
@@ -265,7 +194,6 @@ contract BicForkUniswapV2 is BicTokenPaymasterTestBase {
     function test_simulate_swap_weth_to_bic_at_max_lf() public {
         // Disable pre-public
         vm.startPrank(owner);
-        bic.setPrePublic(false);
         vm.stopPrank();
 
         // Approve WETH spending
@@ -318,7 +246,6 @@ contract BicForkUniswapV2 is BicTokenPaymasterTestBase {
     function test_simulate_swap_weth_to_bic_at_current_lf() public {
         // Disable pre-public
         vm.startPrank(owner);
-        bic.setPrePublic(false);
         vm.stopPrank();
 
         // Set time and check LF
@@ -384,7 +311,6 @@ contract BicForkUniswapV2 is BicTokenPaymasterTestBase {
     function test_simulate_swap_weth_to_bic_over_max_allocation() public {
         // Disable pre-public
         vm.startPrank(owner);
-        bic.setPrePublic(false);
         vm.stopPrank();
 
         // Approve WETH spending
@@ -441,7 +367,6 @@ contract BicForkUniswapV2 is BicTokenPaymasterTestBase {
     function test_simulate_swap_bic_to_weth_at_current_lf() public {
         // Disable pre-public
         vm.startPrank(owner);
-        bic.setPrePublic(false);
         vm.stopPrank();
 
         // Approve BIC spending
@@ -505,7 +430,6 @@ contract BicForkUniswapV2 is BicTokenPaymasterTestBase {
     function test_simulate_swap_back_and_liquify_with_eth() public {
         // Disable pre-public
         vm.startPrank(owner);
-        bic.setPrePublic(false);
         vm.stopPrank();
 
         // Approve BIC spending for user1

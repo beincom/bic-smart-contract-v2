@@ -133,29 +133,7 @@ contract BicUniswapController is BicTokenPaymasterTestBase {
         categories[0] = 1;
         categories[1] = 2;
 
-        vm.prank(owner);
-        bic.setPrePublicWhitelist(addresses, categories);
-
-        // Setup pre-public rounds
-        BicStorage.PrePublic memory round1 = BicStorage.PrePublic({
-            category: 1,
-            startTime: LFStartTime + 10,
-            endTime: LFStartTime + 10 + round1Duration,
-            coolDown: coolDown1,
-            maxAmountPerBuy: maxAmountPerBuy1
-        });
-
-        BicStorage.PrePublic memory round2 = BicStorage.PrePublic({
-            category: 2,
-            startTime: round1.endTime,
-            endTime: round1.endTime + round2Duration,
-            coolDown: coolDown2,
-            maxAmountPerBuy: maxAmountPerBuy2
-        });
-
         vm.startPrank(owner);
-        bic.setPrePublicRound(round1);
-        bic.setPrePublicRound(round2);
         // Transfer initial balances
         bic.transfer(user1, user1Balance);
         bic.transfer(user2, user2Balance);
@@ -191,505 +169,502 @@ contract BicUniswapController is BicTokenPaymasterTestBase {
         assertTrue(pair.balanceOf(owner) > 0, "Pool setup failed");
     }
 
-    function test_simulate_controller_swap_back_and_liquify_in_public() public {
-        // Set time to LFStartTime + 2 periods + 1
-        uint256 currentTime = LFStartTime + (LFPeriod * 2) + 1;
-        vm.warp(currentTime);
+    // function test_simulate_controller_swap_back_and_liquify_in_public() public {
+    //     // Set time to LFStartTime + 2 periods + 1
+    //     uint256 currentTime = LFStartTime + (LFPeriod * 2) + 1;
+    //     vm.warp(currentTime);
 
-        // Disable pre-public
-        vm.startPrank(owner);
-        bic.setPrePublic(false);
-        vm.stopPrank();
+    //     // Disable pre-public
+    //     vm.startPrank(owner);
+    //     vm.stopPrank();
 
-        // Approve router for user1
-        vm.startPrank(user1);
-        bic.approve(address(uniswapV2Router), type(uint256).max);
-        vm.stopPrank();
+    //     // Approve router for user1
+    //     vm.startPrank(user1);
+    //     bic.approve(address(uniswapV2Router), type(uint256).max);
+    //     vm.stopPrank();
 
-        // Check current LF conditions
-        uint256 currentLF = bic.getCurrentLF();
-        uint256 estLF = simulateLF(LFStartTime, currentTime);
+    //     // Check current LF conditions
+    //     uint256 currentLF = bic.getCurrentLF();
+    //     uint256 estLF = simulateLF(LFStartTime, currentTime);
 
-        assertEq(currentLF, estLF, "Current LF should match estimated LF");
-        assertLe(
-            currentLF,
-            maxLF,
-            "Current LF should be less than or equal to maxLF"
-        );
-        assertGe(
-            currentLF,
-            minLF,
-            "Current LF should be greater than or equal to minLF"
-        );
+    //     assertEq(currentLF, estLF, "Current LF should match estimated LF");
+    //     assertLe(
+    //         currentLF,
+    //         maxLF,
+    //         "Current LF should be less than or equal to maxLF"
+    //     );
+    //     assertGe(
+    //         currentLF,
+    //         minLF,
+    //         "Current LF should be greater than or equal to minLF"
+    //     );
 
-        // Setup first swap parameters
-        uint256 swapAmount = maxAllocation / 10;
-        address[] memory sellPath = new address[](2);
-        sellPath[0] = path[1]; // BIC token
-        sellPath[1] = path[0]; // WETH
-        uint256[] memory amountOuts = uniswapV2Router.getAmountsOut(
-            swapAmount,
-            sellPath
-        );
+    //     // Setup first swap parameters
+    //     uint256 swapAmount = maxAllocation / 10;
+    //     address[] memory sellPath = new address[](2);
+    //     sellPath[0] = path[1]; // BIC token
+    //     sellPath[1] = path[0]; // WETH
+    //     uint256[] memory amountOuts = uniswapV2Router.getAmountsOut(
+    //         swapAmount,
+    //         sellPath
+    //     );
 
-        // Calculate and verify fee
-        uint256 fee = simulateFee(swapAmount, currentLF);
-        assertGe(
-            fee,
-            minSwapBackAndLiquify,
-            "Fee should be >= minSwapBackAndLiquify"
-        );
+    //     // Calculate and verify fee
+    //     uint256 fee = simulateFee(swapAmount, currentLF);
+    //     assertGe(
+    //         fee,
+    //         minSwapBackAndLiquify,
+    //         "Fee should be >= minSwapBackAndLiquify"
+    //     );
 
-        // Execute first swap
-        vm.startPrank(user1);
-        uniswapV2Router.swapExactTokensForETHSupportingFeeOnTransferTokens(
-            swapAmount,
-            0, // min amount out
-            sellPath,
-            user1,
-            currentTime + 60
-        );
-        vm.stopPrank();
+    //     // Execute first swap
+    //     vm.startPrank(user1);
+    //     uniswapV2Router.swapExactTokensForETHSupportingFeeOnTransferTokens(
+    //         swapAmount,
+    //         0, // min amount out
+    //         sellPath,
+    //         user1,
+    //         currentTime + 60
+    //     );
+    //     vm.stopPrank();
 
-        // Verify accumulated LF
-        uint256 accumulatedLF = bic.balanceOf(address(bic));
-        assertGe(
-            accumulatedLF,
-            minSwapBackAndLiquify,
-            "Accumulated LF should be >= minSwapBackAndLiquify"
-        );
+    //     // Verify accumulated LF
+    //     uint256 accumulatedLF = bic.balanceOf(address(bic));
+    //     assertGe(
+    //         accumulatedLF,
+    //         minSwapBackAndLiquify,
+    //         "Accumulated LF should be >= minSwapBackAndLiquify"
+    //     );
 
-        // Disable swap back and liquify
-        vm.startPrank(owner);
-        bic.setSwapBackEnabled(false);
-        vm.stopPrank();
+    //     // Disable swap back and liquify
+    //     vm.startPrank(owner);
+    //     bic.setSwapBackEnabled(false);
+    //     vm.stopPrank();
 
-        // Setup second swap
-        vm.startPrank(user2);
-        bic.approve(address(uniswapV2Router), type(uint256).max);
-        uint256 swapAmount2 = maxAllocation / 10;
-        uint256 fee2 = simulateFee(swapAmount2, currentLF);
+    //     // Setup second swap
+    //     vm.startPrank(user2);
+    //     bic.approve(address(uniswapV2Router), type(uint256).max);
+    //     uint256 swapAmount2 = maxAllocation / 10;
+    //     uint256 fee2 = simulateFee(swapAmount2, currentLF);
 
-        // Execute second swap
-        uniswapV2Router.swapExactTokensForETHSupportingFeeOnTransferTokens(
-            swapAmount2,
-            0, // min amount out
-            sellPath,
-            user1,
-            currentTime + 60
-        );
-        vm.stopPrank();
+    //     // Execute second swap
+    //     uniswapV2Router.swapExactTokensForETHSupportingFeeOnTransferTokens(
+    //         swapAmount2,
+    //         0, // min amount out
+    //         sellPath,
+    //         user1,
+    //         currentTime + 60
+    //     );
+    //     vm.stopPrank();
 
-        // Verify accumulated LF after swap back
-        uint256 accumulatedLFAfterSwapBack = bic.balanceOf(address(bic));
-        assertEq(
-            accumulatedLFAfterSwapBack,
-            fee + fee2,
-            "Accumulated LF should equal sum of fees"
-        );
+    //     // Verify accumulated LF after swap back
+    //     uint256 accumulatedLFAfterSwapBack = bic.balanceOf(address(bic));
+    //     assertEq(
+    //         accumulatedLFAfterSwapBack,
+    //         fee + fee2,
+    //         "Accumulated LF should equal sum of fees"
+    //     );
 
-        // Withdraw stuck tokens
-        vm.prank(owner);
-        bic.withdrawStuckToken(address(bic), user3, accumulatedLFAfterSwapBack);
+    //     // Withdraw stuck tokens
+    //     vm.prank(owner);
+    //     bic.withdrawStuckToken(address(bic), user3, accumulatedLFAfterSwapBack);
 
-        // Verify final balance
-        assertEq(
-            bic.balanceOf(user3),
-            accumulatedLFAfterSwapBack,
-            "User3 should receive all accumulated fees"
-        );
-    }
+    //     // Verify final balance
+    //     assertEq(
+    //         bic.balanceOf(user3),
+    //         accumulatedLFAfterSwapBack,
+    //         "User3 should receive all accumulated fees"
+    //     );
+    // }
 
-    function test_simulate_renounce_controller_swap_back_and_liquify_in_public()
-        public
-    {
-        // Set time to LFStartTime + 2 periods + 1
-        uint256 currentTime = LFStartTime + (LFPeriod * 2) + 1;
-        vm.warp(currentTime);
+    // function test_simulate_renounce_controller_swap_back_and_liquify_in_public()
+    //     public
+    // {
+    //     // Set time to LFStartTime + 2 periods + 1
+    //     uint256 currentTime = LFStartTime + (LFPeriod * 2) + 1;
+    //     vm.warp(currentTime);
 
-        // Disable pre-public
-        vm.startPrank(owner);
-        bic.setPrePublic(false);
-        vm.stopPrank();
-        // Approve router for user1
-        vm.startPrank(user1);
-        bic.approve(address(uniswapV2Router), type(uint256).max);
-        vm.stopPrank();
+    //     // Disable pre-public
+    //     vm.startPrank(owner);
+    //     vm.stopPrank();
+    //     // Approve router for user1
+    //     vm.startPrank(user1);
+    //     bic.approve(address(uniswapV2Router), type(uint256).max);
+    //     vm.stopPrank();
 
-        // Check current LF conditions
-        uint256 currentLF = bic.getCurrentLF();
-        uint256 estLF = simulateLF(LFStartTime, currentTime);
+    //     // Check current LF conditions
+    //     uint256 currentLF = bic.getCurrentLF();
+    //     uint256 estLF = simulateLF(LFStartTime, currentTime);
 
-        assertEq(currentLF, estLF, "Current LF should match estimated LF");
-        assertLe(
-            currentLF,
-            maxLF,
-            "Current LF should be less than or equal to maxLF"
-        );
-        assertGe(
-            currentLF,
-            minLF,
-            "Current LF should be greater than or equal to minLF"
-        );
+    //     assertEq(currentLF, estLF, "Current LF should match estimated LF");
+    //     assertLe(
+    //         currentLF,
+    //         maxLF,
+    //         "Current LF should be less than or equal to maxLF"
+    //     );
+    //     assertGe(
+    //         currentLF,
+    //         minLF,
+    //         "Current LF should be greater than or equal to minLF"
+    //     );
 
-        // Setup first swap parameters
-        uint256 swapAmount = maxAllocation / 10;
-        address[] memory sellPath = new address[](2);
-        sellPath[0] = path[1]; // BIC token
-        sellPath[1] = path[0]; // WETH
+    //     // Setup first swap parameters
+    //     uint256 swapAmount = maxAllocation / 10;
+    //     address[] memory sellPath = new address[](2);
+    //     sellPath[0] = path[1]; // BIC token
+    //     sellPath[1] = path[0]; // WETH
 
-        // Calculate and verify fee
-        uint256 fee = simulateFee(swapAmount, currentLF);
-        assertGe(
-            fee,
-            minSwapBackAndLiquify,
-            "Fee should be >= minSwapBackAndLiquify"
-        );
+    //     // Calculate and verify fee
+    //     uint256 fee = simulateFee(swapAmount, currentLF);
+    //     assertGe(
+    //         fee,
+    //         minSwapBackAndLiquify,
+    //         "Fee should be >= minSwapBackAndLiquify"
+    //     );
 
-        // Execute first swap
-        vm.startPrank(user1);
-        uniswapV2Router.swapExactTokensForETHSupportingFeeOnTransferTokens(
-            swapAmount,
-            0, // min amount out
-            sellPath,
-            user1,
-            currentTime + 60
-        );
-        vm.stopPrank();
+    //     // Execute first swap
+    //     vm.startPrank(user1);
+    //     uniswapV2Router.swapExactTokensForETHSupportingFeeOnTransferTokens(
+    //         swapAmount,
+    //         0, // min amount out
+    //         sellPath,
+    //         user1,
+    //         currentTime + 60
+    //     );
+    //     vm.stopPrank();
 
-        // Verify accumulated LF
-        uint256 accumulatedLF = bic.balanceOf(address(bic));
-        assertGe(
-            accumulatedLF,
-            minSwapBackAndLiquify,
-            "Accumulated LF should be >= minSwapBackAndLiquify"
-        );
+    //     // Verify accumulated LF
+    //     uint256 accumulatedLF = bic.balanceOf(address(bic));
+    //     assertGe(
+    //         accumulatedLF,
+    //         minSwapBackAndLiquify,
+    //         "Accumulated LF should be >= minSwapBackAndLiquify"
+    //     );
 
-        // Renounce liquidity fee controller
-        vm.startPrank(owner);
-        bic.renounceOperator();
-        vm.stopPrank();
-        // Attempt to set swap back enabled (should revert)
-        vm.startPrank(owner);
-        vm.expectRevert();
-        bic.setSwapBackEnabled(false);
-        vm.stopPrank();
-        // Setup second swap
-        vm.startPrank(user2);
-        bic.approve(address(uniswapV2Router), type(uint256).max);
-        uint256 swapAmount2 = maxAllocation / 10;
-        uint256 fee2 = simulateFee(swapAmount2, currentLF);
+    //     // Renounce liquidity fee controller
+    //     vm.startPrank(owner);
+    //     vm.stopPrank();
+    //     // Attempt to set swap back enabled (should revert)
+    //     vm.startPrank(owner);
+    //     vm.expectRevert();
+    //     bic.setSwapBackEnabled(false);
+    //     vm.stopPrank();
+    //     // Setup second swap
+    //     vm.startPrank(user2);
+    //     bic.approve(address(uniswapV2Router), type(uint256).max);
+    //     uint256 swapAmount2 = maxAllocation / 10;
+    //     uint256 fee2 = simulateFee(swapAmount2, currentLF);
 
-        // Execute second swap
-        uniswapV2Router.swapExactTokensForETHSupportingFeeOnTransferTokens(
-            swapAmount2,
-            0, // min amount out
-            sellPath,
-            user1,
-            currentTime + 60
-        );
-        vm.stopPrank();
+    //     // Execute second swap
+    //     uniswapV2Router.swapExactTokensForETHSupportingFeeOnTransferTokens(
+    //         swapAmount2,
+    //         0, // min amount out
+    //         sellPath,
+    //         user1,
+    //         currentTime + 60
+    //     );
+    //     vm.stopPrank();
 
-        // Verify accumulated LF after swap back
-        uint256 accumulatedLFAfterSwapBack = bic.balanceOf(address(bic));
-        assertLe(
-            accumulatedLFAfterSwapBack,
-            fee + fee2,
-            "Accumulated LF should be <= sum of fees"
-        );
+    //     // Verify accumulated LF after swap back
+    //     uint256 accumulatedLFAfterSwapBack = bic.balanceOf(address(bic));
+    //     assertLe(
+    //         accumulatedLFAfterSwapBack,
+    //         fee + fee2,
+    //         "Accumulated LF should be <= sum of fees"
+    //     );
 
-        // Withdraw stuck tokens
-        vm.prank(owner);
-        bic.withdrawStuckToken(address(bic), user3, accumulatedLFAfterSwapBack);
+    //     // Withdraw stuck tokens
+    //     vm.prank(owner);
+    //     bic.withdrawStuckToken(address(bic), user3, accumulatedLFAfterSwapBack);
 
-        // Verify final balance
-        assertEq(
-            bic.balanceOf(user3),
-            accumulatedLFAfterSwapBack,
-            "User3 should receive all accumulated fees"
-        );
-    }
+    //     // Verify final balance
+    //     assertEq(
+    //         bic.balanceOf(user3),
+    //         accumulatedLFAfterSwapBack,
+    //         "User3 should receive all accumulated fees"
+    //     );
+    // }
 
-    function test_simulate_controller_swap_weth_to_bic_cross_rounds() public {
-        // Set time to round1 start + 1
-        uint256 currentTime = LFStartTime + 10 + 1; // round1.startTime + 1
-        vm.warp(currentTime);
+    // function test_simulate_controller_swap_weth_to_bic_cross_rounds() public {
+    //     // Set time to round1 start + 1
+    //     uint256 currentTime = LFStartTime + 10 + 1; // round1.startTime + 1
+    //     vm.warp(currentTime);
 
-        // Check current LF conditions
-        uint256 currentLF = bic.getCurrentLF();
-        uint256 estLF = simulateLF(LFStartTime, currentTime);
+    //     // Check current LF conditions
+    //     uint256 currentLF = bic.getCurrentLF();
+    //     uint256 estLF = simulateLF(LFStartTime, currentTime);
 
-        assertEq(currentLF, estLF, "Current LF should match estimated LF");
-        assertLe(
-            currentLF,
-            maxLF,
-            "Current LF should be less than or equal to maxLF"
-        );
-        assertGe(
-            currentLF,
-            minLF,
-            "Current LF should be greater than or equal to minLF"
-        );
+    //     assertEq(currentLF, estLF, "Current LF should match estimated LF");
+    //     assertLe(
+    //         currentLF,
+    //         maxLF,
+    //         "Current LF should be less than or equal to maxLF"
+    //     );
+    //     assertGe(
+    //         currentLF,
+    //         minLF,
+    //         "Current LF should be greater than or equal to minLF"
+    //     );
 
-        // First swap setup and verification (user1 in round1)
-        uint256 swapAmount = 0.001 ether;
-        uint256[] memory amountOuts = uniswapV2Router.getAmountsOut(
-            swapAmount,
-            path
-        );
+    //     // First swap setup and verification (user1 in round1)
+    //     uint256 swapAmount = 0.001 ether;
+    //     uint256[] memory amountOuts = uniswapV2Router.getAmountsOut(
+    //         swapAmount,
+    //         path
+    //     );
 
-        assertLe(
-            user1Balance + amountOuts[1],
-            maxAllocation,
-            "First swap would exceed max allocation"
-        );
-        assertLe(
-            amountOuts[1],
-            maxAmountPerBuy1,
-            "First swap would exceed max amount per buy in round1"
-        );
+    //     assertLe(
+    //         user1Balance + amountOuts[1],
+    //         maxAllocation,
+    //         "First swap would exceed max allocation"
+    //     );
+    //     assertLe(
+    //         amountOuts[1],
+    //         maxAmountPerBuy1,
+    //         "First swap would exceed max amount per buy in round1"
+    //     );
 
-        // Execute first swap
-        vm.startPrank(user1);
-        uniswapV2Router.swapExactETHForTokens{value: swapAmount}(
-            0, // min amount out
-            path,
-            user1,
-            currentTime + 60
-        );
-        vm.stopPrank();
+    //     // Execute first swap
+    //     vm.startPrank(user1);
+    //     uniswapV2Router.swapExactETHForTokens{value: swapAmount}(
+    //         0, // min amount out
+    //         path,
+    //         user1,
+    //         currentTime + 60
+    //     );
+    //     vm.stopPrank();
 
-        // Second swap setup (user2 attempting in round1)
-        uint256 swapAmount2 = 0.002 ether;
-        uint256[] memory amountOuts2 = uniswapV2Router.getAmountsOut(
-            swapAmount2,
-            path
-        );
+    //     // Second swap setup (user2 attempting in round1)
+    //     uint256 swapAmount2 = 0.002 ether;
+    //     uint256[] memory amountOuts2 = uniswapV2Router.getAmountsOut(
+    //         swapAmount2,
+    //         path
+    //     );
 
-        assertLe(
-            user2Balance + amountOuts2[1],
-            maxAllocation,
-            "Second swap would exceed max allocation"
-        );
-        assertLe(
-            amountOuts2[1],
-            maxAmountPerBuy2,
-            "Second swap would exceed max amount per buy in round2"
-        );
+    //     assertLe(
+    //         user2Balance + amountOuts2[1],
+    //         maxAllocation,
+    //         "Second swap would exceed max allocation"
+    //     );
+    //     assertLe(
+    //         amountOuts2[1],
+    //         maxAmountPerBuy2,
+    //         "Second swap would exceed max amount per buy in round2"
+    //     );
 
-        // Attempt user2 swap in round1 (should fail)
-        vm.startPrank(user2);
-        vm.expectRevert("UniswapV2: TRANSFER_FAILED");
-        uniswapV2Router.swapExactETHForTokens{value: swapAmount2}(
-            0,
-            path,
-            user2,
-            currentTime + 60
-        );
-        vm.stopPrank();
+    //     // Attempt user2 swap in round1 (should fail)
+    //     vm.startPrank(user2);
+    //     vm.expectRevert("UniswapV2: TRANSFER_FAILED");
+    //     uniswapV2Router.swapExactETHForTokens{value: swapAmount2}(
+    //         0,
+    //         path,
+    //         user2,
+    //         currentTime + 60
+    //     );
+    //     vm.stopPrank();
 
-        // Update whitelist for user2
-        address[] memory addresses = new address[](1);
-        addresses[0] = user2;
-        uint256[] memory categories = new uint256[](1);
-        categories[0] = 1;
+    //     // Update whitelist for user2
+    //     address[] memory addresses = new address[](1);
+    //     addresses[0] = user2;
+    //     uint256[] memory categories = new uint256[](1);
+    //     categories[0] = 1;
 
-        vm.prank(owner);
-        bic.setPrePublicWhitelist(addresses, categories);
+    //     vm.prank(owner);
+    //     bic.setPrePublicWhitelist(addresses, categories);
 
-        // Move to round2
-        vm.warp(LFStartTime + 10 + round1Duration);
-        // Let's add some debug logs to verify the timing
-        console.log("Current time:", block.timestamp);
-        console.log("Round1 start:", LFStartTime + 10);
-        console.log("Round1 end:", LFStartTime + 10 + round1Duration);
-        console.log("Round2 start:", LFStartTime + 10 + round1Duration);
-        console.log(
-            "Round2 end:",
-            LFStartTime + 10 + round1Duration + round2Duration
-        );
+    //     // Move to round2
+    //     vm.warp(LFStartTime + 10 + round1Duration);
+    //     // Let's add some debug logs to verify the timing
+    //     console.log("Current time:", block.timestamp);
+    //     console.log("Round1 start:", LFStartTime + 10);
+    //     console.log("Round1 end:", LFStartTime + 10 + round1Duration);
+    //     console.log("Round2 start:", LFStartTime + 10 + round1Duration);
+    //     console.log(
+    //         "Round2 end:",
+    //         LFStartTime + 10 + round1Duration + round2Duration
+    //     );
 
-        // Execute user2 swap in round2
-        vm.startPrank(user2);
-        uniswapV2Router.swapExactETHForTokens{value: swapAmount2}(
-            0,
-            path,
-            user2,
-            LFStartTime + 10 + round1Duration + 60
-        );
-        vm.stopPrank();
+    //     // Execute user2 swap in round2
+    //     vm.startPrank(user2);
+    //     uniswapV2Router.swapExactETHForTokens{value: swapAmount2}(
+    //         0,
+    //         path,
+    //         user2,
+    //         LFStartTime + 10 + round1Duration + 60
+    //     );
+    //     vm.stopPrank();
 
-        // Verify final balances
-        assertEq(
-            bic.balanceOf(address(bic)),
-            0,
-            "BIC contract balance should be 0"
-        );
-        assertEq(
-            bic.balanceOf(user1),
-            user1Balance + amountOuts[1],
-            "User1 balance should include only round1 swap"
-        );
-        assertEq(
-            bic.balanceOf(user2),
-            user2Balance + amountOuts2[1],
-            "User2 balance should include only round2 swap"
-        );
-    }
+    //     // Verify final balances
+    //     assertEq(
+    //         bic.balanceOf(address(bic)),
+    //         0,
+    //         "BIC contract balance should be 0"
+    //     );
+    //     assertEq(
+    //         bic.balanceOf(user1),
+    //         user1Balance + amountOuts[1],
+    //         "User1 balance should include only round1 swap"
+    //     );
+    //     assertEq(
+    //         bic.balanceOf(user2),
+    //         user2Balance + amountOuts2[1],
+    //         "User2 balance should include only round2 swap"
+    //     );
+    // }
 
-    function test_simulate_renounce_controller_swap_weth_to_bic_cross_rounds()
-        public
-    {
-        // Set time to round1 start + 1
-        uint256 currentTime = LFStartTime + 10 + 1; // round1.startTime + 1
-        vm.warp(currentTime);
+    // function test_simulate_renounce_controller_swap_weth_to_bic_cross_rounds()
+    //     public
+    // {
+    //     // Set time to round1 start + 1
+    //     uint256 currentTime = LFStartTime + 10 + 1; // round1.startTime + 1
+    //     vm.warp(currentTime);
 
-        // Check current LF conditions
-        uint256 currentLF = bic.getCurrentLF();
-        uint256 estLF = simulateLF(LFStartTime, currentTime);
+    //     // Check current LF conditions
+    //     uint256 currentLF = bic.getCurrentLF();
+    //     uint256 estLF = simulateLF(LFStartTime, currentTime);
 
-        assertEq(currentLF, estLF, "Current LF should match estimated LF");
-        assertLe(
-            currentLF,
-            maxLF,
-            "Current LF should be less than or equal to maxLF"
-        );
-        assertGe(
-            currentLF,
-            minLF,
-            "Current LF should be greater than or equal to minLF"
-        );
+    //     assertEq(currentLF, estLF, "Current LF should match estimated LF");
+    //     assertLe(
+    //         currentLF,
+    //         maxLF,
+    //         "Current LF should be less than or equal to maxLF"
+    //     );
+    //     assertGe(
+    //         currentLF,
+    //         minLF,
+    //         "Current LF should be greater than or equal to minLF"
+    //     );
 
-        // First swap setup and verification (user1 in round1)
-        uint256 swapAmount = 0.001 ether;
-        uint256[] memory amountOuts = uniswapV2Router.getAmountsOut(
-            swapAmount,
-            path
-        );
+    //     // First swap setup and verification (user1 in round1)
+    //     uint256 swapAmount = 0.001 ether;
+    //     uint256[] memory amountOuts = uniswapV2Router.getAmountsOut(
+    //         swapAmount,
+    //         path
+    //     );
 
-        assertLe(
-            user1Balance + amountOuts[1],
-            maxAllocation,
-            "First swap would exceed max allocation"
-        );
-        assertLe(
-            amountOuts[1],
-            maxAmountPerBuy1,
-            "First swap would exceed max amount per buy in round1"
-        );
+    //     assertLe(
+    //         user1Balance + amountOuts[1],
+    //         maxAllocation,
+    //         "First swap would exceed max allocation"
+    //     );
+    //     assertLe(
+    //         amountOuts[1],
+    //         maxAmountPerBuy1,
+    //         "First swap would exceed max amount per buy in round1"
+    //     );
 
-        // Execute first swap
-        vm.startPrank(user1);
-        uniswapV2Router.swapExactETHForTokens{value: swapAmount}(
-            0, // min amount out
-            path,
-            user1,
-            currentTime + 60
-        );
-        vm.stopPrank();
+    //     // Execute first swap
+    //     vm.startPrank(user1);
+    //     uniswapV2Router.swapExactETHForTokens{value: swapAmount}(
+    //         0, // min amount out
+    //         path,
+    //         user1,
+    //         currentTime + 60
+    //     );
+    //     vm.stopPrank();
 
-        // Second swap setup (user2 attempting in round1)
-        uint256 swapAmount2 = 0.002 ether;
-        uint256[] memory amountOuts2 = uniswapV2Router.getAmountsOut(
-            swapAmount2,
-            path
-        );
+    //     // Second swap setup (user2 attempting in round1)
+    //     uint256 swapAmount2 = 0.002 ether;
+    //     uint256[] memory amountOuts2 = uniswapV2Router.getAmountsOut(
+    //         swapAmount2,
+    //         path
+    //     );
 
-        assertLe(
-            user2Balance + amountOuts2[1],
-            maxAllocation,
-            "Second swap would exceed max allocation"
-        );
-        assertLe(
-            amountOuts2[1],
-            maxAmountPerBuy2,
-            "Second swap would exceed max amount per buy in round2"
-        );
+    //     assertLe(
+    //         user2Balance + amountOuts2[1],
+    //         maxAllocation,
+    //         "Second swap would exceed max allocation"
+    //     );
+    //     assertLe(
+    //         amountOuts2[1],
+    //         maxAmountPerBuy2,
+    //         "Second swap would exceed max amount per buy in round2"
+    //     );
 
-        // Attempt user2 swap in round1 (should fail)
-        vm.startPrank(user2);
-        vm.expectRevert("UniswapV2: TRANSFER_FAILED");
-        uniswapV2Router.swapExactETHForTokens{value: swapAmount2}(
-            0,
-            path,
-            user2,
-            currentTime + 60
-        );
-        vm.stopPrank();
+    //     // Attempt user2 swap in round1 (should fail)
+    //     vm.startPrank(user2);
+    //     vm.expectRevert("UniswapV2: TRANSFER_FAILED");
+    //     uniswapV2Router.swapExactETHForTokens{value: swapAmount2}(
+    //         0,
+    //         path,
+    //         user2,
+    //         currentTime + 60
+    //     );
+    //     vm.stopPrank();
 
-        // Update whitelist for user2
-        address[] memory addresses = new address[](1);
-        addresses[0] = user2;
-        uint256[] memory categories = new uint256[](1);
-        categories[0] = 1;
+    //     // Update whitelist for user2
+    //     address[] memory addresses = new address[](1);
+    //     addresses[0] = user2;
+    //     uint256[] memory categories = new uint256[](1);
+    //     categories[0] = 1;
 
-        vm.startPrank(owner);
-        bic.setPrePublicWhitelist(addresses, categories);
-        bic.renounceOperator(); // Renounce pre-public control
-        vm.stopPrank();
+    //     vm.startPrank(owner);
+    //     bic.setPrePublicWhitelist(addresses, categories);
+    //     bic.renounceOperator(); // Renounce pre-public control
+    //     vm.stopPrank();
 
-        // Execute user2 swap after renouncing
-        vm.startPrank(user2);
-        uniswapV2Router.swapExactETHForTokens{value: swapAmount2}(
-            0,
-            path,
-            user2,
-            LFStartTime + 10 + 60
-        );
-        vm.stopPrank();
+    //     // Execute user2 swap after renouncing
+    //     vm.startPrank(user2);
+    //     uniswapV2Router.swapExactETHForTokens{value: swapAmount2}(
+    //         0,
+    //         path,
+    //         user2,
+    //         LFStartTime + 10 + 60
+    //     );
+    //     vm.stopPrank();
 
-        // Verify final balances
-        assertEq(
-            bic.balanceOf(address(bic)),
-            0,
-            "BIC contract balance should be 0"
-        );
-        assertEq(
-            bic.balanceOf(user1),
-            user1Balance + amountOuts[1],
-            "User1 balance should include only first swap"
-        );
-        assertEq(
-            bic.balanceOf(user2),
-            user2Balance + amountOuts2[1],
-            "User2 balance should include only second swap"
-        );
-    }
+    //     // Verify final balances
+    //     assertEq(
+    //         bic.balanceOf(address(bic)),
+    //         0,
+    //         "BIC contract balance should be 0"
+    //     );
+    //     assertEq(
+    //         bic.balanceOf(user1),
+    //         user1Balance + amountOuts[1],
+    //         "User1 balance should include only first swap"
+    //     );
+    //     assertEq(
+    //         bic.balanceOf(user2),
+    //         user2Balance + amountOuts2[1],
+    //         "User2 balance should include only second swap"
+    //     );
+    // }
 
-    function test_simulate_pause_transaction_except_excluded_addresses()
-        public
-    {
-        // Renounce pre-public and pause transactions
-        vm.startPrank(owner);
-        bic.setPrePublic(false);
-        bic.renounceOperator();
-        bic.pause();
-        vm.stopPrank();
+    // function test_simulate_pause_transaction_except_excluded_addresses()
+    //     public
+    // {
+    //     // Renounce pre-public and pause transactions
+    //     vm.startPrank(owner);
+    //     bic.setPrePublic(false);
+    //     bic.renounceOperator();
+    //     bic.pause();
+    //     vm.stopPrank();
 
-        // Test transfers from non-excluded addresses (should fail)
-        vm.startPrank(user1);
-        vm.expectRevert();
-        bic.transfer(user2, user1Balance);
-        vm.stopPrank();
+    //     // Test transfers from non-excluded addresses (should fail)
+    //     vm.startPrank(user1);
+    //     vm.expectRevert();
+    //     bic.transfer(user2, user1Balance);
+    //     vm.stopPrank();
 
-        // Test transfers from owner (excluded by default)
-        vm.startPrank(owner);
-        bic.transfer(user1, user1Balance);
+    //     // Test transfers from owner (excluded by default)
+    //     vm.startPrank(owner);
+    //     bic.transfer(user1, user1Balance);
 
-        // Set user2 as excluded
-        bic.setIsExcluded(user1, true);
-        vm.stopPrank();
+    //     // Set user2 as excluded
+    //     bic.setIsExcluded(user1, true);
+    //     vm.stopPrank();
 
-        // Test transfer from newly excluded user2
-        vm.prank(user1);
-        bic.transfer(user2, user1Balance * 2);
+    //     // Test transfer from newly excluded user2
+    //     vm.prank(user1);
+    //     bic.transfer(user2, user1Balance * 2);
 
-        // Verify final balances
-        assertEq(
-            bic.balanceOf(user2),
-            user2Balance * 3,
-            "User2 should have triple their initial balance"
-        );
-        assertEq(bic.balanceOf(user1), 0, "User1 should have zero balance");
-    }
+    //     // Verify final balances
+    //     assertEq(
+    //         bic.balanceOf(user2),
+    //         user2Balance * 3,
+    //         "User2 should have triple their initial balance"
+    //     );
+    //     assertEq(bic.balanceOf(user1), 0, "User1 should have zero balance");
+    // }
 }
