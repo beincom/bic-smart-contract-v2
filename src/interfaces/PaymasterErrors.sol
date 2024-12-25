@@ -3,7 +3,6 @@
 pragma solidity ^0.8.23;
 
 interface PaymasterErrors {
-    error PaymasterMode(uint8 mode);
     error PaymasterDataLength(uint256 paymasterDataLength, uint256 paymasterDataOffset);
     error PaymasterInvalidFactory(address factory);
     error PaymasterInvalidOracle(address oracle);
