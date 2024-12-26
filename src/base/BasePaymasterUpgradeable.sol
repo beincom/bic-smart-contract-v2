@@ -4,6 +4,7 @@ pragma solidity ^0.8.12;
 
 /* solhint-disable reason-string */
 
+import "../interfaces/PaymasterErrors.sol";
 import "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
 import "@account-abstraction/contracts/interfaces/IPaymaster.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -13,7 +14,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
  * provides helper methods for staking.
  * validates that the postOp is called only by the entryPoint
  */
-abstract contract BasePaymasterUpgradeable is IPaymaster, OwnableUpgradeable {
+abstract contract BasePaymasterUpgradeable is IPaymaster, OwnableUpgradeable, PaymasterErrors {
     IEntryPoint public entryPoint;
 
 
@@ -99,6 +100,8 @@ abstract contract BasePaymasterUpgradeable is IPaymaster, OwnableUpgradeable {
 
      // validate the call is made from a valid entrypoint
      function _requireFromEntryPoint() internal virtual {
-         require(msg.sender == address(entryPoint), "Sender not EntryPoint");
+        if (_msgSender() != address(entryPoint)) {
+            revert PaymasterNotEntryPoint(_msgSender());
+        }
      }
 }
