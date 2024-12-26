@@ -120,4 +120,13 @@ contract BicTokenPaymasterTestBase is Test {
             )
         );
     }
+
+    uint256 private constant BLOCKED_OFFSET = 15;
+    function isBlocked(address addr) public view returns (bool) {
+        uint256 slotMapping = uint256(BicTokenPaymasterStorageLocation) + BLOCKED_OFFSET;
+        return uint256(vm.load(
+            address(bic),
+            keccak256(abi.encode(addr, bytes32(slotMapping)))
+        )) == 1;
+    }
 }
