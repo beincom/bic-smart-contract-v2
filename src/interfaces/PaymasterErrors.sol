@@ -12,4 +12,5 @@ interface PaymasterErrors {
     error PaymasterExchangeRate(uint256 exchangeRate);
     error PaymasterUnauthorizedVerifying();
     error PaymasterInvalidVerifyingMode(uint8 mode);
+    error PaymasterNotEntryPoint(address caller);
 }

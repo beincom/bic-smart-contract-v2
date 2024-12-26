@@ -251,19 +251,6 @@ contract BicTokenPaymaster is
         emit MinSwapBackAmountUpdated(_msgSender(), amount);
     }
 
-    /**
-     * @notice Update liquidity fee start time
-     * @param newLFStartTime new liquidity fee start time
-     */
-    function setLFStartTime(uint256 newLFStartTime) external onlyOwner {
-        if (newLFStartTime < block.timestamp) {
-            revert BICLFStartTime(newLFStartTime);
-        }
-        BicStorage.Data storage $ = _storage();
-        $._LFStartTime = newLFStartTime;
-        emit LFStartTimeUpdated(newLFStartTime);
-    }
-
     // POOL MANAGEMENT FUNCTIONS
     /**
      * @notice Updated status of LP pool.
@@ -272,29 +259,6 @@ contract BicTokenPaymaster is
      */
     function setPool(address pool, bool status) external onlyOwner {
         _setPool(pool, status);
-    }
-
-    /**
-     * @notice Updated status of LP pools.
-     * @param pools pool addresses.
-     * @param status status of the pool.
-     */
-    function bulkPool(address[] memory pools, bool status) external onlyOwner {
-        for (uint256 i = 0; i < pools.length; i++) {
-            _setPool(pools[i], status);
-        }
-    }
-
-    /**
-     * @notice Updated status of excluded address.
-     * @param excludedAddress excluded address
-     * @param status status of excluded address
-     */
-    function setIsExcluded(
-        address excludedAddress,
-        bool status
-    ) external onlyOwner {
-        _setIsExcluded(excludedAddress, status);
     }
 
     /**
