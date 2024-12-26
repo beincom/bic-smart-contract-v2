@@ -4,28 +4,28 @@ pragma solidity ^0.8.23;
 library BicStorage {
     struct Data {
         // LF (Liquidity Fee) Variables
-        uint256 _LFStartTime;
-        uint256 _LFReduction;
-        uint256 _LFPeriod;
-        uint256 _maxLF;
-        uint256 _minLF;
-        uint256 _minSwapBackAmount;
-        uint256 _accumulatedLF;
+        uint256 _LFStartTime; // slot 0
+        uint256 _LFReduction; // slot 1
+        uint256 _LFPeriod; // slot 2
+        uint256 _maxLF; // slot 3
+        uint256 _minLF; // slot 4
+        uint256 _minSwapBackAmount; // slot 5
+        uint256 _accumulatedLF; // slot 6
         // Addresses
-        address _liquidityTreasury;
-        address _uniswapV2Pair;
-        address _uniswapV2Router;
-        // Status Flags (packed into a single storage slot)
+        address _liquidityTreasury; // slot 7
+        address _uniswapV2Pair; // slot 8
+        address _uniswapV2Router; // slot 9
+        // Status Flags (packed into a single storage slot) slot 9
         bool _prePublic;
         bool _swapBackEnabled;
         bool _swapping;
         // Mappings
-        mapping(address => uint256) _prePublicWhitelist;
-        mapping(address => uint256) _coolDown;
-        mapping(uint256 => PrePublic) _prePublicRounds;
-        mapping(address => bool) _isExcluded;
-        mapping(address => bool) _isPool;
-        mapping(address => bool) _isBlocked;
+        mapping(address => uint256) _prePublicWhitelist; // slot 10
+        mapping(address => uint256) _coolDown; // slot 11
+        mapping(uint256 => PrePublic) _prePublicRounds; // slot 12
+        mapping(address => bool) _isExcluded; // slot 13
+        mapping(address => bool) _isPool; // slot 14
+        mapping(address => bool) _isBlocked; // slot 15
     }
 
     // Pre-public structure

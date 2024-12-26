@@ -77,7 +77,7 @@ contract BicUniswapController is BicTokenPaymasterTestBase {
         vm.startPrank(owner);
 
         // 2. Make sure the pair exists
-        address pairAddress = bic.getUniswapV2Pair();
+        address pairAddress = getUniswapV2Pair();
         console.log("Pair address:", pairAddress);
 
         // 3. Clear any existing approvals first
@@ -163,7 +163,7 @@ contract BicUniswapController is BicTokenPaymasterTestBase {
         path[0] = address(weth);
         path[1] = address(bic);
         // Get the pool address and create pair interface
-        address pool = bic.getUniswapV2Pair();
+        address pool = getUniswapV2Pair();
         pair = IUniswapV2Pair(pool);
         // Verify pool setup
         assertTrue(pair.balanceOf(owner) > 0, "Pool setup failed");

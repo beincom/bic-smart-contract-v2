@@ -47,4 +47,86 @@ contract BicTokenPaymasterTestBase is Test {
         vm.prank(owner);
         bic.transfer(holder1, holder1_init_amount);
     }
+
+    // The storage location constant from BicStorage
+    bytes32 private constant BicTokenPaymasterStorageLocation =
+    0xd959cca23720948e5f992e1bef099a518994cc8b384c796f2b25ba30718fb300;
+
+    // Offset of _uniswapV2Pair in the BicStorage.Data struct
+    uint256 private constant UNISWAP_V2_PAIR_OFFSET = 8;
+
+    function getUniswapV2Pair() public view returns (address) {
+        address uniswapV2Pair = address(
+            uint160(
+                uint256(
+                    vm.load(
+                        address(bic),
+                        bytes32(uint256(BicTokenPaymasterStorageLocation) + UNISWAP_V2_PAIR_OFFSET)
+                    )
+                )
+            )
+        );
+        return uniswapV2Pair;
+    }
+
+    // Offset of _accumulatedLF in the BicStorage.Data struct
+    uint256 private constant ACCUMULATED_LF_OFFSET = 6;
+    function getAccumulatedLF() public view returns (uint256) {
+        return uint256(
+            vm.load(
+                address(bic),
+                bytes32(uint256(BicTokenPaymasterStorageLocation) + ACCUMULATED_LF_OFFSET)
+            )
+        );
+    }
+
+    // Offset of _LFReduction in the BicStorage.Data struct
+    uint256 private constant LF_REDUCTION_OFFSET = 1;
+    function getLFReduction() public view returns (uint256) {
+        return uint256(
+            vm.load(
+                address(bic),
+                bytes32(uint256(BicTokenPaymasterStorageLocation) + LF_REDUCTION_OFFSET)
+            )
+        );
+    }
+
+    uint256 private constant LF_PERIOD_OFFSET = 2;
+    function getLFPeriod() public view returns (uint256) {
+        return uint256(
+            vm.load(
+                address(bic),
+                bytes32(uint256(BicTokenPaymasterStorageLocation) + LF_PERIOD_OFFSET)
+            )
+        );
+    }
+
+    uint256 private constant MAX_LF_OFFSET = 3;
+    function getMaxLF() public view returns (uint256) {
+        return uint256(
+            vm.load(
+                address(bic),
+                bytes32(uint256(BicTokenPaymasterStorageLocation) + MAX_LF_OFFSET)
+            )
+        );
+    }
+
+    uint256 private constant MIN_LF_OFFSET = 4;
+    function getMinLF() public view returns (uint256) {
+        return uint256(
+            vm.load(
+                address(bic),
+                bytes32(uint256(BicTokenPaymasterStorageLocation) + MIN_LF_OFFSET)
+            )
+        );
+    }
+
+    uint256 private constant BLOCKED_OFFSET = 15;
+    function isBlocked(address addr) public view returns (bool) {
+        uint256 slotMapping = uint256(BicTokenPaymasterStorageLocation) + BLOCKED_OFFSET;
+        return uint256(vm.load(
+            address(bic),
+            keccak256(abi.encode(addr, bytes32(slotMapping)))
+        )) == 1;
+    }
 }
