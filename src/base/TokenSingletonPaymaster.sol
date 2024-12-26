@@ -3,7 +3,6 @@ pragma solidity ^0.8.23;
 
 import "./BasePaymasterUpgradeable.sol";
 import "./MultiSigner.sol";
-import "../interfaces/PaymasterErrors.sol";
 import "@account-abstraction/contracts/core/Helpers.sol";
 import "@account-abstraction/contracts/samples/IOracle.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
@@ -14,8 +13,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20VotesUpg
 abstract contract TokenSingletonPaymaster is
     BasePaymasterUpgradeable,
     ERC20VotesUpgradeable,
-    MultiSigner,
-    PaymasterErrors
+    MultiSigner
 {
     /// @custom:storage-location erc7201:storage.TokenSingletonPaymaster
     struct SingletonPaymasterStorage {
