@@ -10,7 +10,7 @@ import {TokenSingletonPaymaster} from "../../src/base/TokenSingletonPaymaster.so
 
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
-import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {BICErrors} from "../../src/interfaces/BICErrors.sol";
 
 contract BicTokenPaymasterV2 is
@@ -401,9 +401,9 @@ contract BicTokenPaymasterV2 is
     ) public onlyOwner {
         bool success;
         if (token == address(0)) {
-            SafeTransferLib.safeTransferETH(to, amount);
+            (success, ) = address(to).call{value: amount}("");
         } else {
-            SafeTransferLib.safeTransfer(token, to, amount);
+            IERC20(token).transfer(to, amount);
         }
     }
 
