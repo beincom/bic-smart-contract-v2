@@ -12,8 +12,8 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20VotesUpg
 
 abstract contract TokenSingletonPaymaster is
     BasePaymasterUpgradeable,
-    MultiSigner,
-    ERC20VotesUpgradeable
+    ERC20VotesUpgradeable,
+    MultiSigner
 {
     /// @custom:storage-location erc7201:storage.TokenSingletonPaymaster
     struct SingletonPaymasterStorage {
@@ -186,7 +186,7 @@ abstract contract TokenSingletonPaymaster is
         } else if (mode == VERIFYING_MODE) {
             return _validateVerifyingMode(userOp, paymasterConfig, userOpHash);
         } else {
-            revert("TokenSingletonPaymaster: invalid paymaster mode");
+            revert PaymasterInvalidVerifyingMode(mode);
         }
     }
     /**
@@ -201,10 +201,11 @@ abstract contract TokenSingletonPaymaster is
         bytes calldata _paymasterAndData,
         uint256 _paymasterDataOffset
     ) internal pure returns (uint8, bytes calldata) {
-        require(
-            _paymasterAndData.length > _paymasterDataOffset,
-            "TokenSingletonPaymaster: invalid paymaster data length"
-        );
+        if (
+            _paymasterAndData.length <= _paymasterDataOffset
+        ) {
+            revert PaymasterDataLength(_paymasterAndData.length, _paymasterDataOffset);
+        }
 
         uint8 mode = uint8(
             bytes1(
@@ -229,10 +230,11 @@ abstract contract TokenSingletonPaymaster is
     ) internal view virtual {
         address factory = address(bytes20(_userOp.initCode[0:20]));
         SingletonPaymasterStorage storage $ = _getSingletonPaymasterStorage();
-        require(
-            $._factories[factory],
-            "TokenSingletonPaymaster: wrong account factory"
-        );
+        if (
+            !$._factories[factory]
+        ) {
+            revert PaymasterInvalidFactory(factory);
+        }
     }
 
     function _validateOracleMode(
@@ -241,28 +243,27 @@ abstract contract TokenSingletonPaymaster is
         bytes32 _userOpHash
     ) internal view returns (bytes memory, uint256) {
         SingletonPaymasterStorage storage $ = _getSingletonPaymasterStorage();
-        require($._oracle != address(0), "TokenSingletonPaymaster: no oracle");
+        if ($._oracle == address(0)) {
+            revert PaymasterInvalidOracle($._oracle);
+        }
         uint256 tokenPrefund = getTokenValueOfEth(_requiredPreFund);
 
         // verificationGasLimit is dual-purposed, as gas limit for postOp. make sure it is high enough
         // make sure that verificationGasLimit is high enough to handle postOp
-        require(
-            _userOp.verificationGasLimit > COST_OF_POST,
-            "TokenSingletonPaymaster: gas too low for postOp"
-        );
+        if (
+            _userOp.verificationGasLimit <= COST_OF_POST
+        ) {
+            revert PaymasterLowGasPostOp(_userOp.verificationGasLimit);
+        }
 
         if (_userOp.initCode.length != 0) {
             _validateConstructor(_userOp);
-            require(
-                balanceOf(_userOp.sender) >= tokenPrefund,
-                "TokenSingletonPaymaster: no balance (pre-create)"
-            );
-        } else {
-            require(
-                balanceOf(_userOp.sender) >= tokenPrefund,
-                "TokenSingletonPaymaster: no balance"
-            );
+        } 
+        
+        if (balanceOf(_userOp.sender) < tokenPrefund) {
+            revert PaymasterInsufficient(_userOp.sender, tokenPrefund);
         }
+        
         return (
             _createPostOpContext(
                 _userOp,
@@ -286,10 +287,11 @@ abstract contract TokenSingletonPaymaster is
         bytes calldata _paymasterConfig,
         bytes32 _userOpHash
     ) internal view returns (bytes memory, uint256) {
-        require(
-            _paymasterConfig.length >= VERIFYING_PAYMASTER_DATA_LENGTH,
-            "TokenSingletonPaymaster: invalid paymaster config length"
-        );
+        if (
+            _paymasterConfig.length < VERIFYING_PAYMASTER_DATA_LENGTH
+        ) {
+            revert PaymasterVerifyingModeDataLength(_paymasterConfig.length);
+        }
 
         uint48 validUntil = uint48(bytes6(_paymasterConfig[0:6]));
         uint48 validAfter = uint48(bytes6(_paymasterConfig[6:12]));
@@ -297,15 +299,17 @@ abstract contract TokenSingletonPaymaster is
         uint256 exchangeRate = uint256(bytes32(_paymasterConfig[28:60]));
         bytes calldata signature = _paymasterConfig[60:];
 
-        require(
-            exchangeRate != 0,
-            "TokenSingletonPaymaster: exchange rate is invalid"
-        );
+        if (
+            exchangeRate == 0
+        ) {
+            revert PaymasterExchangeRate(exchangeRate);
+        }
 
-        require(
-            signature.length == 64 || signature.length == 65,
-            "TokenSingletonPaymaster: signature length is invalid"
-        );
+        if (
+            signature.length != 64 && signature.length != 65
+        ) {
+            revert PaymasterUnauthorizedVerifying();
+        }
 
         bytes32 hash = MessageHashUtils.toEthSignedMessageHash(
             getHash(VERIFYING_MODE, _userOp)

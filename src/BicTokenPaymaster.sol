@@ -2,8 +2,8 @@
 
 pragma solidity ^0.8.23;
 
-import {IUniswapV2Router} from "./interfaces/IUniswapV2Router.sol";
-import {IUniswapV2Factory} from "./interfaces/IUniswapV2Factory.sol";
+import {IUniswapV2Factory} from "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
+import {IUniswapV2Router02} from "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 import {SafeMath} from "./utils/math/SafeMath.sol";
 import {BicStorage} from "./storage/BicStorage.sol";
 import {TokenSingletonPaymaster} from "./base/TokenSingletonPaymaster.sol";
@@ -11,11 +11,13 @@ import {TokenSingletonPaymaster} from "./base/TokenSingletonPaymaster.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {BICErrors} from "./interfaces/BICErrors.sol";
 
 contract BicTokenPaymaster is
     TokenSingletonPaymaster,
     PausableUpgradeable,
-    UUPSUpgradeable
+    UUPSUpgradeable,
+    BICErrors
 {
     using SafeMath for uint256;
     using BicStorage for BicStorage.Data;
@@ -43,16 +45,6 @@ contract BicTokenPaymaster is
 
     /// @dev Emitted when changing a specific pre-public round info
     event PrePublicRoundUpdated(address updater, uint256 category);
-
-    /// @dev Emitted when changing max allocation per a wallet
-    event MaxAllocationUpdated(address updater, uint256 newMaxAllocation);
-
-    /// @dev Emitted when changing uinswap V2 pair
-    event UniswapV2PairUpdated(
-        address updater,
-        address pair,
-        address tokenPair
-    );
 
     /// @dev Emitted when swap back and liquify
     event SwapBackAndLiquify(uint256 liquidityTokens, uint256 ETHForLiquidity);
@@ -84,84 +76,8 @@ contract BicTokenPaymaster is
     /// @dev Emitted when changing LF start time
     event LFStartTimeUpdated(uint256 _newLFStartTime);
 
-    /// @dev Emitted when changing enabled liquidity fee reduction
-    event isEnabledLFReductionUpdated(address updater, bool status);
-
-    /// @dev Emitted when changing upgrade controller
-    event UpgradeControllerUpdated(address updater, address controller);
-
-    /// @dev Emitted when changing pre-public controller
-    event PrePublicControllerUpdated(address updater, address controller);
-
-    /// @dev Emitted when changing liquidity fee controller
-    event LFControllerUpdated(address updater, address controller);
-
-    /// @dev Emitted when changing max allocation controller
-    event MaxAllocationControllerUpdated(address updater, address controller);
-
-    /// @dev Emitted when changing treasury controller
-    event TreasuryControllerUpdated(address updater, address controller);
-
-    /// @dev Emitted when renouncing upgrade feature
-    event RenounceUpgrade(address controller);
-
-    /// @dev Emitted when renouncing pre-public feature
-    event RenouncePrePublic(address controller);
-
-    /// @dev Emitted when renouncing liquidity fee feature
-    event RenounceLF(address controller);
-
-    /// @dev Emitted when renouncing max allocation feature
-    event RenounceMaxAllocation(address controller);
-
-    /// @dev Emitted when renouncing treasury
-    event RenounceTreasury(address controller);
-
     /// @dev Emitted when changing liquidity treasury
     event LiquidityTreasuryUpdated(address updater, address newLFTreasury);
-
-    // MODIFIERS
-    modifier onlyUpgradeController() {
-        BicStorage.Data storage $ = _storage();
-        require(
-            _msgSender() == $._upgradeController,
-            "B: only upgrade controller"
-        );
-        _;
-    }
-
-    modifier onlyPrePublicController() {
-        BicStorage.Data storage $ = _storage();
-        require(
-            _msgSender() == $._prePublicController,
-            "B: only pre-public controller"
-        );
-        _;
-    }
-
-    modifier onlyLFController() {
-        BicStorage.Data storage $ = _storage();
-        require(_msgSender() == $._LFController, "B: only LF controller");
-        _;
-    }
-
-    modifier onlyMaxAllocationController() {
-        BicStorage.Data storage $ = _storage();
-        require(
-            _msgSender() == $._maxAllocationController,
-            "B: only max allocation controller"
-        );
-        _;
-    }
-
-    modifier onlyTreasuryController() {
-        BicStorage.Data storage $ = _storage();
-        require(
-            _msgSender() == $._treasuryController,
-            "B: only treasury controller"
-        );
-        _;
-    }
 
     // CONSTRUCTOR & INITIALIZER
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -175,26 +91,20 @@ contract BicTokenPaymaster is
         address[] memory _singers
     ) public initializer {
         __TokenSingletonPaymaster_init(_entryPoint, _singers);
-        __ERC20Votes_init();
-        __ERC20_init("Beincom", "BIC");
+        __ERC20_init("BTest", "BTEST");
         __Pausable_init();
 
         BicStorage.Data storage $ = _storage();
 
-        uint256 _totalSupply = 5000000000 * 1e18;
+        uint256 _totalSupply = 5 * 1e27;
         _mint(superController, _totalSupply);
 
-        $._upgradeController = superController;
-        $._prePublicController = superController;
-        $._LFController = superController;
-        $._maxAllocationController = superController;
-        $._treasuryController = superController;
+        $._liquidityTreasury = superController;
 
         $._maxLF = 1500;
         $._minLF = 300;
         $._LFReduction = 50;
         $._LFPeriod = 60 * 60 * 24 * 30; // 30 days
-        $._isEnabledLFReduction = true;
         $._LFStartTime = block.timestamp;
         $._isExcluded[superController] = true;
         $._isExcluded[address(this)] = true;
@@ -203,36 +113,17 @@ contract BicTokenPaymaster is
 
         $._swapBackEnabled = true;
         $._minSwapBackAmount = _totalSupply.div(10000);
-        $._maxAllocation = _totalSupply.mul(100).div(10000);
-        $._enabledMaxAllocation = true;
+
+        $._uniswapV2Router = 0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24;
+        $._uniswapV2Pair = IUniswapV2Factory(
+            IUniswapV2Router02($._uniswapV2Router).factory()
+        ).createPair(
+                address(this),
+                IUniswapV2Router02($._uniswapV2Router).WETH()
+            );
+        _setPool($._uniswapV2Pair, true);
+
         transferOwnership(superController);
-
-        // $._uniswapV2Router = IUniswapV2Router(
-        //     0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24
-        // );
-        // $._uniswapV2Pair = IUniswapV2Factory($._uniswapV2Router.factory())
-        //     .createPair(address(this), $._uniswapV2Router.WETH());
-        // $._tokenInPair = $._uniswapV2Router.WETH();
-        // _setPool($._uniswapV2Pair, true);
-    }
-
-    // VIEW FUNCTIONS
-    /**
-     * @notice Get whitelist category.
-     * @param user user address.
-     */
-    function getWhitelistCategory(address user) public view returns (uint256) {
-        BicStorage.Data storage $ = _storage();
-        return $._prePublicWhitelist[user];
-    }
-
-    /**
-     * @notice Check if user is blocked
-     * @param user user address
-     */
-    function isBlocked(address user) public view returns (bool) {
-        BicStorage.Data storage $ = _storage();
-        return $._isBlocked[user];
     }
 
     /**
@@ -241,10 +132,6 @@ contract BicTokenPaymaster is
      */
     function getCurrentLF() public view returns (uint256) {
         BicStorage.Data storage $ = _storage();
-
-        if (!$._isEnabledLFReduction) {
-            return $._minLF;
-        }
 
         uint256 totalReduction = block
             .timestamp
@@ -259,121 +146,12 @@ contract BicTokenPaymaster is
         }
     }
 
-    // CONTROLLER MANAGEMENT FUNCTIONS
-    /**
-     * @notice Updated upgrade controller.
-     * @param controller controller address.
-     */
-    function setUpgradeController(
-        address controller
-    ) public onlyUpgradeController {
-        BicStorage.Data storage $ = _storage();
-        $._upgradeController = controller;
-        emit UpgradeControllerUpdated(_msgSender(), controller);
-    }
-
-    /**
-     * @notice Updated pre-public controller.
-     * @param controller controller address.
-     */
-    function setPrePublicController(
-        address controller
-    ) public onlyPrePublicController {
-        BicStorage.Data storage $ = _storage();
-        $._prePublicController = controller;
-        emit PrePublicControllerUpdated(_msgSender(), controller);
-    }
-
-    /**
-     * @notice Updated liquidity fee controller.
-     * @param controller controller address.
-     */
-    function setLFController(address controller) public onlyLFController {
-        BicStorage.Data storage $ = _storage();
-        $._LFController = controller;
-        emit LFControllerUpdated(_msgSender(), controller);
-    }
-
-    /**
-     * @notice Updated max allocation controller.
-     * @param controller controller address.
-     */
-    function setMaxAllocationController(
-        address controller
-    ) public onlyMaxAllocationController {
-        BicStorage.Data storage $ = _storage();
-        $._maxAllocationController = controller;
-        emit MaxAllocationControllerUpdated(_msgSender(), controller);
-    }
-
-    /**
-     * @notice Updated treasury controller.
-     * @param controller controller address.
-     */
-    function setTreasuryController(
-        address controller
-    ) public onlyTreasuryController {
-        BicStorage.Data storage $ = _storage();
-        $._treasuryController = controller;
-        emit TreasuryControllerUpdated(_msgSender(), controller);
-    }
-
-    /**
-     * @notice Renounce upgrade feature.
-     */
-    function renounceUpgrade() public onlyUpgradeController {
-        BicStorage.Data storage $ = _storage();
-        $._upgradeController = address(0);
-        emit RenounceUpgrade(_msgSender());
-    }
-
-    /**
-     * @notice Renounce max allocation feature.
-     */
-    function renounceMaxAllocation() public onlyMaxAllocationController {
-        BicStorage.Data storage $ = _storage();
-        $._enabledMaxAllocation = false;
-        $._maxAllocation = totalSupply();
-        $._maxAllocationController = address(0);
-        emit RenounceMaxAllocation(_msgSender());
-    }
-
-    /**
-     * @notice Renounce liquidity fee feature.
-     */
-    function renounceLF() public onlyLFController {
-        BicStorage.Data storage $ = _storage();
-        $._minLF = 0;
-        $._maxLF = 0;
-        $._LFController = address(0);
-        emit RenounceLF(_msgSender());
-    }
-
-    /**
-     * @notice Renounce pre-public feature.
-     */
-    function renouncePrePublic() public onlyPrePublicController {
-        BicStorage.Data storage $ = _storage();
-        $._prePublic = false;
-        $._prePublicController = address(0);
-        emit RenouncePrePublic(_msgSender());
-    }
-
-    /**
-     * @notice Renounce treasury.
-     */
-    function renounceTreasury() public onlyTreasuryController {
-        BicStorage.Data storage $ = _storage();
-        $._treasuryController = address(0);
-        emit RenounceTreasury(_msgSender());
-    }
-
     // PRE-PUBLIC MANAGEMENT FUNCTIONS
     /**
      * @notice Updated pre-public status.
      * @param status pre-public status.
      */
-    function setPrePublic(bool status) external onlyPrePublicController {
+    function setPrePublic(bool status) external onlyOwner {
         BicStorage.Data storage $ = _storage();
         $._prePublic = status;
         emit PrePublicStatusUpdated(_msgSender(), status);
@@ -387,7 +165,7 @@ contract BicTokenPaymaster is
     function setPrePublicWhitelist(
         address[] memory addresses,
         uint256[] memory categories
-    ) external onlyPrePublicController {
+    ) external onlyOwner {
         _setPrePublicWhitelist(addresses, categories);
     }
 
@@ -397,21 +175,152 @@ contract BicTokenPaymaster is
      */
     function setPrePublicRound(
         BicStorage.PrePublic memory prePublicRound
-    ) external onlyPrePublicController {
+    ) external onlyOwner {
         _setPrePublicRound(prePublicRound);
     }
 
+    // LIQUIDITY FEE MANAGEMENT FUNCTIONS
+
     /**
-     * @notice Update max allocation per a wallet.
-     * @param newMaxAllocation new max allocation per a wallet.
+     * @notice Update liquidity treasury.
+     * @param newLFTreasury new liquidity treasury.
      */
-    function setMaxAllocation(
-        uint256 newMaxAllocation
-    ) external onlyMaxAllocationController {
+    function setLiquidityTreasury(address newLFTreasury) external onlyOwner {
         BicStorage.Data storage $ = _storage();
-        $._maxAllocation = newMaxAllocation;
-        emit MaxAllocationUpdated(_msgSender(), newMaxAllocation);
+        $._liquidityTreasury = newLFTreasury;
+        emit LiquidityTreasuryUpdated(_msgSender(), newLFTreasury);
     }
+
+    /**
+     * @notice Update liquidity fee.
+     * @param max max liquidity fee basic points.
+     * @param min min liquidity fee basic points.
+     */
+    function setLiquidityFee(uint256 min, uint256 max) external onlyOwner {
+        require(min >= 0 && min <= max && max <= 5000, "B: invalid values");
+        BicStorage.Data storage $ = _storage();
+        $._minLF = min;
+        $._maxLF = max;
+        emit LiquidityFeeUpdated(_msgSender(), min, max);
+    }
+
+    /**
+     * @notice Update liquidity fee reduction
+     * @param _LFReduction liquidity fee reduction percent
+     */
+    function setLFReduction(uint256 _LFReduction) external onlyOwner {
+        if (_LFReduction <= 0) {
+            revert BICLFReduction(_LFReduction);
+        }
+        BicStorage.Data storage $ = _storage();
+        $._LFReduction = _LFReduction;
+        emit LFReductionUpdated(_msgSender(), _LFReduction);
+    }
+
+    /**
+     * @notice Update liquidity fee period
+     * @param _LFPeriod liquidity fee period
+     */
+    function setLFPeriod(uint256 _LFPeriod) external onlyOwner {
+        if (_LFPeriod <= 0) {
+            revert BICLFPeriod(_LFPeriod);
+        }
+        BicStorage.Data storage $ = _storage();
+        $._LFPeriod = _LFPeriod;
+        emit LFPeriodUpdated(_msgSender(), _LFPeriod);
+    }
+
+    // SWAP BACK MANAGEMENT FUNCTIONS
+    /**
+     * @notice Update swap back enabled status.
+     * @param status swap back enabled status.
+     */
+    function setSwapBackEnabled(bool status) external onlyOwner {
+        BicStorage.Data storage $ = _storage();
+        $._swapBackEnabled = status;
+        emit SwapBackEnabledUpdated(_msgSender(), status);
+    }
+
+    /**
+     * @notice Update min swap back amount.
+     * @param amount min swap back amount.
+     */
+    function setMinSwapBackAmount(uint256 amount) external onlyOwner {
+        BicStorage.Data storage $ = _storage();
+        $._minSwapBackAmount = amount;
+        emit MinSwapBackAmountUpdated(_msgSender(), amount);
+    }
+
+    // POOL MANAGEMENT FUNCTIONS
+    /**
+     * @notice Updated status of LP pool.
+     * @param pool pool address.
+     * @param status status of the pool.
+     */
+    function setPool(address pool, bool status) external onlyOwner {
+        _setPool(pool, status);
+    }
+
+    /**
+     * @notice Updated status of excluded addresses.
+     * @param excludedAddresses excluded addresses
+     * @param status status of excluded address
+     */
+    function bulkExcluded(
+        address[] memory excludedAddresses,
+        bool status
+    ) external onlyOwner {
+        for (uint256 i = 0; i < excludedAddresses.length; i++) {
+            _setIsExcluded(excludedAddresses[i], status);
+        }
+    }
+
+    // TREASURY MANAGEMENT FUNCTIONS
+    /**
+     * @notice Withdraw stuck token.
+     * @param token token address.
+     * @param to beneficiary address.
+     */
+    function withdrawStuckToken(
+        address token,
+        address to,
+        uint256 amount
+    ) public onlyOwner {
+        bool success;
+        if (token == address(0)) {
+            (success, ) = address(to).call{value: amount}("");
+        } else {
+            IERC20(token).transfer(to, amount);
+        }
+    }
+
+    /**
+     * @notice Block malicious address.
+     * @param addr blacklist address.
+     */
+    function blockAddress(address addr, bool status) public onlyOwner {
+        BicStorage.Data storage $ = _storage();
+        $._isBlocked[addr] = status;
+        emit BlockUpdated(_msgSender(), addr, status);
+    }
+
+    /**
+     * @notice Pause transfers using this token. For emergency use.
+     * @dev Event already defined and emitted in Pausable.sol
+     */
+    function pause() public onlyOwner {
+        _pause();
+    }
+
+    /**
+     * @notice Unpause transfers using this token.
+     * @dev Event already defined and emitted in Pausable.sol
+     */
+    function unpause() public onlyOwner {
+        _unpause();
+    }
+
+    // INTERNAL FUNCTIONS
 
     /**
      * @notice Updated pre-public whitelist info.
@@ -423,10 +332,9 @@ contract BicTokenPaymaster is
         uint256[] memory _categories
     ) private {
         BicStorage.Data storage $ = _storage();
-        require(
-            _addresses.length == _categories.length,
-            "B: Mismatched length"
-        );
+        if (_addresses.length != _categories.length) {
+            revert BICPrePublicWhitelist(_addresses, _categories);
+        }
         for (uint256 i = 0; i < _addresses.length; i++) {
             $._prePublicWhitelist[_addresses[i]] = _categories[i];
         }
@@ -445,214 +353,6 @@ contract BicTokenPaymaster is
         emit PrePublicRoundUpdated(_msgSender(), _prePublicRound.category);
     }
 
-    // LIQUIDITY FEE MANAGEMENT FUNCTIONS
-    /**
-     * @notice Updated uniswap V2 pair.
-     * @param pair uniswap V2 pair address.
-     * @param tokenPair token in uniswap V2 pair.
-     */
-    function setUniswapV2Pair(
-        address pair,
-        address tokenPair
-    ) external onlyLFController {
-        BicStorage.Data storage $ = _storage();
-        $._uniswapV2Pair = pair;
-        $._tokenInPair = tokenPair;
-        emit UniswapV2PairUpdated(_msgSender(), pair, tokenPair);
-    }
-
-    /**
-     * @notice Update liquidity treasury.
-     * @param newLFTreasury new liquidity treasury.
-     */
-    function setLiquidityTreasury(
-        address newLFTreasury
-    ) external onlyLFController {
-        BicStorage.Data storage $ = _storage();
-        $._liquidityTreasury = newLFTreasury;
-        emit LiquidityTreasuryUpdated(_msgSender(), newLFTreasury);
-    }
-
-    /**
-     * @notice Update liquidity fee.
-     * @param max max liquidity fee basic points.
-     * @param min min liquidity fee basic points.
-     */
-    function setLiquidityFee(
-        uint256 min,
-        uint256 max
-    ) external onlyLFController {
-        require(min >= 0 && min <= max && max <= 5000, "B: invalid values");
-        BicStorage.Data storage $ = _storage();
-        $._minLF = min;
-        $._maxLF = max;
-        emit LiquidityFeeUpdated(_msgSender(), min, max);
-    }
-
-    /**
-     * @notice Update liquidity fee reduction
-     * @param _LFReduction liquidity fee reduction percent
-     */
-    function setLFReduction(uint256 _LFReduction) external onlyLFController {
-        require(_LFReduction > 0, "B: 0 LF reduction");
-        BicStorage.Data storage $ = _storage();
-        $._LFReduction = _LFReduction;
-        emit LFReductionUpdated(_msgSender(), _LFReduction);
-    }
-
-    /**
-     * @notice Update liquidity fee period
-     * @param _LFPeriod liquidity fee period
-     */
-    function setLFPeriod(uint256 _LFPeriod) external onlyLFController {
-        require(_LFPeriod > 0, "B: 0 LF period");
-        BicStorage.Data storage $ = _storage();
-        $._LFPeriod = _LFPeriod;
-        emit LFPeriodUpdated(_msgSender(), _LFPeriod);
-    }
-
-    // SWAP BACK MANAGEMENT FUNCTIONS
-    /**
-     * @notice Update swap back enabled status.
-     * @param status swap back enabled status.
-     */
-    function setSwapBackEnabled(bool status) external onlyLFController {
-        BicStorage.Data storage $ = _storage();
-        $._swapBackEnabled = status;
-        emit SwapBackEnabledUpdated(_msgSender(), status);
-    }
-
-    /**
-     * @notice Update min swap back amount.
-     * @param amount min swap back amount.
-     */
-    function setMinSwapBackAmount(uint256 amount) external onlyLFController {
-        BicStorage.Data storage $ = _storage();
-        $._minSwapBackAmount = amount;
-        emit MinSwapBackAmountUpdated(_msgSender(), amount);
-    }
-
-    /**
-     * @notice Update liquidity fee start time
-     * @param _newLFStartTime new liquidity fee start time
-     */
-    function setLFStartTime(uint256 _newLFStartTime) external onlyLFController {
-        require(_newLFStartTime > block.timestamp, "B: invalid start time");
-        BicStorage.Data storage $ = _storage();
-        $._LFStartTime = _newLFStartTime;
-        emit LFStartTimeUpdated(_newLFStartTime);
-    }
-
-    /**
-     * @notice Update enabled liquidity fee reduction
-     * @param status enabled liquidity fee status
-     */
-    function setIsEnabledLFReduction(bool status) external onlyLFController {
-        BicStorage.Data storage $ = _storage();
-        $._isEnabledLFReduction = status;
-        emit isEnabledLFReductionUpdated(_msgSender(), status);
-    }
-
-    // POOL MANAGEMENT FUNCTIONS
-    /**
-     * @notice Updated status of LP pool.
-     * @param pool pool address.
-     * @param status status of the pool.
-     */
-    function setPool(address pool, bool status) external onlyLFController {
-        _setPool(pool, status);
-    }
-
-    /**
-     * @notice Updated status of LP pools.
-     * @param pools pool addresses.
-     * @param status status of the pool.
-     */
-    function bulkPool(
-        address[] memory pools,
-        bool status
-    ) external onlyLFController {
-        for (uint256 i = 0; i < pools.length; i++) {
-            _setPool(pools[i], status);
-        }
-    }
-
-    /**
-     * @notice Updated status of excluded address.
-     * @param excludedAddress excluded address
-     * @param status status of excluded address
-     */
-    function setIsExcluded(
-        address excludedAddress,
-        bool status
-    ) external onlyTreasuryController {
-        _setIsExcluded(excludedAddress, status);
-    }
-
-    /**
-     * @notice Updated status of excluded addresses.
-     * @param excludedAddresses excluded addresses
-     * @param status status of excluded address
-     */
-    function bulkExcluded(
-        address[] memory excludedAddresses,
-        bool status
-    ) external onlyTreasuryController {
-        for (uint256 i = 0; i < excludedAddresses.length; i++) {
-            _setIsExcluded(excludedAddresses[i], status);
-        }
-    }
-
-    // TREASURY MANAGEMENT FUNCTIONS
-    /**
-     * @notice Withdraw stuck token.
-     * @param token token address.
-     * @param to beneficiary address.
-     */
-    function withdrawStuckToken(
-        address token,
-        address to
-    ) public onlyTreasuryController {
-        bool success;
-        if (token == address(0)) {
-            (success, ) = address(to).call{value: address(this).balance}("");
-        } else {
-            uint256 amount = IERC20(token).balanceOf(address(this));
-            require(amount > 0, "B: 0 amount token");
-            IERC20(token).transfer(to, amount);
-        }
-    }
-
-    /**
-     * @notice Block malicious address.
-     * @param addr blacklist address.
-     */
-    function blockAddress(
-        address addr,
-        bool status
-    ) public onlyTreasuryController {
-        BicStorage.Data storage $ = _storage();
-        $._isBlocked[addr] = status;
-        emit BlockUpdated(_msgSender(), addr, status);
-    }
-
-    /**
-     * @notice Pause transfers using this token. For emergency use.
-     * @dev Event already defined and emitted in Pausable.sol
-     */
-    function pause() public onlyTreasuryController {
-        _pause();
-    }
-
-    /**
-     * @notice Unpause transfers using this token.
-     * @dev Event already defined and emitted in Pausable.sol
-     */
-    function unpause() public onlyTreasuryController {
-        _unpause();
-    }
-
-    // INTERNAL FUNCTIONS
     /**
      * @notice Updated status of excluded address.
      * @param _excludedAddress excluded address
@@ -683,31 +383,18 @@ contract BicTokenPaymaster is
         BicStorage.Data storage $ = _storage();
         address[] memory path = new address[](2);
         path[0] = address(this);
-        path[1] = $._tokenInPair;
+        path[1] = IUniswapV2Router02($._uniswapV2Router).WETH();
         $._accumulatedLF -= _swapAmount;
-        _approve(address(this), address($._uniswapV2Router), _swapAmount);
+        _approve(address(this), $._uniswapV2Router, _swapAmount);
 
-        if ($._tokenInPair == $._uniswapV2Router.WETH()) {
-            $
-                ._uniswapV2Router
-                .swapExactTokensForETHSupportingFeeOnTransferTokens(
-                    _swapAmount,
-                    0,
-                    path,
-                    address(this),
-                    block.timestamp
-                );
-        } else {
-            $
-                ._uniswapV2Router
-                .swapExactTokensForTokensSupportingFeeOnTransferTokens(
-                    _swapAmount,
-                    0,
-                    path,
-                    address(this),
-                    block.timestamp
-                );
-        }
+        IUniswapV2Router02($._uniswapV2Router)
+            .swapExactTokensForETHSupportingFeeOnTransferTokens(
+                _swapAmount,
+                0,
+                path,
+                address(this),
+                block.timestamp
+            );
     }
 
     /**
@@ -721,32 +408,17 @@ contract BicTokenPaymaster is
     ) internal {
         BicStorage.Data storage $ = _storage();
         $._accumulatedLF -= _liquidityToken0;
-        _approve(address(this), address($._uniswapV2Router), _liquidityToken0);
-        if ($._tokenInPair == $._uniswapV2Router.WETH()) {
-            $._uniswapV2Router.addLiquidityETH{value: _liquidityToken1}(
-                address(this),
-                _liquidityToken0,
-                0,
-                0,
-                $._liquidityTreasury,
-                block.timestamp
-            );
-        } else {
-            IERC20($._tokenInPair).approve(
-                address($._uniswapV2Router),
-                _liquidityToken1
-            );
-            $._uniswapV2Router.addLiquidity(
-                address(this),
-                $._tokenInPair,
-                _liquidityToken0,
-                _liquidityToken1,
-                0,
-                0,
-                $._liquidityTreasury,
-                block.timestamp
-            );
-        }
+        _approve(address(this), $._uniswapV2Router, _liquidityToken0);
+        IUniswapV2Router02($._uniswapV2Router).addLiquidityETH{
+            value: _liquidityToken1
+        }(
+            address(this),
+            _liquidityToken0,
+            0,
+            0,
+            $._liquidityTreasury,
+            block.timestamp
+        );
     }
 
     function _swapBackAndLiquify() internal {
@@ -760,25 +432,13 @@ contract BicTokenPaymaster is
         uint256 liquidityTokens = $._minSwapBackAmount.div(2);
         uint256 amounTokensToSwap = $._minSwapBackAmount.sub(liquidityTokens);
 
-        if ($._tokenInPair == $._uniswapV2Router.WETH()) {
-            _initialToken1Balance = address(this).balance;
-        } else {
-            _initialToken1Balance = IERC20($._tokenInPair).balanceOf(
-                address(this)
-            );
-        }
+        _initialToken1Balance = address(this).balance;
 
         _swapBack(amounTokensToSwap);
 
         uint256 _liquidityToken1;
 
-        if ($._tokenInPair == $._uniswapV2Router.WETH()) {
-            _liquidityToken1 = address(this).balance.sub(_initialToken1Balance);
-        } else {
-            _liquidityToken1 = IERC20($._tokenInPair)
-                .balanceOf(address(this))
-                .sub(_initialToken1Balance);
-        }
+        _liquidityToken1 = address(this).balance.sub(_initialToken1Balance);
 
         if (liquidityTokens > 0 && _liquidityToken1 > 0) {
             _addLiquidity(liquidityTokens, _liquidityToken1);
@@ -797,103 +457,197 @@ contract BicTokenPaymaster is
     ) internal virtual override {
         BicStorage.Data storage $ = _storage();
 
-        if (!$._isExcluded[from]) {
-            require(!paused(), "B: paused transfer");
-        }
-        require(!$._isBlocked[from], "B: blocked from address");
-
+        // Early returns for basic validations
         if (amount == 0) {
             super._update(from, to, 0);
             return;
         }
 
-        // Guard max allocation
-        if (
-            !$._isExcluded[from] &&
-            !$._isExcluded[to] &&
-            to != address(0) &&
-            to != address(0xdead) &&
-            !$._swapping
-        ) {
-            // Pre-public round
-            if ($._prePublic) {
-                uint256 _category = $._prePublicWhitelist[to];
-                require(_category != 0, "B: only pre-public whitelist");
-                BicStorage.PrePublic memory _round = $._prePublicRounds[
-                    _category
-                ];
-                require(
-                    _round.startTime <= block.timestamp &&
-                        _round.endTime >= block.timestamp,
-                    "B: round not active"
-                );
-                require(
-                    $._coolDown[to] == 0 ||
-                        $._coolDown[to] + _round.coolDown <= block.timestamp,
-                    "B: wait for cool down"
-                );
-                require(
-                    amount <= _round.maxAmountPerBuy,
-                    "B: exceed max amount per buy in pre-public"
-                );
-                $._coolDown[to] = block.timestamp;
-            }
-
-            // guard on buy
-            if ($._enabledMaxAllocation && $._isPool[from]) {
-                require(
-                    balanceOf(to) + amount <= $._maxAllocation,
-                    "B: exceed max allocation"
-                );
-            }
+        // Skip additional checks if sender or receiver is excluded
+        if (_isException(from, to)) {
+            super._update(from, to, amount);
+            return;
         }
 
-        if ($._minLF > 0) {
-            // swap back and liquify
-            bool canSwapBackAndLiquify = $._accumulatedLF >=
-                $._minSwapBackAmount;
-            if (
-                canSwapBackAndLiquify &&
-                $._swapBackEnabled &&
-                from != $._uniswapV2Pair &&
-                !$._swapping
-            ) {
-                $._swapping = true;
-                _swapBackAndLiquify();
-                $._swapping = false;
-            }
+        _validateBeforeTransfer(from);
 
-            // Extract liquidity fee
-            bool _isTakenFee = !$._swapping;
-
-            if ($._isExcluded[from] || $._isExcluded[to]) {
-                _isTakenFee = false;
-            }
-
-            uint256 _LF = 0;
-
-            if (_isTakenFee) {
-                // charge liquidity on sell
-                if ($._isPool[to] && $._minLF > 0) {
-                    _LF = amount.mul(getCurrentLF()).div(10000);
-                }
-            }
-
-            if (_LF > 0) {
-                $._accumulatedLF += _LF;
-                super._update(from, address(this), _LF);
-            }
-
-            amount -= _LF;
+        // Handle pre-public sale restrictions
+        if ($._prePublic && $._isPool[from]) {
+            _validatePrePublicTransfer(to, amount);
         }
 
-        super._update(from, to, amount);
+        // Process liquidity fee if applicable
+        uint256 finalAmount = _processLiquidityFee(from, to, amount);
+
+        super._update(from, to, finalAmount);
+    }
+
+    /**
+     * @notice Validates basic transfer conditions
+     * @dev Checks if transfer is paused and if sender is blocked
+     * @param from Address attempting to send tokens
+     */
+    function _validateBeforeTransfer(address from) internal view {
+        BicStorage.Data storage $ = _storage();
+        if (paused() || $._isBlocked[from]) {
+            revert BICValidateBeforeTransfer(from);
+        }
+    }
+
+    /**
+     * @notice Checks if address is excluded from transfer rules
+     * @param from Sender address
+     * @param to Receiver address
+     * @return bool True if excluded from rules
+     */
+    function _isException(
+        address from,
+        address to
+    ) internal view returns (bool) {
+        BicStorage.Data storage $ = _storage();
+        return $._isExcluded[from] || $._isExcluded[to] || $._swapping;
+    }
+
+    /**
+     * @notice Validate pre-public sale transfer restrictions
+     * @dev Validates whitelist, round timing, cooldown and max buy amount
+     * @param to Receiver address
+     * @param amount Amount being transferred
+     */
+    function _validatePrePublicTransfer(address to, uint256 amount) internal {
+        BicStorage.Data storage $ = _storage();
+        uint256 category = $._prePublicWhitelist[to];
+        if (category == 0) {
+            revert BICInvalidCategory(to, category);
+        }
+
+        BicStorage.PrePublic memory round = $._prePublicRounds[category];
+        if (!_isActivePrePublicRound(round)) {
+            revert BICNotActiveRound(to, category);
+        }
+        if (!_isValidCooldown(to, round.coolDown)) {
+            revert BICWaitForCoolDown(to, $._coolDown[to] + round.coolDown);
+        }
+        if (amount > round.maxAmountPerBuy) {
+            revert BICMaxAmountPerBuy(to, round.maxAmountPerBuy);
+        }
+
+        $._coolDown[to] = block.timestamp;
+    }
+
+    /**
+     * @notice Checks if a pre-public round is currently active
+     * @dev Validates round start and end times against current block timestamp
+     * @param round PrePublic round data
+     * @return bool True if round is active
+     */
+    function _isActivePrePublicRound(
+        BicStorage.PrePublic memory round
+    ) internal view returns (bool) {
+        return
+            round.startTime <= block.timestamp &&
+            round.endTime >= block.timestamp;
+    }
+
+    /**
+     * @notice Validates cooldown period for pre-public purchases
+     * @dev Ensures sufficient time has passed since last purchase
+     * @param to Buyer address
+     * @param coolDown Required cooldown period
+     * @return bool True if cooldown period has passed
+     */
+    function _isValidCooldown(
+        address to,
+        uint256 coolDown
+    ) internal view returns (bool) {
+        BicStorage.Data storage $ = _storage();
+        return
+            $._coolDown[to] == 0 ||
+            $._coolDown[to] + coolDown <= block.timestamp;
+    }
+
+    /**
+     * @notice Processes liquidity fee for transfers
+     * @dev Handles swap back to ETH and liquidity addition if conditions are met
+     * @param from Sender address
+     * @param to Receiver address
+     * @param amount Transfer amount
+     * @return uint256 Final transfer amount after fees
+     */
+    function _processLiquidityFee(
+        address from,
+        address to,
+        uint256 amount
+    ) internal returns (uint256) {
+        BicStorage.Data storage $ = _storage();
+
+        if ($._minLF == 0) {
+            return amount;
+        }
+
+        // Handle swap back and liquify if needed
+        if (_shouldSwapBack(from)) {
+            $._swapping = true;
+            _swapBackAndLiquify();
+            $._swapping = false;
+        }
+
+        // Calculate and process liquidity fee
+        uint256 liquidityFee = _calculateLiquidityFee(from, to, amount);
+        if (liquidityFee > 0) {
+            $._accumulatedLF += liquidityFee;
+            super._update(from, address(this), liquidityFee);
+            return amount - liquidityFee;
+        }
+
+        return amount;
+    }
+
+    /**
+     * @notice Checks if conditions are met for swap back operation
+     * @dev Validates accumulated fees and swap settings
+     * @param from Source address of transfer
+     * @return bool True if swap back should be executed
+     */
+    function _shouldSwapBack(address from) internal view returns (bool) {
+        BicStorage.Data storage $ = _storage();
+        return
+            $._accumulatedLF >= $._minSwapBackAmount &&
+            $._swapBackEnabled &&
+            from != $._uniswapV2Pair &&
+            !$._swapping;
+    }
+
+    /**
+     * @notice Calculates liquidity fee for a transfer
+     * @dev Applies fee based on transfer direction and settings
+     * @param from Sender address
+     * @param to Receiver address
+     * @param amount Transfer amount
+     * @return uint256 Calculated fee amount
+     */
+    function _calculateLiquidityFee(
+        address from,
+        address to,
+        uint256 amount
+    ) internal view returns (uint256) {
+        BicStorage.Data storage $ = _storage();
+
+        if ($._isExcluded[from] || $._isExcluded[to] || $._swapping) {
+            return 0;
+        }
+
+        if ($._isPool[to] && $._minLF > 0) {
+            return amount.mul(getCurrentLF()).div(10000);
+        }
+
+        return 0;
     }
 
     /// @inheritdoc UUPSUpgradeable
     function _authorizeUpgrade(
         address
-    ) internal view virtual override(UUPSUpgradeable) onlyUpgradeController {}
+    ) internal virtual override(UUPSUpgradeable) onlyOwner {}
 
     receive() external payable {}
 }

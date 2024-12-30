@@ -51,6 +51,13 @@ $ anvil
 $ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
 ```
 
+### Deploy BIC Token in Unichain Sepolia
+
+```shell
+$ forge script script/BicDeployScript.s.sol:BicDeployScript --rpc-url unichain_sepolia --broadcast -vvvv
+
+```
+
 ### Cast
 
 ```shell

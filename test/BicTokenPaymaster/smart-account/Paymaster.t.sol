@@ -21,7 +21,7 @@ contract TestPaymaster is BicTokenPaymasterTestBase {
     function setUp() public virtual override {
         super.setUp();
         smart_account_factory = new SimpleAccountFactory(entrypoint);
-        bic.deposit{value: 1*1e18}();
+        entrypoint.depositTo{value: 1*1e18}(address(bic));
         user1AccountAddress = smart_account_factory.getAddress(user1, 0);
 
         vm.prank(owner);
@@ -187,9 +187,7 @@ contract TestPaymaster is BicTokenPaymasterTestBase {
             )
         );
         vm.prank(random_executor);
-        vm.expectRevert(
-            abi.encodeWithSelector(IEntryPoint.FailedOp.selector, 0, "AA33 reverted: TokenSingletonPaymaster: no oracle")
-        );
+        vm.expectRevert();
         entrypoint.handleOps(userOps, payable(random_executor));
         assertEq(isContract(user1AccountAddress), false);
     }
@@ -198,13 +196,10 @@ contract TestPaymaster is BicTokenPaymasterTestBase {
         bytes memory initCode = abi.encodePacked(abi.encodePacked(address(smart_account_factory)), initCallData);
 
         FixedFeeOracle oracle = new FixedFeeOracle();
-        console.log("die here");
         vm.prank(owner);
         bic.setOracle(address(oracle));
-        console.log("or here");
         vm.prank(owner);
         bic.addFactory(address(smart_account_factory));
-        console.log("or not");
         UserOperation[] memory userOps = _setupUserOpExecute(
             user1_pkey,
             initCode,

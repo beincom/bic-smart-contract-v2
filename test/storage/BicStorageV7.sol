@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.23;
 
-import {IUniswapV2Router} from "../../src/interfaces/IUniswapV2Router.sol";
 
 library BicStorageV7 {
     struct Data {

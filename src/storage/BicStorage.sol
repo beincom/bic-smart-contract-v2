@@ -1,41 +1,31 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {IUniswapV2Router} from "../interfaces/IUniswapV2Router.sol";
-
 library BicStorage {
     struct Data {
+        // LF (Liquidity Fee) Variables
+        uint256 _LFStartTime; // slot 0
+        uint256 _LFReduction; // slot 1
+        uint256 _LFPeriod; // slot 2
+        uint256 _maxLF; // slot 3
+        uint256 _minLF; // slot 4
+        uint256 _minSwapBackAmount; // slot 5
+        uint256 _accumulatedLF; // slot 6
+        // Addresses
+        address _liquidityTreasury; // slot 7
+        address _uniswapV2Pair; // slot 8
+        address _uniswapV2Router; // slot 9
+        // Status Flags (packed into a single storage slot) slot 9
         bool _prePublic;
-        bool _isEnabledLFReduction;
         bool _swapBackEnabled;
         bool _swapping;
-        bool _enabledMaxAllocation;
-        // Controller
-        address _upgradeController;
-        address _prePublicController;
-        address _LFController;
-        address _maxAllocationController;
-        address _treasuryController;
-        address _liquidityTreasury;
-        // Dex
-        address _uniswapV2Pair;
-        address _tokenInPair;
-        IUniswapV2Router _uniswapV2Router;
-        // LF
-        uint256 _LFStartTime;
-        uint256 _LFReduction;
-        uint256 _LFPeriod;
-        uint256 _maxLF;
-        uint256 _minLF;
-        uint256 _minSwapBackAmount;
-        uint256 _maxAllocation;
-        uint256 _accumulatedLF;
-        mapping(address => uint256) _prePublicWhitelist;
-        mapping(address => uint256) _coolDown;
-        mapping(uint256 => PrePublic) _prePublicRounds;
-        mapping(address => bool) _isExcluded;
-        mapping(address => bool) _isPool;
-        mapping(address => bool) _isBlocked;
+        // Mappings
+        mapping(address => uint256) _prePublicWhitelist; // slot 10
+        mapping(address => uint256) _coolDown; // slot 11
+        mapping(uint256 => PrePublic) _prePublicRounds; // slot 12
+        mapping(address => bool) _isExcluded; // slot 13
+        mapping(address => bool) _isPool; // slot 14
+        mapping(address => bool) _isBlocked; // slot 15
     }
 
     // Pre-public structure
@@ -47,9 +37,9 @@ library BicStorage {
         uint256 maxAmountPerBuy;
     }
 
-    // keccak256(abi.encode(uint256(keccak256("storage.B139Storage")) - 1)) & ~bytes32(uint256(0xff))
+    // Keccak-256 hash of "storage.B139Storage" minus 1, masked to fit storage slot
     bytes32 private constant BicTokenPaymasterStorageLocation =
-        0xd959cca23720948e5f992e1bef099a518994cc8b384c796f2b25ba30718fb300;
+    0xd959cca23720948e5f992e1bef099a518994cc8b384c796f2b25ba30718fb300;
 
     function _getStorageLocation()
         internal
