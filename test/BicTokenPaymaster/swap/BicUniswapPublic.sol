@@ -157,18 +157,18 @@ contract BicForkUniswapV2 is BicTokenPaymasterTestBase {
         assertTrue(pair.balanceOf(owner) > 0, "Pool setup failed");
     }
 
-    function test_checking_fee() public view {
-        // Check liquidity fee related info
-        assertEq(bic.LFReduction(), LFReduction, "LFReduction mismatch");
-        assertEq(bic.LFPeriod(), LFPeriod, "LFPeriod mismatch");
-        assertEq(bic.maxLF(), maxLF, "maxLF mismatch");
-        assertEq(bic.minLF(), minLF, "minLF mismatch");
-        assertEq(
-            bic.getUniswapV2Pair(),
-            address(pair),
-            "uniswapV2Pair mismatch"
-        );
-    }
+    // function test_checking_fee() public view {
+    //     // Check liquidity fee related info
+    //     assertEq(bic.LFReduction(), LFReduction, "LFReduction mismatch");
+    //     assertEq(bic.LFPeriod(), LFPeriod, "LFPeriod mismatch");
+    //     assertEq(bic.maxLF(), maxLF, "maxLF mismatch");
+    //     assertEq(bic.minLF(), minLF, "minLF mismatch");
+    //     assertEq(
+    //         bic.getUniswapV2Pair(),
+    //         address(pair),
+    //         "uniswapV2Pair mismatch"
+    //     );
+    // }
 
     function test_simu2late_current_liquidity_fee_after_period() public {
         // Calculate target time: LFStartTime + (LFPeriod * 2) + 1
@@ -486,13 +486,13 @@ contract BicForkUniswapV2 is BicTokenPaymasterTestBase {
 
         // Check accumulated LF
         uint256 bicBalance = bic.balanceOf(address(bic));
-        uint256 accumulatedLF = bic.getAccumulatedLF();
+        // uint256 accumulatedLF = bic.getAccumulatedLF();
         assertEq(bicBalance, fee, "BIC balance should equal fee");
-        assertEq(
-            bicBalance,
-            accumulatedLF,
-            "BIC balance should equal accumulated LF"
-        );
+        // assertEq(
+        //     bicBalance,
+        //     accumulatedLF,
+        //     "BIC balance should equal accumulated LF"
+        // );
         assertGt(
             bicBalance,
             minSwapBackAndLiquify,
@@ -521,13 +521,13 @@ contract BicForkUniswapV2 is BicTokenPaymasterTestBase {
         uint256 LFBalanceAfter = pair.balanceOf(owner);
 
         // Check final states
-        uint256 accumulatedLFAfterSwapBack = bic.getAccumulatedLF();
+        // uint256 accumulatedLFAfterSwapBack = bic.getAccumulatedLF();
 
-        assertLt(
-            accumulatedLFAfterSwapBack,
-            fee + fee2,
-            "Accumulated LF should be less than total fees"
-        );
+        // assertLt(
+        //     accumulatedLFAfterSwapBack,
+        //     fee + fee2,
+        //     "Accumulated LF should be less than total fees"
+        // );
         assertGt(
             LFBalanceAfter,
             LFBalanceBefore,

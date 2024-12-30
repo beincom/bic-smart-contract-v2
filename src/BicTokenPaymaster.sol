@@ -91,20 +91,21 @@ contract BicTokenPaymaster is
         address[] memory _singers
     ) public initializer {
         __TokenSingletonPaymaster_init(_entryPoint, _singers);
+        __ERC20Votes_init();
         __ERC20_init("BTest", "BTEST");
         __Pausable_init();
 
         BicStorage.Data storage $ = _storage();
 
-        uint256 _totalSupply = 5 * 1e27;
+        uint256 _totalSupply = 888 * 1e27;
         _mint(superController, _totalSupply);
 
         $._liquidityTreasury = superController;
 
         $._maxLF = 1500;
         $._minLF = 300;
-        $._LFReduction = 50;
-        $._LFPeriod = 60 * 60 * 24 * 30; // 30 days
+        $._LFReduction = 100;
+        $._LFPeriod = 60 * 60; // 30 days
         $._LFStartTime = block.timestamp;
         $._isExcluded[superController] = true;
         $._isExcluded[address(this)] = true;
@@ -114,7 +115,7 @@ contract BicTokenPaymaster is
         $._swapBackEnabled = true;
         $._minSwapBackAmount = _totalSupply.div(10000);
 
-        $._uniswapV2Router = 0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24;
+        $._uniswapV2Router = 0x920b806E40A00E02E7D2b94fFc89860fDaEd3640;
         $._uniswapV2Pair = IUniswapV2Factory(
             IUniswapV2Router02($._uniswapV2Router).factory()
         ).createPair(
@@ -127,44 +128,44 @@ contract BicTokenPaymaster is
     }
 
     // VIEW FUNCTIONS
-    /**
-     * @notice Get accumulated LF
-     */
-    function getAccumulatedLF() public view returns (uint256) {
-        BicStorage.Data storage $ = _storage();
-        return $._accumulatedLF;
-    }
+    // /**
+    //  * @notice Get accumulated LF
+    //  */
+    // function getAccumulatedLF() public view returns (uint256) {
+    //     BicStorage.Data storage $ = _storage();
+    //     return $._accumulatedLF;
+    // }
 
-    /**
-     * @notice Get LF reduction */
-    function LFReduction() public view returns (uint256) {
-        BicStorage.Data storage $ = _storage();
-        return $._LFReduction;
-    }
+    // /**
+    //  * @notice Get LF reduction */
+    // function LFReduction() public view returns (uint256) {
+    //     BicStorage.Data storage $ = _storage();
+    //     return $._LFReduction;
+    // }
 
-    /**
-     * @notice Get LF period
-     */
-    function LFPeriod() public view returns (uint256) {
-        BicStorage.Data storage $ = _storage();
-        return $._LFPeriod;
-    }
+    // /**
+    //  * @notice Get LF period
+    //  */
+    // function LFPeriod() public view returns (uint256) {
+    //     BicStorage.Data storage $ = _storage();
+    //     return $._LFPeriod;
+    // }
 
-    /**
-     * @notice Get max LF
-     */
-    function maxLF() public view returns (uint256) {
-        BicStorage.Data storage $ = _storage();
-        return $._maxLF;
-    }
+    // /**
+    //  * @notice Get max LF
+    //  */
+    // function maxLF() public view returns (uint256) {
+    //     BicStorage.Data storage $ = _storage();
+    //     return $._maxLF;
+    // }
 
-    /**
-     * @notice Get min LF
-     */
-    function minLF() public view returns (uint256) {
-        BicStorage.Data storage $ = _storage();
-        return $._minLF;
-    }
+    // /**
+    //  * @notice Get min LF
+    //  */
+    // function minLF() public view returns (uint256) {
+    //     BicStorage.Data storage $ = _storage();
+    //     return $._minLF;
+    // }
 
     /**
      * @notice Get uniswap v2 pair
@@ -194,14 +195,14 @@ contract BicTokenPaymaster is
         return $._prePublicWhitelist[user];
     }
 
-    /**
-     * @notice Check if user is blocked
-     * @param user user address
-     */
-    function isBlocked(address user) public view returns (bool) {
-        BicStorage.Data storage $ = _storage();
-        return $._isBlocked[user];
-    }
+    // /**
+    //  * @notice Check if user is blocked
+    //  * @param user user address
+    //  */
+    // function isBlocked(address user) public view returns (bool) {
+    //     BicStorage.Data storage $ = _storage();
+    //     return $._isBlocked[user];
+    // }
 
     /**
      * @notice Get current liquidity fee
@@ -213,8 +214,8 @@ contract BicTokenPaymaster is
         uint256 totalReduction = block
             .timestamp
             .sub($._LFStartTime)
-            .mul($._LFReduction)
-            .div($._LFPeriod);
+            .div($._LFPeriod)
+            .mul($._LFReduction);
 
         if (totalReduction + $._minLF >= $._maxLF) {
             return $._minLF;
@@ -257,7 +258,6 @@ contract BicTokenPaymaster is
     }
 
     // LIQUIDITY FEE MANAGEMENT FUNCTIONS
-
     /**
      * @notice Update liquidity treasury.
      * @param newLFTreasury new liquidity treasury.
@@ -266,6 +266,19 @@ contract BicTokenPaymaster is
         BicStorage.Data storage $ = _storage();
         $._liquidityTreasury = newLFTreasury;
         emit LiquidityTreasuryUpdated(_msgSender(), newLFTreasury);
+    }
+
+    /**
+     * @notice Update liquidity fee start time
+     * @param newLFStartTime new liquidity fee start time
+     */
+    function setLFStartTime(uint256 newLFStartTime) external onlyOwner {
+        if (newLFStartTime < block.timestamp) {
+            revert BICLFStartTime(newLFStartTime);
+        }
+        BicStorage.Data storage $ = _storage();
+        $._LFStartTime = newLFStartTime;
+        emit LFStartTimeUpdated(newLFStartTime);
     }
 
     /**

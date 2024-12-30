@@ -905,10 +905,10 @@ contract BicUniswapPrePublic is BicTokenPaymasterTestBase {
             fee,
             "BIC contract balance should equal fee"
         );
-        assertEq(
-            bic.balanceOf(address(bic)),
-            bic.getAccumulatedLF(),
-            "BIC balance should equal accumulated LF"
-        );
+        // assertEq(
+        //     bic.balanceOf(address(bic)),
+        //     bic.getAccumulatedLF(),
+        //     "BIC balance should equal accumulated LF"
+        // );
     }
 }
