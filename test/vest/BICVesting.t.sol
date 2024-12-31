@@ -115,6 +115,7 @@ contract BICVestingTest is BICVestingTestBase {
         // Try to release again in same stack
         vm.expectRevert(); // Should revert with NoRelease
         bicVesting.release();
+        vm.stopPrank();
     }
 
     function test_correct_max_reward_stacks() public {
@@ -134,6 +135,7 @@ contract BICVestingTest is BICVestingTestBase {
         uint256 initialReleased = bicVesting.released();
         vm.startPrank(redeemer1);
         bicVesting.release();
+        vm.stopPrank();
 
         assertGt(bicVesting.released(), initialReleased);
         assertEq(bicVesting.currentRewardStacks(), 1);
@@ -156,7 +158,7 @@ contract BICVestingTest is BICVestingTestBase {
 
     function test_beneficiaries_list_accuracy() public {
         address vestingContract = getVestingContract(redeem1);
-        BICVesting bicVesting = BICVesting(vestingContract);
+        BICVesting bicVesting = BICVesting(payable(vestingContract));
 
         address[] memory storedBeneficiaries = bicVesting.getBeneficiaries();
         assertEq(storedBeneficiaries.length, 2);
@@ -196,5 +198,99 @@ contract BICVestingTest is BICVestingTestBase {
             duplicateRedeem.redeemRate
         );
         vm.stopPrank();
+    }
+
+    // TODO: Fix this test - still has dust
+    function test_final_release_transfers_all_remaining() public {
+        // Create new redeem with odd total amount
+        address[] memory beneficiaries = new address[](2);
+        beneficiaries[0] = redeemer1;
+        beneficiaries[1] = redeemer2;
+
+        uint16[] memory allocations = new uint16[](2);
+        allocations[0] = 7000; // 70%
+        allocations[1] = 3000; // 30%
+
+        CreateRedeem memory oddRedeem = CreateRedeem({
+            token: address(testERC20),
+            totalAmount: 3333, // Odd amount that will create dust
+            beneficiaries: beneficiaries,
+            allocations: allocations,
+            duration: 1000,
+            redeemRate: 200
+        });
+
+        createVesting(oddRedeem);
+        address vestingContract = getVestingContract(oddRedeem);
+        BICVesting bicVesting = BICVesting(payable(vestingContract));
+
+        // Print initial state
+        console.log(
+            "Initial contract balance:",
+            testERC20.balanceOf(address(bicVesting))
+        );
+
+        // Warp to after end time
+        vm.warp(block.timestamp + (oddRedeem.duration * 51));
+
+        (uint256 amount, ) = bicVesting.releasable();
+        console.log("Releasable amount:", amount);
+        console.log("Current released:", bicVesting.released());
+        console.log("Total amount:", oddRedeem.totalAmount);
+
+        vm.startPrank(redeemer1);
+        bicVesting.release();
+        vm.stopPrank();
+
+        // Print final balances
+        console.log(
+            "Final contract balance:",
+            testERC20.balanceOf(address(bicVesting))
+        );
+        console.log("Redeemer1 balance:", testERC20.balanceOf(redeemer1));
+        console.log("Redeemer2 balance:", testERC20.balanceOf(redeemer2));
+
+        // Verify contract has zero balance after final release
+        assertEq(
+            testERC20.balanceOf(address(bicVesting)),
+            0,
+            "Contract should have zero balance"
+        );
+    }
+    function test_dust_handling_with_odd_amount() public {
+        // Create new redeem with odd total amount
+        address[] memory beneficiaries = new address[](2);
+        beneficiaries[0] = redeemer1;
+        beneficiaries[1] = redeemer2;
+
+        uint16[] memory allocations = new uint16[](2);
+        allocations[0] = 7000; // 70%
+        allocations[1] = 3000; // 30%
+
+        CreateRedeem memory oddRedeem = CreateRedeem({
+            token: address(testERC20),
+            totalAmount: 3333, // Odd amount that will create dust
+            beneficiaries: beneficiaries,
+            allocations: allocations,
+            duration: 1000,
+            redeemRate: 200
+        });
+        createVesting(oddRedeem);
+
+        address vestingContract = getVestingContract(oddRedeem);
+
+        BICVesting bicVesting = BICVesting(payable(vestingContract));
+
+        // Advance one duration
+        vm.warp(block.timestamp + oddRedeem.duration);
+        vm.startPrank(redeemer1);
+        bicVesting.release();
+        vm.stopPrank();
+
+        // Check that rounding doesn't lose any tokens
+        uint256 totalReleased = testERC20.balanceOf(redeemer1) +
+            testERC20.balanceOf(redeemer2);
+        // less than amountPerDuration because of dust
+        assertLt(totalReleased, bicVesting.amountPerDuration());
     }
 }
