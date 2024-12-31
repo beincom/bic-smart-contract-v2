@@ -158,6 +158,11 @@ contract BICVestingFactory is Ownable, BICVestingErrors {
     /// @param beneficiaries beneficiary addresses
     function _validateBeneficiaries(address[] calldata beneficiaries) internal {
         for (uint256 i = 0; i < beneficiaries.length; i++) {
+            for (uint256 j = i + 1; j < beneficiaries.length; j++) {
+                if (beneficiaries[i] == beneficiaries[j]) {
+                    revert DuplicateBeneficiary(beneficiaries[i]);
+                }
+            }
             if (beneficiaries[i] == address(0) || redeemAddress[beneficiaries[i]] != address(0)) {
                 revert InvalidBeneficiary(beneficiaries[i]);
             }

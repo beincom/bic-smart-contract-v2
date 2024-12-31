@@ -124,6 +124,7 @@ contract BICVesting is
             end += 1 * durationSeconds;
         }
 
+        uint16 totalAllocations = 0;
         // Check for duplicate beneficiaries
         for (uint256 i = 0; i < beneficiaries.length; i++) {
             for (uint256 j = i + 1; j < beneficiaries.length; j++) {
@@ -138,6 +139,10 @@ contract BICVesting is
                 allocation: allocations[i],
                 releasedAmount: 0
             });
+            totalAllocations += allocations[i];
+        }
+        if (totalAllocations != DENOMINATOR) {
+            revert InvalidAllocations(allocations);
         }
     }
 

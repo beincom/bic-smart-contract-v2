@@ -3,10 +3,12 @@ pragma solidity ^0.8.23;
 
 import {BICVestingTestBase} from "./BICVestingTestBase.sol";
 import {BICVesting} from "../../src/vest/BICVesting.sol";
-import {Test, console} from "forge-std/Test.sol";
+import {Test} from "forge-std/Test.sol";
+import {console} from "forge-std/console.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract BICVestingTest is BICVestingTestBase {
-    uint64 public constant DOMINATOR = 10_000;
+    uint64 public constant DENOMINATOR = 10_000;
     function test_early_redeem() public {
         address vestingContract = getVestingContract(redeem1);
         BICVesting bicVesting = BICVesting(vestingContract);
@@ -22,18 +24,20 @@ contract BICVestingTest is BICVestingTestBase {
         address vestingContract = getVestingContract(redeem1);
         BICVesting bicVesting = BICVesting(vestingContract);
 
-        BICVesting.RedeemAllocation memory alloc1 = bicVesting.getAllocation(redeemer1);
-        BICVesting.RedeemAllocation memory alloc2 = bicVesting.getAllocation(redeemer2);
-
+        BICVesting.RedeemAllocation memory alloc1 = bicVesting.getAllocation(
+            redeemer1
+        );
+        BICVesting.RedeemAllocation memory alloc2 = bicVesting.getAllocation(
+            redeemer2
+        );
 
         vm.warp(block.timestamp + redeem1.duration);
 
-        
         assertEq(testERC20.balanceOf(redeemer1), 0);
         (uint256 amount, uint256 stacks) = bicVesting.releasable();
 
-        uint256 amount1Expect = (amount * alloc1.allocation) / DOMINATOR;
-        uint256 amount2Expect = (amount * alloc1.allocation) / DOMINATOR;
+        uint256 amount1Expect = (amount * alloc1.allocation) / DENOMINATOR;
+        uint256 amount2Expect = (amount * alloc1.allocation) / DENOMINATOR;
 
         assertGt(amount, 0);
         assertEq(stacks, 1);
@@ -41,12 +45,10 @@ contract BICVestingTest is BICVestingTestBase {
         bicVesting.release();
 
         // assertEq(amount, testERC20.balanceOf(redeemer1) + testERC20.balanceOf(redeemer2));
-        //assertEq(amount * redeem1.allocations[0] / DOMINATOR, testERC20.balanceOf(redeemer1));
+        //assertEq(amount * redeem1.allocations[0] / DENOMINATOR, testERC20.balanceOf(redeemer1));
     }
 
-    function test_SuccessRedeemOtherStack() public {
-        
-    }
+    function test_SuccessRedeemOtherStack() public {}
 
     function test_accumulate_multiple_stacks() public {
         address vestingContract = getVestingContract(redeem1);
@@ -145,12 +147,34 @@ contract BICVestingTest is BICVestingTestBase {
     function test_partial_release_tracking() public {
         address vestingContract = getVestingContract(redeem1);
         BICVesting bicVesting = BICVesting(vestingContract);
-
+        address[] memory beneficiaries = bicVesting.getBeneficiaries();
+        IERC20 erc20 = IERC20(bicVesting.erc20());
+        uint256 length = beneficiaries.length;
         vm.warp(block.timestamp + redeem1.duration);
-
+        (uint256 amount, uint256 stacks) = bicVesting.releasable();
+        uint256[] memory balancesPrev = new uint256[](length);
+        uint256[] memory amountsAllocation = new uint256[](length);
+        for (uint256 index = 0; index < beneficiaries.length; index++) {
+            balancesPrev[index] = erc20.balanceOf(beneficiaries[index]);
+            amountsAllocation[index] = ((amount *
+                bicVesting.getAllocation(beneficiaries[index]).allocation) /
+                DENOMINATOR);
+            console.log(
+                "Changing owner from %e to %e",
+                balancesPrev[index],
+                amountsAllocation[index]
+            );
+        }
         uint256 initialReleased = bicVesting.released();
         vm.startPrank(redeemer1);
         bicVesting.release();
+
+        for (uint256 index = 0; index < beneficiaries.length; index++) {
+            uint256 balanceNext = balancesPrev[index] +
+                amountsAllocation[index];
+            console.log("Changing owner from %e", balanceNext);
+            assertEq(erc20.balanceOf(beneficiaries[index]), balanceNext);
+        }
 
         assertGt(bicVesting.released(), initialReleased);
         assertEq(bicVesting.currentRewardStacks(), 1);
@@ -160,12 +184,40 @@ contract BICVestingTest is BICVestingTestBase {
         address vestingContract = getVestingContract(redeem1);
         BICVesting bicVesting = BICVesting(vestingContract);
 
+        address[] memory beneficiaries = bicVesting.getBeneficiaries();
+        IERC20 erc20 = IERC20(bicVesting.erc20());
+        uint256 length = beneficiaries.length;
+
+        uint64 maxRewardStacks = bicVesting.maxRewardStacks();
+        uint256[] memory balancesPrev = new uint256[](length);
+        uint256[] memory amountsAllocation = new uint256[](length);
+
         // Release all stacks one by one
-        for (uint i = 0; i < 50; i++) {
+        for (uint64 i = 0; i < maxRewardStacks; i++) {
             vm.warp(block.timestamp + redeem1.duration);
+            (uint256 amount, uint256 stacks) = bicVesting.releasable();
+
+            for (uint256 index = 0; index < beneficiaries.length; index++) {
+                balancesPrev[index] = erc20.balanceOf(beneficiaries[index]);
+                amountsAllocation[index] = ((amount *
+                    bicVesting.getAllocation(beneficiaries[index]).allocation) /
+                    DENOMINATOR);
+                console.log(
+                    "Changing owner from %e to %e",
+                    balancesPrev[index],
+                    amountsAllocation[index]
+                );
+            }
             vm.startPrank(redeemer1);
             bicVesting.release();
             vm.stopPrank();
+
+            for (uint256 index = 0; index < beneficiaries.length; index++) {
+                uint256 balanceNext = balancesPrev[index] +
+                    amountsAllocation[index];
+                console.log("Changing owner from %e", balanceNext);
+                assertEq(erc20.balanceOf(beneficiaries[index]), balanceNext);
+            }
         }
 
         assertEq(bicVesting.released(), redeem1.totalAmount);
