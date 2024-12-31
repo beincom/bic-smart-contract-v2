@@ -14,7 +14,12 @@ import {BICVestingErrors} from "../interfaces/BICVestingErrors.sol";
 /// @notice Manages the locked tokens, allowing beneficiaries to claim their tokens after a vesting period
 /// @dev This contract uses OpenZeppelin's Initializable and ReentrancyGuard to provide initialization and reentrancy protection
 /// @dev Based on VestingWallet from OpenZeppelin Contracts
-contract BICVesting is Context, Initializable, ReentrancyGuard, BICVestingErrors {
+contract BICVesting is
+    Context,
+    Initializable,
+    ReentrancyGuard,
+    BICVestingErrors
+{
     using EnumerableSet for EnumerableSet.AddressSet;
 
     struct RedeemAllocation {
@@ -22,13 +27,18 @@ contract BICVesting is Context, Initializable, ReentrancyGuard, BICVestingErrors
         uint16 allocation;
         uint256 releasedAmount;
     }
-      
+
     /// @notice Emitted when tokens are released to the beneficiary
     /// @param caller The address of the account that executed the release
     /// @param beneficiary The address of the beneficiary who received the tokens
     /// @param amount The amount of tokens released
     /// @param timestamp The block timestamp when the release occurred
-    event ERC20Released(address caller, address beneficiary, uint256 amount, uint256 timestamp);
+    event ERC20Released(
+        address caller,
+        address beneficiary,
+        uint256 amount,
+        uint256 timestamp
+    );
 
     /// @notice The denominator used for calculating percentages, 100% = 10_000, 10% = 1_000, 1% = 100, 0.1% = 10, 0.01% = 1
     /// @dev This is used to calculate the redeem rate
@@ -79,8 +89,14 @@ contract BICVesting is Context, Initializable, ReentrancyGuard, BICVestingErrors
             _end += 1 * durationSeconds;
         }
 
+        // Check for duplicate beneficiaries
         for (uint256 i = 0; i < beneficiaries.length; i++) {
-            address _beneficiary = beneficiaries[1];
+            for (uint256 j = i + 1; j < beneficiaries.length; j++) {
+                if (beneficiaries[i] == beneficiaries[j]) {
+                    revert DuplicateBeneficiary(beneficiaries[i]);
+                }
+            }
+            address _beneficiary = beneficiaries[i];
             _beneficiaries.add(_beneficiary);
             _redeemAllocations[_beneficiary] = RedeemAllocation({
                 beneficiary: _beneficiary,
@@ -177,7 +193,7 @@ contract BICVesting is Context, Initializable, ReentrancyGuard, BICVestingErrors
         }
         _currentRewardStacks += uint64(counter);
         _released += amount;
-        
+
         for (uint256 i = 0; i < _beneficiaries.length(); i++) {
             _releaseToBeneficiary(_beneficiaries.at(i), amount);
         }
@@ -187,11 +203,16 @@ contract BICVesting is Context, Initializable, ReentrancyGuard, BICVestingErrors
     /// @param timestamp The current block timestamp
     /// @return amount The amount of tokens that can be released at this timestamp
     /// @return counter The number of reward stacks that have been released at this timestamp
-    function _vestingSchedule(uint64 timestamp) internal view virtual returns (uint256, uint256) {
+    function _vestingSchedule(
+        uint64 timestamp
+    ) internal view virtual returns (uint256, uint256) {
         if (timestamp < _start) {
             return (0, 0);
         } else if (timestamp > _end) {
-            return (IERC20(_erc20).balanceOf(address(this)), _maxRewardStacks - _currentRewardStacks);
+            return (
+                IERC20(_erc20).balanceOf(address(this)),
+                _maxRewardStacks - _currentRewardStacks
+            );
         } else {
             // check for the latest stack, if _currentRewardStacks < _maxRewardStacks => amount is _amountPerDuration
             // for odd left-over in the last stack, wait for the end of the duration
@@ -208,7 +229,7 @@ contract BICVesting is Context, Initializable, ReentrancyGuard, BICVestingErrors
     /// @dev Internal helper function to calculate the amount of tokens per duration
     /// @return The calculated amount of tokens that should be released per duration based on the total amount and redeem rate
     function _amountPerDuration() internal view virtual returns (uint256) {
-        return _totalAmount * _redeemRate / DENOMINATOR;
+        return (_totalAmount * _redeemRate) / DENOMINATOR;
     }
 
     /// @dev Internal helper function to calculate the last timestamp at which tokens were released based on the current reward stacks
@@ -217,16 +238,29 @@ contract BICVesting is Context, Initializable, ReentrancyGuard, BICVestingErrors
         return _start + (_duration * _currentRewardStacks);
     }
 
-    function _releaseToBeneficiary(address _beneficiary, uint256 stackAmount) private {
-        RedeemAllocation storage _redeemAllocation = _redeemAllocations[_beneficiary];
-        uint256 _releasedAmount = (stackAmount * _redeemAllocation.allocation) / DENOMINATOR;
-        uint256 currentAllocation = _redeemAllocation.releasedAmount + _releasedAmount;
-        uint256 maxAllocation = (_totalAmount * _redeemAllocation.allocation) / DENOMINATOR;
+    function _releaseToBeneficiary(
+        address _beneficiary,
+        uint256 stackAmount
+    ) private {
+        RedeemAllocation storage _redeemAllocation = _redeemAllocations[
+            _beneficiary
+        ];
+        uint256 _releasedAmount = (stackAmount * _redeemAllocation.allocation) /
+            DENOMINATOR;
+        uint256 currentAllocation = _redeemAllocation.releasedAmount +
+            _releasedAmount;
+        uint256 maxAllocation = (_totalAmount * _redeemAllocation.allocation) /
+            DENOMINATOR;
         if (currentAllocation > maxAllocation) {
             revert ExceedAllocation(maxAllocation, currentAllocation);
         }
         _redeemAllocation.releasedAmount += _releasedAmount;
         SafeERC20.safeTransfer(IERC20(_erc20), _beneficiary, _releasedAmount);
-        emit ERC20Released(_msgSender(), _beneficiary, _releasedAmount, block.timestamp);
+        emit ERC20Released(
+            _msgSender(),
+            _beneficiary,
+            _releasedAmount,
+            block.timestamp
+        );
     }
 }
