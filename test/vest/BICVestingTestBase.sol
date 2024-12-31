@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {Test, console} from "forge-std/Test.sol";
 import {BICVestingFactory} from "../../src/vest/BICVestingFactory.sol";
 import {BICVesting} from "../../src/vest/BICVesting.sol";
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract TestERC20 is ERC20 {
     constructor(address owner) ERC20('Test ERC20', 'tERC20') {
@@ -89,7 +89,8 @@ contract BICVestingTestBase is Test {
     function test_checking_vesting_info() public view {
         address vestingContract = getVestingContract(redeem1);
         BICVesting bicVesting = BICVesting(vestingContract);
-        uint256 amountPerDuration = redeem1.totalAmount * redeem1.redeemRate / 10000;
+        uint64 DENOMINATOR = bicVesting.DENOMINATOR;
+        uint256 amountPerDuration = redeem1.totalAmount * redeem1.redeemRate / DENOMINATOR;
         
         assertEq(redeem1.token, bicVesting.erc20());
         assertEq(redeem1.totalAmount, bicVesting.redeemTotalAmount());

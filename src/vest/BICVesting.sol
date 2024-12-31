@@ -22,6 +22,39 @@ contract BICVesting is Context, Initializable, ReentrancyGuard, BICVestingErrors
         uint16 allocation;
         uint256 releasedAmount;
     }
+
+    /**
+     * @notice Data structure to hold all relevant vesting information
+     * @dev This struct is used to store information about the vesting schedule and state.
+     * @param erc20 The address of the ERC20 token contract.
+     * @param redeemTotalAmount The total amount of tokens to be redeemed.
+     * @param start The start time of the vesting period (timestamp).
+     * @param end The end time of the vesting period (timestamp).
+     * @param duration The duration of the vesting period in seconds.
+     * @param maxRewardStacks The maximum number of reward stacks allowed.
+     * @param currentRewardStacks The current number of reward stacks.
+     * @param redeemRate The rate at which tokens are redeemed.
+     * @param lastAtCurrentStack The timestamp of the last action at the current stack.
+     * @param amountPerDuration The amount of tokens to be released per duration.
+     * @param released The total amount of tokens that have been released.
+     * @param beneficiaries The list of beneficiary addresses.
+     * @param allocations The list of allocations corresponding to each beneficiary.
+     * @param releasedAmounts The list of amounts released to each beneficiary.
+     */
+    struct Data {
+        address erc20;
+        uint256 redeemTotalAmount;
+        uint64 start;
+        uint64 end;
+        uint64 duration;
+        uint64 maxRewardStacks;
+        uint64 currentRewardStacks;
+        uint64 redeemRate;
+        uint256 lastAtCurrentStack;
+        uint256 amountPerDuration;
+        uint256 released;
+        RedeemAllocation[] redeemAllocations;
+    }
       
     /// @notice Emitted when tokens are released to the beneficiary
     /// @param caller The address of the account that executed the release
@@ -34,18 +67,18 @@ contract BICVesting is Context, Initializable, ReentrancyGuard, BICVestingErrors
     /// @dev This is used to calculate the redeem rate
     uint64 public constant DENOMINATOR = 10_000;
 
-    address private _erc20;
+    address public erc20;
     EnumerableSet.AddressSet private _beneficiaries;
     mapping(address => RedeemAllocation) private _redeemAllocations;
 
-    uint256 private _released;
-    uint256 private _totalAmount;
-    uint64 private _start;
-    uint64 private _end;
-    uint64 private _duration;
-    uint64 private _maxRewardStacks;
-    uint64 private _currentRewardStacks;
-    uint64 private _redeemRate;
+    uint256 public _released;
+    uint256 public redeemTotalAmount;
+    uint64 public start;
+    uint64 public end;
+    uint64 public duration;
+    uint64 public maxRewardStacks;
+    uint64 public currentRewardStacks;
+    uint64 public redeemRate;
 
     /// @dev Constructor is empty and payment is disabled by default
     constructor() payable {}
@@ -68,15 +101,17 @@ contract BICVesting is Context, Initializable, ReentrancyGuard, BICVestingErrors
         uint64 durationSeconds,
         uint64 redeemRateNumber
     ) public virtual initializer {
-        _start = startTime;
-        _duration = durationSeconds;
-        _erc20 = erc20Address;
-        _totalAmount = totalAmount;
-        _maxRewardStacks = DENOMINATOR / redeemRateNumber;
-        _redeemRate = redeemRateNumber;
-        _end = _start + _maxRewardStacks * durationSeconds;
+
+
+        start = startTime;
+        duration = durationSeconds;
+        erc20 = erc20Address;
+        redeemTotalAmount = totalAmount;
+        maxRewardStacks = DENOMINATOR / redeemRateNumber;
+        redeemRate = redeemRateNumber;
+        end = start + maxRewardStacks * durationSeconds;
         if (DENOMINATOR % redeemRateNumber > 0) {
-            _end += 1 * durationSeconds;
+            end += 1 * durationSeconds;
         }
 
         for (uint256 i = 0; i < beneficiaries.length; i++) {
@@ -90,76 +125,49 @@ contract BICVesting is Context, Initializable, ReentrancyGuard, BICVestingErrors
         }
     }
 
-    /// @notice Getter for the ERC20 token address
-    /// @dev This function returns the address of the ERC20 token that is locked in the contract
-    function erc20() public view virtual returns (address) {
-        return _erc20;
-    }
+    /// @notice Getter for all vesting information
+    /// @dev This function returns all relevant vesting information in a single call
+    /// @return The Data struct containing all vesting information
+    function getInformation() 
+        public 
+        view 
+        virtual 
+        returns (Data memory) 
+    {
+        
+        uint256 length = _beneficiaries.length();
+        RedeemAllocation[] memory redeemAllocations = new RedeemAllocation[](length);
+        for (uint256 i = 0; i < length; i++) {
+            address beneficiaryAddress = _beneficiaries.at(i);
+            redeemAllocations[i] = _redeemAllocations[beneficiaryAddress];
+        }
 
-    /// @notice Getter for the total amount of tokens locked in the contract
-    /// @dev This function returns the total amount of tokens that are locked in the contract
-    function redeemTotalAmount() public view virtual returns (uint256) {
-        return _totalAmount;
+        return Data({
+            erc20: erc20,
+            redeemTotalAmount: redeemTotalAmount,
+            start: start,
+            end: end,
+            duration: duration,
+            maxRewardStacks: maxRewardStacks,
+            currentRewardStacks: currentRewardStacks,
+            lastAtCurrentStack: _lastAtCurrentStack(),
+            amountPerDuration: _amountPerDuration(),
+            redeemRate: redeemRate,
+            released: _released,
+            redeemAllocations: redeemAllocations
+        });
     }
-
-    /// @notice Getter for the redeem rate
-    /// @dev This function returns the redeem rate, which is the percentage of tokens that will be released per duration
-    function redeemRate() public view virtual returns (uint64) {
-        return _redeemRate;
-    }
-
-    /// @notice Getter for the beneficiary address
-    /// @dev This function returns the address of the beneficiary who will receive the tokens after vesting
-    function getBeneficiaries() public view virtual returns (address[] memory) {
-        return _beneficiaries.values();
-    }
-
-    /// @notice Getter for the start timestamp
-    /// @dev This function returns the start timestamp of the vesting period
-    function start() public view virtual returns (uint256) {
-        return _start;
-    }
-
-    /// @notice Getter for the end timestamp
-    /// @dev This function returns the end timestamp of the vesting period
-    function end() public view virtual returns (uint256) {
-        return _end;
-    }
-
-    /// @notice Getter for the duration of the vesting period
-    /// @dev This function returns the duration of the vesting period
-    function duration() public view virtual returns (uint256) {
-        return _duration;
-    }
-
-    /// @notice Getter for the last timestamp at the current reward stack
-    /// @dev This function returns the last timestamp at the current reward stack
-    function lastAtCurrentStack() public view virtual returns (uint256) {
-        return _lastAtCurrentStack();
-    }
-
-    /// @notice Getter for the maximum reward stacks
-    /// @dev This function returns the maximum reward stacks
-    function maxRewardStacks() public view virtual returns (uint256) {
-        return _maxRewardStacks;
-    }
-
-    /// @notice Getter for the current reward stacks
-    /// @dev This function returns the current reward stacks
-    function currentRewardStacks() public view virtual returns (uint256) {
-        return _currentRewardStacks;
-    }
-
+    
     /// @notice Getter for the amount of tokens that will be released per duration
     /// @dev This function returns the amount of tokens that will be released per duration
     function amountPerDuration() public view virtual returns (uint256) {
         return _amountPerDuration();
     }
 
-    /// @notice Getter for the amount of tokens that have been released
-    /// @dev This function returns the amount of tokens that have been released to the beneficiary
-    function released() public view virtual returns (uint256) {
-        return _released;
+    /// @notice Getter for the beneficiary address
+    /// @dev This function returns the address of the beneficiary who will receive the tokens after vesting
+    function getBeneficiaries() public view virtual returns (address[] memory) {
+        return _beneficiaries.values();
     }
 
     /// @notice Calculates the amount of tokens that are currently available for release
@@ -175,7 +183,7 @@ contract BICVesting is Context, Initializable, ReentrancyGuard, BICVestingErrors
         if (amount == 0) {
             revert NoRelease();
         }
-        _currentRewardStacks += uint64(counter);
+        currentRewardStacks += uint64(counter);
         _released += amount;
         
         for (uint256 i = 0; i < _beneficiaries.length(); i++) {
@@ -188,17 +196,17 @@ contract BICVesting is Context, Initializable, ReentrancyGuard, BICVestingErrors
     /// @return amount The amount of tokens that can be released at this timestamp
     /// @return counter The number of reward stacks that have been released at this timestamp
     function _vestingSchedule(uint64 timestamp) internal view virtual returns (uint256, uint256) {
-        if (timestamp < _start) {
+        if (timestamp < start) {
             return (0, 0);
-        } else if (timestamp > _end) {
-            return (IERC20(_erc20).balanceOf(address(this)), _maxRewardStacks - _currentRewardStacks);
+        } else if (timestamp > end) {
+            return (IERC20(erc20).balanceOf(address(this)), maxRewardStacks - currentRewardStacks);
         } else {
-            // check for the latest stack, if _currentRewardStacks < _maxRewardStacks => amount is _amountPerDuration
+            // check for the latest stack, if currentRewardStacks < maxRewardStacks => amount is _amountPerDuration
             // for odd left-over in the last stack, wait for the end of the duration
-            if (_currentRewardStacks >= _maxRewardStacks) return (0, 0);
+            if (currentRewardStacks >= maxRewardStacks) return (0, 0);
 
             uint256 elapsedTime = uint256(timestamp) - _lastAtCurrentStack();
-            uint256 rewardStackCounter = elapsedTime / _duration;
+            uint256 rewardStackCounter = elapsedTime / duration;
             uint256 amount = rewardStackCounter * _amountPerDuration();
 
             return (amount, rewardStackCounter);
@@ -208,25 +216,25 @@ contract BICVesting is Context, Initializable, ReentrancyGuard, BICVestingErrors
     /// @dev Internal helper function to calculate the amount of tokens per duration
     /// @return The calculated amount of tokens that should be released per duration based on the total amount and redeem rate
     function _amountPerDuration() internal view virtual returns (uint256) {
-        return _totalAmount * _redeemRate / DENOMINATOR;
+        return redeemTotalAmount * redeemRate / DENOMINATOR;
     }
 
     /// @dev Internal helper function to calculate the last timestamp at which tokens were released based on the current reward stacks
     /// @return The timestamp of the last release
     function _lastAtCurrentStack() internal view virtual returns (uint256) {
-        return _start + (_duration * _currentRewardStacks);
+        return start + (duration * currentRewardStacks);
     }
 
     function _releaseToBeneficiary(address _beneficiary, uint256 stackAmount) private {
         RedeemAllocation storage _redeemAllocation = _redeemAllocations[_beneficiary];
         uint256 _releasedAmount = (stackAmount * _redeemAllocation.allocation) / DENOMINATOR;
         uint256 currentAllocation = _redeemAllocation.releasedAmount + _releasedAmount;
-        uint256 maxAllocation = (_totalAmount * _redeemAllocation.allocation) / DENOMINATOR;
+        uint256 maxAllocation = (redeemTotalAmount * _redeemAllocation.allocation) / DENOMINATOR;
         if (currentAllocation > maxAllocation) {
             revert ExceedAllocation(maxAllocation, currentAllocation);
         }
         _redeemAllocation.releasedAmount += _releasedAmount;
-        SafeERC20.safeTransfer(IERC20(_erc20), _beneficiary, _releasedAmount);
+        SafeERC20.safeTransfer(IERC20(erc20), _beneficiary, _releasedAmount);
         emit ERC20Released(_msgSender(), _beneficiary, _releasedAmount, block.timestamp);
     }
 }
