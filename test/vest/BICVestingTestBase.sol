@@ -7,7 +7,7 @@ import {BICVestingFactory} from "../../src/vest/BICVestingFactory.sol";
 import {BICVesting} from "../../src/vest/BICVesting.sol";
 
 contract TestERC20 is ERC20 {
-    constructor(address owner) ERC20('Test ERC20', 'tERC20') {
+    constructor(address owner) ERC20("Test ERC20", "tERC20") {
         _mint(owner, 1e27);
     }
 }
@@ -28,9 +28,9 @@ contract BICVestingTestBase is Test {
     uint256 owner_private_key = 0xb1c;
     address owner = vm.addr(owner_private_key);
     uint256 redeemer1_private_key = 0xb2c;
-    address redeemer1 = vm.addr(owner_private_key);
+    address redeemer1 = vm.addr(redeemer1_private_key);
     uint256 redeemer2_private_key = 0xb3c;
-    address redeemer2 = vm.addr(owner_private_key);
+    address redeemer2 = vm.addr(redeemer2_private_key);
 
     CreateRedeem public redeem1;
     address[] beneficiaries;
@@ -41,7 +41,10 @@ contract BICVestingTestBase is Test {
         testERC20 = new TestERC20(owner);
 
         vm.startPrank(owner);
-        testERC20.transfer(address(bicVestingFactory), testERC20.balanceOf(owner));
+        testERC20.transfer(
+            address(bicVestingFactory),
+            testERC20.balanceOf(owner)
+        );
 
         beneficiaries = new address[](2);
         beneficiaries[0] = redeemer1;
@@ -75,15 +78,18 @@ contract BICVestingTestBase is Test {
         vm.stopPrank();
     }
 
-    function getVestingContract(CreateRedeem memory info) public view returns (address) {
-        return bicVestingFactory.computeRedeem(
-            info.token,
-            info.totalAmount,
-            info.beneficiaries,
-            info.allocations,
-            info.duration,
-            info.redeemRate
-        );
+    function getVestingContract(
+        CreateRedeem memory info
+    ) public view returns (address) {
+        return
+            bicVestingFactory.computeRedeem(
+                info.token,
+                info.totalAmount,
+                info.beneficiaries,
+                info.allocations,
+                info.duration,
+                info.redeemRate
+            );
     }
 
     function test_checking_vesting_info() public view {

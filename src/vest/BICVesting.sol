@@ -14,7 +14,12 @@ import {BICVestingErrors} from "../interfaces/BICVestingErrors.sol";
 /// @notice Manages the locked tokens, allowing beneficiaries to claim their tokens after a vesting period
 /// @dev This contract uses OpenZeppelin's Initializable and ReentrancyGuard to provide initialization and reentrancy protection
 /// @dev Based on VestingWallet from OpenZeppelin Contracts
-contract BICVesting is Context, Initializable, ReentrancyGuard, BICVestingErrors {
+contract BICVesting is
+    Context,
+    Initializable,
+    ReentrancyGuard,
+    BICVestingErrors
+{
     using EnumerableSet for EnumerableSet.AddressSet;
 
     struct RedeemAllocation {
@@ -61,7 +66,12 @@ contract BICVesting is Context, Initializable, ReentrancyGuard, BICVestingErrors
     /// @param beneficiary The address of the beneficiary who received the tokens
     /// @param amount The amount of tokens released
     /// @param timestamp The block timestamp when the release occurred
-    event ERC20Released(address caller, address beneficiary, uint256 amount, uint256 timestamp);
+    event ERC20Released(
+        address caller,
+        address beneficiary,
+        uint256 amount,
+        uint256 timestamp
+    );
 
     /// @notice The denominator used for calculating percentages, 100% = 10_000, 10% = 1_000, 1% = 100, 0.1% = 10, 0.01% = 1
     /// @dev This is used to calculate the redeem rate
@@ -114,8 +124,14 @@ contract BICVesting is Context, Initializable, ReentrancyGuard, BICVestingErrors
             end += 1 * durationSeconds;
         }
 
+        // Check for duplicate beneficiaries
         for (uint256 i = 0; i < beneficiaries.length; i++) {
-            address _beneficiary = beneficiaries[1];
+            for (uint256 j = i + 1; j < beneficiaries.length; j++) {
+                if (beneficiaries[i] == beneficiaries[j]) {
+                    revert DuplicateBeneficiary(beneficiaries[i]);
+                }
+            }
+            address _beneficiary = beneficiaries[i];
             _beneficiaries.add(_beneficiary);
             _redeemAllocations[_beneficiary] = RedeemAllocation({
                 beneficiary: _beneficiary,
