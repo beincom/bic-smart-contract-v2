@@ -165,9 +165,9 @@ contract BICVesting is Context, Initializable, ReentrancyGuard, BICVestingErrors
     }
 
     /// @notice 
-    /// @dev
+    /// @dev 
     function getAllocation(address _beneficiary) public view virtual returns (RedeemAllocation memory) {
-        return _redeemAllocations(_beneficiary);
+        return _redeemAllocations[_beneficiary];
     }
 
     

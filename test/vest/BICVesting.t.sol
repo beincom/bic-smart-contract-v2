@@ -21,10 +21,20 @@ contract BICVestingTest is BICVestingTestBase {
     function test_SuccessRedeemFirstStack() public {
         address vestingContract = getVestingContract(redeem1);
         BICVesting bicVesting = BICVesting(vestingContract);
-        uint256 allocation1 = bicVesting._redeemAllocations();
+
+        BICVesting.RedeemAllocation memory alloc1 = bicVesting.getAllocation(redeemer1);
+        BICVesting.RedeemAllocation memory alloc2 = bicVesting.getAllocation(redeemer2);
+
+
         vm.warp(block.timestamp + redeem1.duration);
+
+        
         assertEq(testERC20.balanceOf(redeemer1), 0);
         (uint256 amount, uint256 stacks) = bicVesting.releasable();
+
+        uint256 amount1Expect = (amount * alloc1.allocation) / DOMINATOR;
+        uint256 amount2Expect = (amount * alloc1.allocation) / DOMINATOR;
+
         assertGt(amount, 0);
         assertEq(stacks, 1);
         vm.startPrank(redeemer1);
