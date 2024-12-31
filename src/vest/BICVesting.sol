@@ -71,7 +71,7 @@ contract BICVesting is Context, Initializable, ReentrancyGuard, BICVestingErrors
     EnumerableSet.AddressSet private _beneficiaries;
     mapping(address => RedeemAllocation) private _redeemAllocations;
 
-    uint256 public _released;
+    uint256 public released;
     uint256 public redeemTotalAmount;
     uint64 public start;
     uint64 public end;
@@ -153,7 +153,7 @@ contract BICVesting is Context, Initializable, ReentrancyGuard, BICVestingErrors
             lastAtCurrentStack: _lastAtCurrentStack(),
             amountPerDuration: _amountPerDuration(),
             redeemRate: redeemRate,
-            released: _released,
+            released: released,
             redeemAllocations: redeemAllocations
         });
     }
@@ -163,6 +163,14 @@ contract BICVesting is Context, Initializable, ReentrancyGuard, BICVestingErrors
     function amountPerDuration() public view virtual returns (uint256) {
         return _amountPerDuration();
     }
+
+    /// @notice 
+    /// @dev
+    function getAllocation(address _beneficiary) public view virtual returns (RedeemAllocation memory) {
+        return _redeemAllocations(_beneficiary);
+    }
+
+    
 
     /// @notice Getter for the beneficiary address
     /// @dev This function returns the address of the beneficiary who will receive the tokens after vesting
@@ -184,7 +192,7 @@ contract BICVesting is Context, Initializable, ReentrancyGuard, BICVestingErrors
             revert NoRelease();
         }
         currentRewardStacks += uint64(counter);
-        _released += amount;
+        released += amount;
         
         for (uint256 i = 0; i < _beneficiaries.length(); i++) {
             _releaseToBeneficiary(_beneficiaries.at(i), amount);

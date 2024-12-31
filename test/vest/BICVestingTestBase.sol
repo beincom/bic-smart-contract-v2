@@ -89,7 +89,7 @@ contract BICVestingTestBase is Test {
     function test_checking_vesting_info() public view {
         address vestingContract = getVestingContract(redeem1);
         BICVesting bicVesting = BICVesting(vestingContract);
-        uint64 DENOMINATOR = bicVesting.DENOMINATOR;
+        uint64 DENOMINATOR = bicVesting.DENOMINATOR();
         uint256 amountPerDuration = redeem1.totalAmount * redeem1.redeemRate / DENOMINATOR;
         
         assertEq(redeem1.token, bicVesting.erc20());
