@@ -1,14 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {Test, console} from "forge-std/Test.sol";
 import {BICVestingFactory} from "../../src/vest/BICVestingFactory.sol";
 import {BICVesting} from "../../src/vest/BICVesting.sol";
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract TestERC20 is ERC20 {
     constructor(address owner) ERC20("Test ERC20", "tERC20") {
         _mint(owner, 1e27);
+    }
+
+    function mint(address to, uint256 amount) public {
+        _mint(to, amount);
     }
 }
 
@@ -65,6 +69,18 @@ contract BICVestingTestBase is Test {
         createVesting(redeem1);
     }
 
+    function isValidAllocations(uint16[] memory _allocations) internal pure returns (bool) {
+        uint256 sum = 0;
+        for (uint256 i = 0; i < _allocations.length; i++) {
+            sum += _allocations[i];
+            if (sum > 10_000) {
+                return false;
+            }
+        }
+        return sum == 10_000;
+    }
+
+
     function createVesting(CreateRedeem memory info) public {
         vm.startPrank(owner);
         bicVestingFactory.createRedeem(
@@ -95,9 +111,9 @@ contract BICVestingTestBase is Test {
     function test_checking_vesting_info() public view {
         address vestingContract = getVestingContract(redeem1);
         BICVesting bicVesting = BICVesting(vestingContract);
-        uint256 amountPerDuration = (redeem1.totalAmount * redeem1.redeemRate) /
-            10000;
-
+        uint64 DENOMINATOR = bicVesting.DENOMINATOR();
+        uint256 amountPerDuration = redeem1.totalAmount * redeem1.redeemRate / DENOMINATOR;
+        
         assertEq(redeem1.token, bicVesting.erc20());
         assertEq(redeem1.totalAmount, bicVesting.redeemTotalAmount());
         assertEq(redeem1.redeemRate, bicVesting.redeemRate());

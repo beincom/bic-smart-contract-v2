@@ -72,8 +72,8 @@ contract BICVestingFactory is Ownable, BICVestingErrors {
             revert InvalidRedeemAllocation(beneficiaries, allocations);
         }
 
-        // validate beneficiaries and allocations
-        _validateBeneficiaryAddresses(beneficiaries);
+        // validate beneficiaryAddresses and allocations
+        _validateBeneficiaries(beneficiaries);
         _validateAllocations(allocations);
 
         if (
@@ -93,9 +93,12 @@ contract BICVestingFactory is Ownable, BICVestingErrors {
         // Transfer from BIC to Account
         SafeERC20.safeTransfer(IERC20(erc20), address(ret), totalAmount);
 
-        // redeemAddress[beneficiaryAddress] = address(ret);
+        for (uint256 i = 0; i < beneficiaries.length; i++) {
+            redeemAddress[beneficiaries[i]] = address(ret);
+        }
         emit RedeemInitialized(address(ret), erc20, totalAmount, beneficiaries, allocations, durationSeconds, redeemRate);
     }
+
 
     /// @notice Computes the address of a potential redeem contract for a given set of parameters
     /// @param erc20 The address of the ERC20 token involved
@@ -113,10 +116,16 @@ contract BICVestingFactory is Ownable, BICVestingErrors {
         uint64 durationSeconds,
         uint64 redeemRate
     ) public view returns (address) {
-        // if (redeemAddress[beneficiaryAddress] != address(0)) {
-        //     return redeemAddress[beneficiaryAddress];
-        // }
+        if (
+            beneficiaries.length == 0 ||
+            beneficiaries.length != allocations.length
+        ) {
+            revert InvalidRedeemAllocation(beneficiaries, allocations);
+        }
 
+        // only need to validate allocations
+        _validateAllocations(allocations);
+        
         bytes32 salthash = getHash(erc20, totalAmount, beneficiaries, allocations, durationSeconds, redeemRate);
 
         address predicted = Clones.predictDeterministicAddress(address(bicVestingImplementation), salthash);
@@ -128,7 +137,8 @@ contract BICVestingFactory is Ownable, BICVestingErrors {
     /// @dev This hash is used for creating deterministic addresses for clone contracts
     /// @param erc20 The address of the ERC20 token
     /// @param totalAmount The total amount of tokens
-    /// @param beneficiaries The address of the beneficiary
+    /// @param beneficiaries The addresses of the beneficiary
+    /// @param allocations The percentage of the total amount to allocate to each beneficiary
     /// @param durationSeconds The duration of the redeem
     /// @param redeemRate The percentage of the total amount to be redeemed per interval
     /// @return hash The computed hash of the parameters
@@ -146,9 +156,14 @@ contract BICVestingFactory is Ownable, BICVestingErrors {
     /// @notice validate beneficiary addresses
     /// @dev Ensure all beneficiaries are not null address
     /// @param beneficiaries beneficiary addresses
-    function _validateBeneficiaryAddresses(address[] calldata beneficiaries) internal pure {
+    function _validateBeneficiaries(address[] calldata beneficiaries) internal view {
         for (uint256 i = 0; i < beneficiaries.length; i++) {
-            if (beneficiaries[i] == address(0)) {
+            for (uint256 j = i + 1; j < beneficiaries.length; j++) {
+                if (beneficiaries[i] == beneficiaries[j]) {
+                    revert DuplicateBeneficiary(beneficiaries[i]);
+                }
+            }
+            if (beneficiaries[i] == address(0) || redeemAddress[beneficiaries[i]] != address(0)) {
                 revert InvalidBeneficiary(beneficiaries[i]);
             }
         }
@@ -161,9 +176,9 @@ contract BICVestingFactory is Ownable, BICVestingErrors {
         uint16 totalAllocations = 0;
         for (uint256 i = 0; i < allocations.length; i++) {
             totalAllocations += allocations[i];
-        }
-        if (totalAllocations != DENOMINATOR) {
-            revert InvalidAllocations(allocations);
+            if(totalAllocations > DENOMINATOR) {
+                revert InvalidAllocations(allocations);
+            }
         }
     }
 }
