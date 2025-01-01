@@ -170,7 +170,7 @@ contract BICVestingFuzzTest is Test {
         currentRewardStacks = vesting.currentRewardStacks();
         if (currentRewardStacks >= maxRewardStacks) {
             if (buffer > 0) {
-                vm.warp(vesting.end());
+                vm.warp(vesting.end() + 1);
                 (amount, stacksCounter) = vesting.releasable();
                 for (uint256 i = 0; i < beneficiaries.length; i++) {
                     balancesPrev[i] = erc20.balanceOf(beneficiaries[i]);
