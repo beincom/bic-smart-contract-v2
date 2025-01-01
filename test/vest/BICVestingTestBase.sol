@@ -10,6 +10,10 @@ contract TestERC20 is ERC20 {
     constructor(address owner) ERC20("Test ERC20", "tERC20") {
         _mint(owner, 1e27);
     }
+
+    function mint(address to, uint256 amount) public {
+        _mint(to, amount);
+    }
 }
 
 contract BICVestingTestBase is Test {
@@ -64,6 +68,18 @@ contract BICVestingTestBase is Test {
         });
         createVesting(redeem1);
     }
+
+    function isValidAllocations(uint16[] memory _allocations) internal pure returns (bool) {
+        uint256 sum = 0;
+        for (uint256 i = 0; i < _allocations.length; i++) {
+            sum += _allocations[i];
+            if (sum > 10_000) {
+                return false;
+            }
+        }
+        return sum == 10_000;
+    }
+
 
     function createVesting(CreateRedeem memory info) public {
         vm.startPrank(owner);

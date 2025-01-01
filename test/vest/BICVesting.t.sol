@@ -154,26 +154,26 @@ contract BICVestingTest is BICVestingTestBase {
         (uint256 amount, uint256 stacks) = bicVesting.releasable();
         uint256[] memory balancesPrev = new uint256[](length);
         uint256[] memory amountsAllocation = new uint256[](length);
-        for (uint256 index = 0; index < beneficiaries.length; index++) {
-            balancesPrev[index] = erc20.balanceOf(beneficiaries[index]);
-            amountsAllocation[index] = ((amount *
-                bicVesting.getAllocation(beneficiaries[index]).allocation) /
+        for (uint256 i = 0; i < beneficiaries.length; i++) {
+            balancesPrev[i] = erc20.balanceOf(beneficiaries[i]);
+            amountsAllocation[i] = ((amount *
+                bicVesting.getAllocation(beneficiaries[i]).allocation) /
                 DENOMINATOR);
             console.log(
                 "Changing owner from %e to %e",
-                balancesPrev[index],
-                amountsAllocation[index]
+                balancesPrev[i],
+                amountsAllocation[i]
             );
         }
         uint256 initialReleased = bicVesting.released();
         vm.startPrank(redeemer1);
         bicVesting.release();
 
-        for (uint256 index = 0; index < beneficiaries.length; index++) {
-            uint256 balanceNext = balancesPrev[index] +
-                amountsAllocation[index];
+        for (uint256 i = 0; i < beneficiaries.length; i++) {
+            uint256 balanceNext = balancesPrev[i] +
+                amountsAllocation[i];
             console.log("Changing owner from %e", balanceNext);
-            assertEq(erc20.balanceOf(beneficiaries[index]), balanceNext);
+            assertEq(erc20.balanceOf(beneficiaries[i]), balanceNext);
         }
 
         assertGt(bicVesting.released(), initialReleased);
@@ -197,26 +197,26 @@ contract BICVestingTest is BICVestingTestBase {
             vm.warp(block.timestamp + redeem1.duration);
             (uint256 amount, uint256 stacks) = bicVesting.releasable();
 
-            for (uint256 index = 0; index < beneficiaries.length; index++) {
-                balancesPrev[index] = erc20.balanceOf(beneficiaries[index]);
-                amountsAllocation[index] = ((amount *
-                    bicVesting.getAllocation(beneficiaries[index]).allocation) /
+            for (uint256 i = 0; i < beneficiaries.length; i++) {
+                balancesPrev[i] = erc20.balanceOf(beneficiaries[i]);
+                amountsAllocation[i] = ((amount *
+                    bicVesting.getAllocation(beneficiaries[i]).allocation) /
                     DENOMINATOR);
                 console.log(
                     "Changing owner from %e to %e",
-                    balancesPrev[index],
-                    amountsAllocation[index]
+                    balancesPrev[i],
+                    amountsAllocation[i]
                 );
             }
             vm.startPrank(redeemer1);
             bicVesting.release();
             vm.stopPrank();
 
-            for (uint256 index = 0; index < beneficiaries.length; index++) {
-                uint256 balanceNext = balancesPrev[index] +
-                    amountsAllocation[index];
+            for (uint256 i = 0; i < beneficiaries.length; i++) {
+                uint256 balanceNext = balancesPrev[i] +
+                    amountsAllocation[i];
                 console.log("Changing owner from %e", balanceNext);
-                assertEq(erc20.balanceOf(beneficiaries[index]), balanceNext);
+                assertEq(erc20.balanceOf(beneficiaries[i]), balanceNext);
             }
         }
 
@@ -266,4 +266,6 @@ contract BICVestingTest is BICVestingTestBase {
         );
         vm.stopPrank();
     }
+
+    
 }

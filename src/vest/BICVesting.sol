@@ -111,7 +111,14 @@ contract BICVesting is
         uint64 durationSeconds,
         uint64 redeemRateNumber
     ) public virtual initializer {
-
+        if (
+            totalAmount == 0 ||
+            durationSeconds == 0 ||
+            redeemRateNumber == 0 ||
+            erc20Address == address(0)
+        ) {
+            revert InvalidVestingConfig(totalAmount, durationSeconds, redeemRate, erc20Address);
+        }
 
         start = startTime;
         duration = durationSeconds;
@@ -127,22 +134,20 @@ contract BICVesting is
         uint16 totalAllocations = 0;
         // Check for duplicate beneficiaries
         for (uint256 i = 0; i < beneficiaries.length; i++) {
-            for (uint256 j = i + 1; j < beneficiaries.length; j++) {
-                if (beneficiaries[i] == beneficiaries[j]) {
-                    revert DuplicateBeneficiary(beneficiaries[i]);
-                }
-            }
             address _beneficiary = beneficiaries[i];
-            _beneficiaries.add(_beneficiary);
+            bool success = _beneficiaries.add(_beneficiary);
+            if(!success) {
+                revert DuplicateBeneficiary(beneficiaries[i]);
+            }
             _redeemAllocations[_beneficiary] = RedeemAllocation({
                 beneficiary: _beneficiary,
                 allocation: allocations[i],
                 releasedAmount: 0
             });
             totalAllocations += allocations[i];
-        }
-        if (totalAllocations != DENOMINATOR) {
-            revert InvalidAllocations(allocations);
+            if(totalAllocations > DENOMINATOR) {
+                revert InvalidAllocations(allocations);
+            }
         }
     }
 
@@ -256,14 +261,14 @@ contract BICVesting is
 
     function _releaseToBeneficiary(address _beneficiary, uint256 stackAmount) private {
         RedeemAllocation storage _redeemAllocation = _redeemAllocations[_beneficiary];
-        uint256 _releasedAmount = (stackAmount * _redeemAllocation.allocation) / DENOMINATOR;
-        uint256 currentAllocation = _redeemAllocation.releasedAmount + _releasedAmount;
+        uint256 releaseAmount = (stackAmount * _redeemAllocation.allocation) / DENOMINATOR;
+        uint256 currentAllocation = _redeemAllocation.releasedAmount + releaseAmount;
         uint256 maxAllocation = (redeemTotalAmount * _redeemAllocation.allocation) / DENOMINATOR;
         if (currentAllocation > maxAllocation) {
             revert ExceedAllocation(maxAllocation, currentAllocation);
         }
-        _redeemAllocation.releasedAmount += _releasedAmount;
-        SafeERC20.safeTransfer(IERC20(erc20), _beneficiary, _releasedAmount);
-        emit ERC20Released(_msgSender(), _beneficiary, _releasedAmount, block.timestamp);
+        _redeemAllocation.releasedAmount += releaseAmount;
+        SafeERC20.safeTransfer(IERC20(erc20), _beneficiary, releaseAmount);
+        emit ERC20Released(_msgSender(), _beneficiary, releaseAmount, block.timestamp);
     }
 }

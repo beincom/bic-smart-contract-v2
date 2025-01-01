@@ -156,7 +156,7 @@ contract BICVestingFactory is Ownable, BICVestingErrors {
     /// @notice validate beneficiary addresses
     /// @dev Ensure all beneficiaries are not null address
     /// @param beneficiaries beneficiary addresses
-    function _validateBeneficiaries(address[] calldata beneficiaries) internal {
+    function _validateBeneficiaries(address[] calldata beneficiaries) internal view {
         for (uint256 i = 0; i < beneficiaries.length; i++) {
             for (uint256 j = i + 1; j < beneficiaries.length; j++) {
                 if (beneficiaries[i] == beneficiaries[j]) {
@@ -176,9 +176,9 @@ contract BICVestingFactory is Ownable, BICVestingErrors {
         uint16 totalAllocations = 0;
         for (uint256 i = 0; i < allocations.length; i++) {
             totalAllocations += allocations[i];
-        }
-        if (totalAllocations != DENOMINATOR) {
-            revert InvalidAllocations(allocations);
+            if(totalAllocations > DENOMINATOR) {
+                revert InvalidAllocations(allocations);
+            }
         }
     }
 }
