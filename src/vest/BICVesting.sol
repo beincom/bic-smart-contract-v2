@@ -196,8 +196,6 @@ contract BICVesting is
         return _redeemAllocations[_beneficiary];
     }
 
-    
-
     /// @notice Getter for the beneficiary address
     /// @dev This function returns the address of the beneficiary who will receive the tokens after vesting
     function getBeneficiaries() public view virtual returns (address[] memory) {
@@ -219,9 +217,23 @@ contract BICVesting is
         }
         currentRewardStacks += uint64(counter);
         released += amount;
+        uint256 distributedAmount = 0;
         
         for (uint256 i = 0; i < _beneficiaries.length(); i++) {
-            _releaseToBeneficiary(_beneficiaries.at(i), amount);
+            address _beneficiary = _beneficiaries.at(i);
+            RedeemAllocation storage _redeemAllocation = _redeemAllocations[_beneficiary];
+            uint256 releaseAmount;
+
+            if (i == _beneficiaries.length() - 1) {
+                releaseAmount = amount - distributedAmount;
+            } else {
+                releaseAmount = (amount * _redeemAllocation.allocation) / DENOMINATOR;
+            }
+
+            _redeemAllocation.releasedAmount += releaseAmount;
+            distributedAmount += releaseAmount;
+            SafeERC20.safeTransfer(IERC20(erc20), _beneficiary, releaseAmount);
+            emit ERC20Released(_msgSender(), _beneficiary, releaseAmount, block.timestamp);
         }
     }
 
@@ -257,18 +269,5 @@ contract BICVesting is
     /// @return The timestamp of the last release
     function _lastAtCurrentStack() internal view virtual returns (uint256) {
         return start + (duration * currentRewardStacks);
-    }
-
-    function _releaseToBeneficiary(address _beneficiary, uint256 stackAmount) private {
-        RedeemAllocation storage _redeemAllocation = _redeemAllocations[_beneficiary];
-        uint256 releaseAmount = (stackAmount * _redeemAllocation.allocation) / DENOMINATOR;
-        uint256 currentAllocation = _redeemAllocation.releasedAmount + releaseAmount;
-        uint256 maxAllocation = (redeemTotalAmount * _redeemAllocation.allocation) / DENOMINATOR;
-        if (currentAllocation > maxAllocation) {
-            revert ExceedAllocation(maxAllocation, currentAllocation);
-        }
-        _redeemAllocation.releasedAmount += releaseAmount;
-        SafeERC20.safeTransfer(IERC20(erc20), _beneficiary, releaseAmount);
-        emit ERC20Released(_msgSender(), _beneficiary, releaseAmount, block.timestamp);
     }
 }

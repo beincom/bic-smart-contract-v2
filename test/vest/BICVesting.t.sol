@@ -295,32 +295,11 @@ contract BICVestingTest is BICVestingTestBase {
         address vestingContract = getVestingContract(oddRedeem);
         BICVesting bicVesting = BICVesting(payable(vestingContract));
 
-        // Print initial state
-        console.log(
-            "Initial contract balance:",
-            testERC20.balanceOf(address(bicVesting))
-        );
-
         // Warp to after end time
         vm.warp(bicVesting.end() + 1);
-
-        (uint256 amount, ) = bicVesting.releasable();
-        console.log("Releasable amount:", amount);
-        console.log("Current released:", bicVesting.released());
-        console.log("Total amount:", oddRedeem.totalAmount);
-
         vm.startPrank(redeemer1);
         bicVesting.release();
         vm.stopPrank();
-
-        // Print final balances
-        console.log(
-            "Final contract balance:",
-            testERC20.balanceOf(address(bicVesting))
-        );
-        console.log("Redeemer1 balance:", testERC20.balanceOf(beneficiaries[0]));
-        console.log("Redeemer2 balance:", testERC20.balanceOf(beneficiaries[1]));
-        console.log("bicVesting balance:", testERC20.balanceOf(address(bicVesting)));
 
         // Verify contract has zero balance after final release
         assertEq(
@@ -367,6 +346,6 @@ contract BICVestingTest is BICVestingTestBase {
         uint256 totalReleased = testERC20.balanceOf(redeemer1) +
             testERC20.balanceOf(redeemer2);
         // less than amountPerDuration because of dust
-        assertLt(totalReleased, bicVesting.amountPerDuration());
+        assertGe(totalReleased, bicVesting.amountPerDuration());
     }
 }
