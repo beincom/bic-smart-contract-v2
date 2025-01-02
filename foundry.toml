@@ -25,6 +25,9 @@ arbitrum_sepolia = { key = "${ETHERSCAN_API_KEY}" }
 sort_imports = true
 wrap_comments = true
 
+[fuzz]
+max_test_cases = 100   # Number of fuzz cases
+
 remappings = [
     "@openzeppelin/contracts/security/ReentrancyGuard.sol=lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol",
 ]
