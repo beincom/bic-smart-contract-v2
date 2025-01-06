@@ -16,8 +16,6 @@ contract TestPaymaster is BicTokenPaymasterTestBase {
 
     address public random_executor = address(0xeee);
 
-//    error FailedOp(uint256 opIndex, string reason);
-
     function setUp() public virtual override {
         super.setUp();
         smart_account_factory = new SimpleAccountFactory(entrypoint);
@@ -191,6 +189,7 @@ contract TestPaymaster is BicTokenPaymasterTestBase {
         entrypoint.handleOps(userOps, payable(random_executor));
         assertEq(isContract(user1AccountAddress), false);
     }
+
     function test_createOracleUserOp_SuccessWithFixedFeeOracleAndFactory() public {
         bytes memory initCallData = abi.encodeWithSignature("createAccount(address,uint256)", user1, 0);
         bytes memory initCode = abi.encodePacked(abi.encodePacked(address(smart_account_factory)), initCallData);

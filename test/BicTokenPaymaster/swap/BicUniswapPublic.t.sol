@@ -448,6 +448,7 @@ contract BicForkUniswapV2 is BicTokenPaymasterTestBase {
 
         uint256 currentLF = bic.getCurrentLF();
         uint256 estLF = simulateLF(LFStartTime, currentTime);
+        uint256 deadline = currentTime + 60;
 
         // Check LF conditions
         assertEq(currentLF, estLF, "Current LF should match estimated LF");
@@ -480,7 +481,7 @@ contract BicForkUniswapV2 is BicTokenPaymasterTestBase {
             0, // min amount out
             swapPath,
             user1,
-            currentTime + 60
+            deadline
         );
         vm.stopPrank();
 
@@ -515,7 +516,7 @@ contract BicForkUniswapV2 is BicTokenPaymasterTestBase {
             0,
             swapPath,
             user2,
-            currentTime + 60
+            deadline
         );
         vm.stopPrank();
         uint256 LFBalanceAfter = pair.balanceOf(owner);

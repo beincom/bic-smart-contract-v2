@@ -69,17 +69,6 @@ contract BicTokenPaymasterTestBase is Test {
         return uniswapV2Pair;
     }
 
-    // Offset of _accumulatedLF in the BicStorage.Data struct
-    uint256 private constant ACCUMULATED_LF_OFFSET = 6;
-    function getAccumulatedLF() public view returns (uint256) {
-        return uint256(
-            vm.load(
-                address(bic),
-                bytes32(uint256(BicTokenPaymasterStorageLocation) + ACCUMULATED_LF_OFFSET)
-            )
-        );
-    }
-
     // Offset of _LFReduction in the BicStorage.Data struct
     uint256 private constant LF_REDUCTION_OFFSET = 1;
     function getLFReduction() public view returns (uint256) {
@@ -119,6 +108,92 @@ contract BicTokenPaymasterTestBase is Test {
                 bytes32(uint256(BicTokenPaymasterStorageLocation) + MIN_LF_OFFSET)
             )
         );
+    }
+
+    uint256 private constant MIN_SWAP_BACK_AMOUNT_OFFSET = 5;
+    function getMinSwapBackAmount() public view returns (uint256) {
+        return uint256(
+            vm.load(
+                address(bic),
+                bytes32(uint256(BicTokenPaymasterStorageLocation) + MIN_SWAP_BACK_AMOUNT_OFFSET)
+            )
+        );
+    }
+
+    uint256 private constant ACCUMULATED_LF_OFFSET = 6;
+    function getAccumulatedLF() public view returns (uint256) {
+        return uint256(
+            vm.load(
+                address(bic),
+                bytes32(uint256(BicTokenPaymasterStorageLocation) + ACCUMULATED_LF_OFFSET)
+            )
+        );
+    }
+
+    uint256 private constant ROUTER_N_BOOL_FLAGS_OFFSET = 9;
+    function getRouterNBoolFlags() public view returns (address router, bool prePublic, bool swapBackEnable, bool swapping) {
+        bytes32 data = vm.load(
+            address(bic),
+            bytes32(uint256(BicTokenPaymasterStorageLocation) + ROUTER_N_BOOL_FLAGS_OFFSET)
+        );
+//        bytes calldata dataCalldata = abi.encodePacked(data);
+//        console.logBytes32(data);
+//        router = address(uint160(bytes20(dataCalldata[13:])));
+//        console.log("router: ", router);
+//        prePublic = uint8(bytes1(data[12])) == 1;
+//        console.log("prePublic: ", prePublic);
+//        swapBackEnable = uint8(bytes1(data[11])) == 1;
+//        console.log("swapBackEnable: ", swapBackEnable);
+//        swapping = uint8(bytes1(data[10])) == 1;
+//        console.log("swapping: ", swapping);
+        assembly {
+        // Extract the 3 boolean flags from the 12th byte
+            let flags := shr(160, data) // Shift 253 bits to the right (256 - 3 = 253)
+            prePublic := and(flags, 8) // Extract the least significant bit
+            swapBackEnable := and(shr(8, flags), 8) // Extract the second bit
+            swapping := and(shr(16, flags), 8) // Extract the third bit
+
+        // Extract the last 20 bytes (160 bits) for the router address
+            router := and(data, 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF)
+//            router := shr(96, data)
+//            prePublic := shr(104, data)
+//            swapBackEnable := shr(112, data)
+//            swapping := shr(120, data)
+        }
+        console.log("router: ", router);
+        console.log("prePublic: ", prePublic);
+        console.log("swapBackEnable: ", swapBackEnable);
+        console.log("swapping: ", swapping);
+    }
+
+    uint256 private constant LIQUIDITY_TREASURY_OFFSET = 7;
+    function getLiquidityTreasury() public view returns (address) {
+        return address(
+            uint160(
+                uint256(
+                    vm.load(
+                        address(bic),
+                        bytes32(uint256(BicTokenPaymasterStorageLocation) + LIQUIDITY_TREASURY_OFFSET)
+                    )
+                )
+            )
+        );
+    }
+
+    uint256 private constant IS_EXCLUDED_OFFSET = 13;
+    function isExcluded(address addr) public view returns (bool) {
+        return uint256(vm.load(
+            address(bic),
+            keccak256(abi.encode(addr, bytes32(uint256(BicTokenPaymasterStorageLocation) + IS_EXCLUDED_OFFSET)))
+        )) == 1;
+    }
+
+    uint256 private constant POOL_OFFSET = 14;
+    function isPool(address addr) public view returns (bool) {
+        return uint256(vm.load(
+            address(bic),
+            keccak256(abi.encode(addr, bytes32(uint256(BicTokenPaymasterStorageLocation) + POOL_OFFSET)))
+        )) == 1;
     }
 
     uint256 private constant BLOCKED_OFFSET = 15;

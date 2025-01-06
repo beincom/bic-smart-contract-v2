@@ -8,23 +8,18 @@ ast = true
 build_info = true
 extra_output = ["storageLayout"]
 unchecked_cheatcode_artifacts = true
-
-[profile.deploy]
-optimizer = true
-optimizer_runs = 999999
+evm_version="cancun"
 
 [rpc_endpoints]
 unichain_sepolia = "https://sepolia.unichain.org"
 arbitrum_sepolia = "https://sepolia-rollup.arbitrum.io/rpc"
+base_sepolia = "https://sepolia.base.org/"
 
 [etherscan]
 unichain_sepolia = { key = "${ETHERSCAN_API_KEY}" }
 arbitrum_sepolia = { key = "${ETHERSCAN_API_KEY}" }
+basescan_sepolia = { key = "${BASESCAN_API_KEY}" }
 
 [fmt]
 sort_imports = true
 wrap_comments = true
-
-remappings = [
-    "@openzeppelin/contracts/security/ReentrancyGuard.sol=lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol",
-]
