@@ -136,29 +136,11 @@ contract BicTokenPaymasterTestBase is Test {
             address(bic),
             bytes32(uint256(BicTokenPaymasterStorageLocation) + ROUTER_N_BOOL_FLAGS_OFFSET)
         );
-//        bytes calldata dataCalldata = abi.encodePacked(data);
-//        console.logBytes32(data);
-//        router = address(uint160(bytes20(dataCalldata[13:])));
-//        console.log("router: ", router);
-//        prePublic = uint8(bytes1(data[12])) == 1;
-//        console.log("prePublic: ", prePublic);
-//        swapBackEnable = uint8(bytes1(data[11])) == 1;
-//        console.log("swapBackEnable: ", swapBackEnable);
-//        swapping = uint8(bytes1(data[10])) == 1;
-//        console.log("swapping: ", swapping);
         assembly {
-        // Extract the 3 boolean flags from the 12th byte
-            let flags := shr(160, data) // Shift 253 bits to the right (256 - 3 = 253)
-            prePublic := and(flags, 8) // Extract the least significant bit
-            swapBackEnable := and(shr(8, flags), 8) // Extract the second bit
-            swapping := and(shr(16, flags), 8) // Extract the third bit
-
-        // Extract the last 20 bytes (160 bits) for the router address
-            router := and(data, 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF)
-//            router := shr(96, data)
-//            prePublic := shr(104, data)
-//            swapBackEnable := shr(112, data)
-//            swapping := shr(120, data)
+            router := shr(0, data)
+            prePublic := shr(160, data)
+            swapBackEnable := shr(168, data)
+            swapping := shr(172, data)
         }
         console.log("router: ", router);
         console.log("prePublic: ", prePublic);

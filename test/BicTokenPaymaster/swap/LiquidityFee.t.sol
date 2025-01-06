@@ -70,7 +70,7 @@ contract LiquidityFee is BicTokenPaymasterTestBase {
         assertEq(true, swapBackEnabled);
         vm.prank(owner);
         bic.setSwapBackEnabled(false);
-        (, bool t1, bool swapBackEnabled2,  bool t2) = getRouterNBoolFlags();
+        (,, bool swapBackEnabled2,) = getRouterNBoolFlags();
         assertEq(false, swapBackEnabled2);
     }
 
@@ -129,6 +129,4 @@ contract LiquidityFee is BicTokenPaymasterTestBase {
         bic.withdrawStuckToken(address(0),toAddress,amount);
         assertEq(amount, address(toAddress).balance);
     }
-
-
 }
