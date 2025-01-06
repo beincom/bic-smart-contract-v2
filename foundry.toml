@@ -23,3 +23,6 @@ basescan_sepolia = { key = "${BASESCAN_API_KEY}" }
 [fmt]
 sort_imports = true
 wrap_comments = true
+
+[fuzz]
+max_test_cases = 100   # Number of fuzz cases
