@@ -54,7 +54,12 @@ contract LiquidityFee is BicTokenPaymasterTestBase {
         uint256 newMinFee2 = newMaxFee + 1;
         vm.expectRevert("B: invalid values");
         bic.setLiquidityFee(newMinFee2, newMaxFee);
+
+        bic.setLiquidityFee(newMaxFee, newMaxFee);
+        assertEq(newMaxFee, bic.getCurrentLF());
+
         vm.stopPrank();
+
     }
 
     function test_setLFReduction() public {
@@ -120,6 +125,16 @@ contract LiquidityFee is BicTokenPaymasterTestBase {
         vm.prank(owner);
         bic.pause();
         assertEq(true, bic.paused());
+        vm.prank(owner);
+        bic.transfer(randomUser, 1000);
+        vm.startPrank(randomUser);
+        vm.expectRevert(abi.encodeWithSelector(
+            BICErrors.BICValidateBeforeTransfer.selector,
+            randomUser
+        ));
+        bic.transfer(address(0x123), 1000);
+        bic.transfer(address(0x123), 0);
+        vm.stopPrank();
         vm.prank(owner);
         bic.unpause();
         assertEq(false, bic.paused());
