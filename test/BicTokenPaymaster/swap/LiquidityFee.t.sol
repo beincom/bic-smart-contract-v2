@@ -2,6 +2,7 @@
 pragma solidity ^0.8.23;
 
 import "../BicTokenPaymasterTestBase.sol";
+import {BICErrors} from "../../../src/interfaces/BICErrors.sol";
 
 contract LiquidityFee is BicTokenPaymasterTestBase {
     address public bicUniswapPair;
@@ -35,4 +36,139 @@ contract LiquidityFee is BicTokenPaymasterTestBase {
         assertEq(uniswapV2Factory.feeToSetter(), address(54321));
     }
 
+    function test_setLiquidityTreasury() public {
+        address newTreasury = vm.addr(0x00001);
+        vm.prank(owner);
+        bic.setLiquidityTreasury(newTreasury);
+        assertEq(newTreasury, getLiquidityTreasury());
+    }
+
+    function test_setLiquidityFee() public {
+        uint256 newMinFee = 1000;
+        uint256 newMaxFee = 2000;
+        vm.startPrank(owner);
+        bic.setLiquidityFee(newMinFee, newMaxFee);
+        assertEq(newMinFee, getMinLF());
+        assertEq(newMaxFee, getMaxLF());
+
+        uint256 newMinFee2 = newMaxFee + 1;
+        vm.expectRevert("B: invalid values");
+        bic.setLiquidityFee(newMinFee2, newMaxFee);
+
+        bic.setLiquidityFee(newMaxFee, newMaxFee);
+        assertEq(newMaxFee, bic.getCurrentLF());
+
+        vm.stopPrank();
+
+    }
+
+    function test_setLFReduction() public {
+        uint256 newReduction = 1000;
+        vm.startPrank(owner);
+        bic.setLFReduction(newReduction);
+        assertEq(newReduction, getLFReduction());
+        vm.expectRevert(abi.encodeWithSelector(
+            BICErrors.BICLFReduction.selector,
+            0
+        ));
+        bic.setLFReduction(0);
+        vm.stopPrank();
+    }
+
+    function test_setLFPeriod() public {
+        uint256 newPeriod = 1000;
+        vm.startPrank(owner);
+        bic.setLFPeriod(newPeriod);
+        assertEq(newPeriod, getLFPeriod());
+        vm.expectRevert(abi.encodeWithSelector(
+            BICErrors.BICLFPeriod.selector,
+            0
+        ));
+        bic.setLFPeriod(0);
+        vm.stopPrank();
+    }
+
+    function test_setSwapBackEnabled() public {
+        (, , bool swapBackEnabled, ) = getRouterNBoolFlags();
+        assertEq(true, swapBackEnabled);
+        vm.prank(owner);
+        bic.setSwapBackEnabled(false);
+        (,, bool swapBackEnabled2,) = getRouterNBoolFlags();
+        assertEq(false, swapBackEnabled2);
+    }
+
+    function test_setMinSwapBackAmount() public {
+        uint256 newMinSwapBackAmount = 1000;
+        vm.prank(owner);
+        bic.setMinSwapBackAmount(newMinSwapBackAmount);
+        assertEq(newMinSwapBackAmount, getMinSwapBackAmount());
+    }
+
+    function test_setPool() public {
+        vm.prank(owner);
+        bic.setPool(bicUniswapPair, true);
+        assertEq(true, isPool(bicUniswapPair));
+    }
+
+    function test_setBulkExcluded() public {
+        address[] memory excluded = new address[](2);
+        excluded[0] = vm.addr(0x00001);
+        excluded[1] = vm.addr(0x00002);
+        vm.prank(owner);
+        bic.bulkExcluded(excluded, true);
+        assertEq(true, isExcluded(excluded[0]));
+        assertEq(true, isExcluded(excluded[1]));
+    }
+
+    function test_pause() public {
+        assertEq(false, bic.paused());
+        vm.prank(owner);
+        bic.pause();
+        assertEq(true, bic.paused());
+        vm.prank(owner);
+        bic.transfer(randomUser, 1000);
+        vm.startPrank(randomUser);
+        vm.expectRevert(abi.encodeWithSelector(
+            BICErrors.BICValidateBeforeTransfer.selector,
+            randomUser
+        ));
+        bic.transfer(address(0x123), 1000);
+        bic.transfer(address(0x123), 0);
+        vm.stopPrank();
+        vm.prank(owner);
+        bic.unpause();
+        assertEq(false, bic.paused());
+    }
+
+    function test_withdrawStuckTokens() public {
+        address toAddress = vm.addr(0x10001);
+        uint256 amount = 1000;
+        vm.prank(owner);
+        bic.transfer(address(bic), amount);
+        assertEq(amount, bic.balanceOf(address(bic)));
+        vm.deal(address(bic), amount);
+        assertEq(amount, address(bic).balance);
+        vm.prank(owner);
+        bic.withdrawStuckToken(address(bic),toAddress,amount);
+        assertEq(amount, bic.balanceOf(toAddress));
+        vm.prank(owner);
+        bic.withdrawStuckToken(address(0),toAddress,amount);
+        assertEq(amount, address(toAddress).balance);
+    }
+
+    function test_setPrePublicWhitelist_failIfAddressLenghtNotValid() public {
+        address[] memory addresses = new address[](2);
+        uint256[] memory categories = new uint256[](1);
+        addresses[0] = vm.addr(0x00001);
+        categories[0] = 1;
+        addresses[1] = vm.addr(0x00002);
+        vm.startPrank(owner);
+        vm.expectRevert(abi.encodeWithSelector(
+            BICErrors.BICPrePublicWhitelist.selector,
+            addresses,
+            categories
+        ));
+        bic.setPrePublicWhitelist(addresses, categories);
+        vm.stopPrank();
+    }
 }
