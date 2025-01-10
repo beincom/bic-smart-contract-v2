@@ -57,9 +57,6 @@ contract BicTokenPaymaster is
 
     /// Uniswap V2 pair
     address public uniswapV2Pair;
-
-    /// token in uniswap V2 pair
-    address public tokenInPair;
     
     /// Accumulated liquidity fee
     uint256 public accumulatedLF;
