@@ -1,16 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-/* solhint-disable reason-string */
-
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
  * Helper class for creating a contract with multiple valid signers.
  */
-abstract contract MultiSigner is OwnableUpgradeable {
-
-
+abstract contract MultiSigner is Ownable {
     /// @notice Emitted when a signer is added.
     event SignerAdded(address signer);
 
@@ -20,7 +16,7 @@ abstract contract MultiSigner is OwnableUpgradeable {
     /// @notice Mapping of valid signers.
     mapping(address account => bool isValidSigner) public signers;
 
-    function __MultiSigner_init(address[] memory _initialSigners) internal onlyInitializing {
+    constructor(address[] memory _initialSigners) {
         for (uint256 i = 0; i < _initialSigners.length; i++) {
             signers[_initialSigners[i]] = true;
         }

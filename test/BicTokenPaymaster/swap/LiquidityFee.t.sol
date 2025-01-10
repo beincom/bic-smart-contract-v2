@@ -40,7 +40,7 @@ contract LiquidityFee is BicTokenPaymasterTestBase {
         address newTreasury = vm.addr(0x00001);
         vm.prank(owner);
         bic.setLiquidityTreasury(newTreasury);
-        assertEq(newTreasury, getLiquidityTreasury());
+        assertEq(newTreasury, bic.liquidityTreasury());
     }
 
     function test_setLiquidityFee() public {
@@ -48,11 +48,11 @@ contract LiquidityFee is BicTokenPaymasterTestBase {
         uint256 newMaxFee = 2000;
         vm.startPrank(owner);
         bic.setLiquidityFee(newMinFee, newMaxFee);
-        assertEq(newMinFee, getMinLF());
-        assertEq(newMaxFee, getMaxLF());
+        assertEq(newMinFee, bic.minLF());
+        assertEq(newMaxFee, bic.maxLF());
 
         uint256 newMinFee2 = newMaxFee + 1;
-        vm.expectRevert("B: invalid values");
+        vm.expectRevert(abi.encodeWithSignature("BICInvalidMinMaxLF(uint256,uint256)", newMinFee2, newMaxFee));
         bic.setLiquidityFee(newMinFee2, newMaxFee);
 
         bic.setLiquidityFee(newMaxFee, newMaxFee);
@@ -66,7 +66,7 @@ contract LiquidityFee is BicTokenPaymasterTestBase {
         uint256 newReduction = 1000;
         vm.startPrank(owner);
         bic.setLFReduction(newReduction);
-        assertEq(newReduction, getLFReduction());
+        assertEq(newReduction, bic.LFReduction());
         vm.expectRevert(abi.encodeWithSelector(
             BICErrors.BICLFReduction.selector,
             0
@@ -79,7 +79,7 @@ contract LiquidityFee is BicTokenPaymasterTestBase {
         uint256 newPeriod = 1000;
         vm.startPrank(owner);
         bic.setLFPeriod(newPeriod);
-        assertEq(newPeriod, getLFPeriod());
+        assertEq(newPeriod, bic.LFPeriod());
         vm.expectRevert(abi.encodeWithSelector(
             BICErrors.BICLFPeriod.selector,
             0
@@ -89,11 +89,11 @@ contract LiquidityFee is BicTokenPaymasterTestBase {
     }
 
     function test_setSwapBackEnabled() public {
-        (, , bool swapBackEnabled, ) = getRouterNBoolFlags();
+        bool swapBackEnabled = bic.swapBackEnabled();
         assertEq(true, swapBackEnabled);
         vm.prank(owner);
         bic.setSwapBackEnabled(false);
-        (,, bool swapBackEnabled2,) = getRouterNBoolFlags();
+        bool swapBackEnabled2 = bic.swapBackEnabled();
         assertEq(false, swapBackEnabled2);
     }
 
@@ -101,13 +101,13 @@ contract LiquidityFee is BicTokenPaymasterTestBase {
         uint256 newMinSwapBackAmount = 1000;
         vm.prank(owner);
         bic.setMinSwapBackAmount(newMinSwapBackAmount);
-        assertEq(newMinSwapBackAmount, getMinSwapBackAmount());
+        assertEq(newMinSwapBackAmount, bic.minSwapBackAmount());
     }
 
     function test_setPool() public {
         vm.prank(owner);
         bic.setPool(bicUniswapPair, true);
-        assertEq(true, isPool(bicUniswapPair));
+        assertEq(true, bic.isPool(bicUniswapPair));
     }
 
     function test_setBulkExcluded() public {
@@ -116,8 +116,8 @@ contract LiquidityFee is BicTokenPaymasterTestBase {
         excluded[1] = vm.addr(0x00002);
         vm.prank(owner);
         bic.bulkExcluded(excluded, true);
-        assertEq(true, isExcluded(excluded[0]));
-        assertEq(true, isExcluded(excluded[1]));
+        assertEq(true, bic.isExcluded(excluded[0]));
+        assertEq(true, bic.isExcluded(excluded[1]));
     }
 
     function test_pause() public {

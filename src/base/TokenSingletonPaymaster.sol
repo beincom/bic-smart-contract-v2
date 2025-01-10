@@ -1,55 +1,42 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.23;
 
-import "./BasePaymasterUpgradeable.sol";
 import "./MultiSigner.sol";
+import "../interfaces/PaymasterErrors.sol";
+import "@account-abstraction/contracts/core/BasePaymaster.sol";
 import "@account-abstraction/contracts/core/Helpers.sol";
 import "@account-abstraction/contracts/samples/IOracle.sol";
+import "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20VotesUpgradeable.sol";
 
 abstract contract TokenSingletonPaymaster is
-    BasePaymasterUpgradeable,
-    ERC20VotesUpgradeable,
-    MultiSigner
+    BasePaymaster,
+    ERC20Votes,
+    MultiSigner,
+    PaymasterErrors
 {
-    /// @custom:storage-location erc7201:storage.TokenSingletonPaymaster
-    struct SingletonPaymasterStorage {
-        /// The factory that creates accounts. used to validate account creation. Just to make sure not have any unexpected account creation trying to bug the system
-        mapping(address => bool) _factories;
-        /// The oracle to use for token exchange rate.
-        address _oracle;
-    }
+    /// The factory that creates accounts. used to validate account creation. Just to make sure not have any unexpected account creation trying to bug the system
+    mapping(address => bool) public factories;
 
-    // keccak256(abi.encode(uint256(keccak256("storage.TokenSingletonPaymaster")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant SingletonPaymasterStorageLocation =
-        0xcff66a0bc9e58c2fefb38bcef8c7cb089e731fdccf5f5d396e8729b289677f00;
-
-    function _getSingletonPaymasterStorage()
-        private
-        pure
-        returns (SingletonPaymasterStorage storage $)
-    {
-        assembly {
-            $.slot := SingletonPaymasterStorageLocation
-        }
-    }
+    /// The oracle to use for token exchange rate.
+    address public oracle;
 
     /// Calculated cost of the postOp, minimum value that need verificationGasLimit to be higher than
-    uint256 public COST_OF_POST;
+    uint256 public COST_OF_POST = 60000;
 
-    uint256 public PAYMASTER_DATA_OFFSET;
+    uint256 public PAYMASTER_DATA_OFFSET = 20;
 
     /// @notice Mode indicating that the Paymaster is in Oracle mode.
-    uint8 public ORACLE_MODE;
+    uint8 public ORACLE_MODE = 0;
 
     /// @notice Mode indicating that the Paymaster is in Verifying mode.
-    uint8 public VERIFYING_MODE;
+    uint8 public VERIFYING_MODE = 1;
 
     /// @notice The length of the ERC-20 config without singature.
-    uint8 public VERIFYING_PAYMASTER_DATA_LENGTH;
+    uint8 public VERIFYING_PAYMASTER_DATA_LENGTH = 60;
 
     /// @dev Emitted when a user is charged, using for indexing on subgraph
     event ChargeFee(bytes32 indexed userOpHash, address sender, uint256 fee);
@@ -94,27 +81,18 @@ abstract contract TokenSingletonPaymaster is
         uint256 maxPriorityFeePerGas;
     }
 
-    function __TokenSingletonPaymaster_init(
+    constructor (
         address _entryPoint,
         address[] memory _singers
-    ) public initializer {
-        __BasePaymasterUpgradeable_init(_entryPoint);
-        __MultiSigner_init(_singers);
-        COST_OF_POST = 60000;
-        PAYMASTER_DATA_OFFSET = 20;
-        ORACLE_MODE = 0;
-        VERIFYING_MODE = 1;
-        VERIFYING_PAYMASTER_DATA_LENGTH = 60;
-    }
+    )  BasePaymaster(IEntryPoint(_entryPoint)) MultiSigner(_singers)  {}
 
     /**
      * @notice Set the oracle to use for token exchange rate.
      * @param _oracle the oracle to use.
      */
     function setOracle(address _oracle) external onlyOwner {
-        SingletonPaymasterStorage storage $ = _getSingletonPaymasterStorage();
-        emit SetOracle($._oracle, _oracle, msg.sender);
-        $._oracle = _oracle;
+        oracle = _oracle;
+        emit SetOracle(oracle, _oracle, msg.sender);
     }
 
     /**
@@ -122,8 +100,7 @@ abstract contract TokenSingletonPaymaster is
      * @param _factory the factory to add.
      */
     function addFactory(address _factory) external onlyOwner {
-        SingletonPaymasterStorage storage $ = _getSingletonPaymasterStorage();
-        $._factories[_factory] = true;
+        factories[_factory] = true;
         emit AddFactory(_factory, msg.sender);
     }
 
@@ -151,8 +128,8 @@ abstract contract TokenSingletonPaymaster is
     function getTokenValueOfEth(
         uint256 valueEth
     ) internal view virtual returns (uint256 valueToken) {
-        SingletonPaymasterStorage storage $ = _getSingletonPaymasterStorage();
-        return IOracle($._oracle).getTokenValueOfEth(valueEth);
+        
+        return IOracle(oracle).getTokenValueOfEth(valueEth);
     }
 
     /**
@@ -229,9 +206,9 @@ abstract contract TokenSingletonPaymaster is
         UserOperation calldata _userOp
     ) internal view virtual {
         address factory = address(bytes20(_userOp.initCode[0:20]));
-        SingletonPaymasterStorage storage $ = _getSingletonPaymasterStorage();
+        
         if (
-            !$._factories[factory]
+            !factories[factory]
         ) {
             revert PaymasterInvalidFactory(factory);
         }
@@ -242,9 +219,9 @@ abstract contract TokenSingletonPaymaster is
         uint256 _requiredPreFund,
         bytes32 _userOpHash
     ) internal view returns (bytes memory, uint256) {
-        SingletonPaymasterStorage storage $ = _getSingletonPaymasterStorage();
-        if ($._oracle == address(0)) {
-            revert PaymasterInvalidOracle($._oracle);
+        
+        if (oracle == address(0)) {
+            revert PaymasterInvalidOracle(oracle);
         }
         uint256 tokenPrefund = getTokenValueOfEth(_requiredPreFund);
 

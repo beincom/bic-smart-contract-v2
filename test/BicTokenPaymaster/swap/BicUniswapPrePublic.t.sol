@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {BicStorage} from "../../../src/storage/BicStorage.sol";
+import "../../../src/BicTokenPaymaster.sol";
 import "../BicTokenPaymasterTestBase.sol";
 import {IUniswapV2Pair} from "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 
@@ -77,7 +77,7 @@ contract BicUniswapPrePublic is BicTokenPaymasterTestBase {
         vm.startPrank(owner);
 
         // 2. Make sure the pair exists
-        address pairAddress = getUniswapV2Pair();
+        address pairAddress = bic.uniswapV2Pair();
         console.log("Pair address:", pairAddress);
 
         // 3. Clear any existing approvals first
@@ -137,7 +137,7 @@ contract BicUniswapPrePublic is BicTokenPaymasterTestBase {
         bic.setPrePublicWhitelist(addresses, categories);
 
         // Setup pre-public rounds
-        BicStorage.PrePublic memory round1 = BicStorage.PrePublic({
+        BicTokenPaymaster.PrePublic memory round1 = BicTokenPaymaster.PrePublic({
             category: 1,
             startTime: LFStartTime + 10,
             endTime: LFStartTime + 10 + round1Duration,
@@ -145,7 +145,7 @@ contract BicUniswapPrePublic is BicTokenPaymasterTestBase {
             maxAmountPerBuy: maxAmountPerBuy1
         });
 
-        BicStorage.PrePublic memory round2 = BicStorage.PrePublic({
+        BicTokenPaymaster.PrePublic memory round2 = BicTokenPaymaster.PrePublic({
             category: 2,
             startTime: round1.endTime,
             endTime: round1.endTime + round2Duration,
@@ -185,7 +185,7 @@ contract BicUniswapPrePublic is BicTokenPaymasterTestBase {
         path[0] = address(weth);
         path[1] = address(bic);
         // Get the pool address and create pair interface
-        address pool = getUniswapV2Pair();
+        address pool = bic.uniswapV2Pair();
         pair = IUniswapV2Pair(pool);
         // Verify pool setup
         assertTrue(pair.balanceOf(owner) > 0, "Pool setup failed");
@@ -907,7 +907,7 @@ contract BicUniswapPrePublic is BicTokenPaymasterTestBase {
         );
         assertEq(
             bic.balanceOf(address(bic)),
-            getAccumulatedLF(),
+            bic.accumulatedLF(),
             "BIC balance should equal accumulated LF"
         );
     }
