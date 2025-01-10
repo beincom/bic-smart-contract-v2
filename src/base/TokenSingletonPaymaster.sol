@@ -91,8 +91,8 @@ abstract contract TokenSingletonPaymaster is
      * @param _oracle the oracle to use.
      */
     function setOracle(address _oracle) external onlyOwner {
-        emit SetOracle(oracle, _oracle, msg.sender);
         oracle = _oracle;
+        emit SetOracle(oracle, _oracle, msg.sender);
     }
 
     /**
