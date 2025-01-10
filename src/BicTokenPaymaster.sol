@@ -72,12 +72,7 @@ contract BicTokenPaymaster is
 
     /// Guard _swapping
     bool private _swapping;
-    
-    /// Max allocation per a wallet
-    uint256 public maxAllocation;
 
-    /// Max allocation enabled
-    bool public enabledMaxAllocation;
     
     /// Whitelist for pre-public in DEX
     mapping(address => uint256) private _prePublicWhitelist;
@@ -180,6 +175,14 @@ contract BicTokenPaymaster is
     }
 
     /**
+     * @notice Get whitelist category.
+     * @param user user address.
+     */
+    function getWhitelistCategory(address user) public view returns (uint256) {
+        return _prePublicWhitelist[user];
+    }
+
+    /**
      * @notice Get current liquidity fee
      * @return current liquidity fee
      */
@@ -187,8 +190,8 @@ contract BicTokenPaymaster is
         uint256 totalReduction = block
             .timestamp
             .sub(LFStartTime)
-            .mul(LFReduction)
-            .div(LFPeriod);
+            .div(LFPeriod)
+            .mul(LFReduction);
 
         if (totalReduction + minLF >= maxLF) {
             return minLF;
@@ -230,6 +233,17 @@ contract BicTokenPaymaster is
     }
 
     // LIQUIDITY FEE MANAGEMENT FUNCTIONS
+    /**
+     * @notice Update liquidity fee start time
+     * @param _newLFStartTime new liquidity fee start time
+     */
+    function setLFStartTime(uint256 _newLFStartTime) external onlyOwner {
+        if (_newLFStartTime < block.timestamp) {
+            revert BICInvalidLFStartTime(_newLFStartTime);
+        }
+        LFStartTime = _newLFStartTime;
+        emit LFStartTimeUpdated(_newLFStartTime);
+    }
 
     /**
      * @notice Update liquidity treasury.
@@ -246,7 +260,9 @@ contract BicTokenPaymaster is
      * @param min min liquidity fee basic points.
      */
     function setLiquidityFee(uint256 min, uint256 max) external onlyOwner {
-        require(min >= 0 && min <= max && max <= 5000, "B: invalid values");
+        if (min < 0 || min > max || max > 5000) {
+            revert BICInvalidMinMaxLF(min, max);
+        }
         minLF = min;
         maxLF = max;
         emit LiquidityFeeUpdated(_msgSender(), min, max);

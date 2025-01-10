@@ -52,7 +52,7 @@ contract LiquidityFee is BicTokenPaymasterTestBase {
         assertEq(newMaxFee, bic.maxLF());
 
         uint256 newMinFee2 = newMaxFee + 1;
-        vm.expectRevert("B: invalid values");
+        vm.expectRevert(abi.encodeWithSignature("BICInvalidMinMaxLF(uint256,uint256)", newMinFee2, newMaxFee));
         bic.setLiquidityFee(newMinFee2, newMaxFee);
 
         bic.setLiquidityFee(newMaxFee, newMaxFee);
