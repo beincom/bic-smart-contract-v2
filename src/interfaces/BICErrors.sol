@@ -4,6 +4,8 @@ pragma solidity ^0.8.23;
 
 interface BICErrors {
     error BICUnauthorized(address caller, address authorized);
+    error BICInvalidLFStartTime(uint256 newLFStartTime);
+    error BICInvalidMinMaxLF(uint256 min, uint256 max);
     error BICLFReduction(uint256 LFReduction);
     error BICLFPeriod(uint256 LFPeriod);
     error BICLFStartTime(uint256 LFStartTime);
