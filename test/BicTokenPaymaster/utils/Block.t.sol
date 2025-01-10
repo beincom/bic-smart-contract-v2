@@ -11,9 +11,9 @@ contract BlockTest is BicTokenPaymasterTestBase {
     }
 
     function test_block() public {
-        assertEq(isBlocked(badAddress), false, "badAddress should not be blocked");
+        assertEq(bic.isBlocked(badAddress), false, "badAddress should not be blocked");
         vm.prank(owner);
         bic.blockAddress(badAddress, true);
-        assertEq(isBlocked(badAddress), true, "badAddress should be blocked");
+        assertEq(bic.isBlocked(badAddress), true, "badAddress should be blocked");
     }
 }

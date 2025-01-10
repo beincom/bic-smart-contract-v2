@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {BicStorage} from "../../../src/storage/BicStorage.sol";
 import "../BicTokenPaymasterTestBase.sol";
 import {IUniswapV2Pair} from "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 
@@ -73,7 +72,7 @@ contract BicForkUniswapV2 is BicTokenPaymasterTestBase {
         vm.startPrank(owner);
 
         // 2. Make sure the pair exists
-        address pairAddress = getUniswapV2Pair();
+        address pairAddress = bic.uniswapV2Pair();
         console.log("Pair address:", pairAddress);
 
         // 3. Clear any existing approvals first
@@ -151,7 +150,7 @@ contract BicForkUniswapV2 is BicTokenPaymasterTestBase {
         path[0] = address(weth);
         path[1] = address(bic);
         // Get the pool address and create pair interface
-        address pool = getUniswapV2Pair();
+        address pool = bic.uniswapV2Pair();
         pair = IUniswapV2Pair(pool);
         // Verify pool setup
         assertTrue(pair.balanceOf(owner) > 0, "Pool setup failed");
@@ -159,12 +158,12 @@ contract BicForkUniswapV2 is BicTokenPaymasterTestBase {
 
     function test_checking_fee() public view {
         // Check liquidity fee related info
-        assertEq(getLFReduction(), LFReduction, "LFReduction mismatch");
-        assertEq(getLFPeriod(), LFPeriod, "LFPeriod mismatch");
-        assertEq(getMaxLF(), maxLF, "maxLF mismatch");
-        assertEq(getMinLF(), minLF, "minLF mismatch");
+        assertEq(bic.LFReduction(), LFReduction, "LFReduction mismatch");
+        assertEq(bic.LFPeriod(), LFPeriod, "LFPeriod mismatch");
+        assertEq(bic.maxLF(), maxLF, "maxLF mismatch");
+        assertEq(bic.minLF(), minLF, "minLF mismatch");
         assertEq(
-            getUniswapV2Pair(),
+            bic.uniswapV2Pair(),
             address(pair),
             "uniswapV2Pair mismatch"
         );
@@ -487,7 +486,7 @@ contract BicForkUniswapV2 is BicTokenPaymasterTestBase {
 
         // Check accumulated LF
         uint256 bicBalance = bic.balanceOf(address(bic));
-        uint256 accumulatedLF = getAccumulatedLF();
+        uint256 accumulatedLF = bic.accumulatedLF();
         assertEq(bicBalance, fee, "BIC balance should equal fee");
         assertEq(
             bicBalance,
@@ -522,7 +521,7 @@ contract BicForkUniswapV2 is BicTokenPaymasterTestBase {
         uint256 LFBalanceAfter = pair.balanceOf(owner);
 
         // Check final states
-        uint256 accumulatedLFAfterSwapBack = getAccumulatedLF();
+        uint256 accumulatedLFAfterSwapBack = bic.accumulatedLF();
 
         assertLt(
             accumulatedLFAfterSwapBack,
