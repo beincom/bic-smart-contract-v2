@@ -26,8 +26,8 @@ contract CreateVestingScript is Script {
         uint256 totalAmount = 1111 * 1e18;
         address erc20 = 0x03c36763E271211961e9E42DC6D600F9cF0Ea417;
         address[] memory beneficiaries = new address[](2);
-        beneficiaries[0] = 0x1e6754B227C6ae4B0ca61D82f79D60660737554a;
-        beneficiaries[1] = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
+        beneficiaries[0] = 0x97275c14bE84fc5F541516E6c7aE7A9F0a7eBeeA;
+        beneficiaries[1] = 0x74F54227B6C8D6B95D2220c83332d84Fe646d3d0;
 
         uint16[] memory allocations = new uint16[](2);
         allocations[0] = 2000;
