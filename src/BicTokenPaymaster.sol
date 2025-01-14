@@ -152,7 +152,7 @@ contract BicTokenPaymaster is
         maxLF = 1500;
         minLF = 300;
         LFReduction = 50;
-        LFPeriod = 60 * 60 * 24 * 30; // 30 days
+        LFPeriod = 30 days;
         LFStartTime = block.timestamp;
         isExcluded[superController] = true;
         isExcluded[address(this)] = true;
