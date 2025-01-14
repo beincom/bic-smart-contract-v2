@@ -407,6 +407,15 @@ contract BicTokenPaymaster is
      * @param _prePublicRound Pre-public round info.
      */
     function _setPrePublicRound(PrePublic memory _prePublicRound) private {
+        if (_prePublicRound.startTime > _prePublicRound.endTime) {
+            revert BICInvalidTimestampPrePublicRound(_prePublicRound.startTime, _prePublicRound.endTime);
+        }
+        if (_prePublicRound.coolDown > _prePublicRound.endTime - _prePublicRound.startTime) {
+            revert BICInvalidCoolDown(_prePublicRound.coolDown);
+        }
+        if (_prePublicRound.maxAmountPerBuy > totalSupply()) {
+            revert BICInvalidMaxAmountPerBuy(_prePublicRound.maxAmountPerBuy);
+        }
         prePublicRounds[_prePublicRound.category] = _prePublicRound;
         emit PrePublicRoundUpdated(_msgSender(), _prePublicRound.category);
     }
