@@ -139,6 +139,9 @@ contract BicTokenPaymaster is
     /// @dev Emitted when changing liquidity treasury
     event LiquidityTreasuryUpdated(address updater, address newLFTreasury);
 
+    /// @dev Emitted when withdrawing stuck tokens
+    event WithdrawToken(address caller, address token, address beneficiary, uint256 amount);
+
     constructor(
         address _entryPoint,
         address superController,
@@ -352,6 +355,7 @@ contract BicTokenPaymaster is
         } else {
             ERC20(token).transfer(to, amount);
         }
+        emit WithdrawToken(_msgSender(), token, to, amount);
     }
 
     /**
