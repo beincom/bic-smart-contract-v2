@@ -146,9 +146,9 @@ contract BICVesting is
                 releasedAmount: 0
             });
             totalAllocations += allocations[i];
-            if(totalAllocations > DENOMINATOR) {
-                revert InvalidAllocations(allocations);
-            }
+        }
+        if(totalAllocations != DENOMINATOR) {
+            revert InvalidAllocations(allocations);
         }
     }
 

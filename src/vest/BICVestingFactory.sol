@@ -182,9 +182,9 @@ contract BICVestingFactory is Ownable, BICVestingErrors {
         uint16 totalAllocations = 0;
         for (uint256 i = 0; i < allocations.length; i++) {
             totalAllocations += allocations[i];
-            if(totalAllocations > DENOMINATOR) {
-                revert InvalidAllocations(allocations);
-            }
+        }
+        if(totalAllocations != DENOMINATOR) {
+            revert InvalidAllocations(allocations);
         }
     }
 }
