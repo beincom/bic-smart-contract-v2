@@ -10,7 +10,7 @@ interface BICErrors {
     error BICLFPeriod(uint256 LFPeriod);
     error BICLFStartTime(uint256 LFStartTime);
     error BICPrePublicWhitelist(address[] addresses, uint256[] categories);
-    error BICValidateBeforeTransfer(address from);
+    error BICValidateBeforeTransfer(address from, address to);
     error BICInvalidCategory(address user, uint256 category);
     error BICNotActiveRound(address user, uint256 category);
     error BICWaitForCoolDown(address user, uint256 coolDown);

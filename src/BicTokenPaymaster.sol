@@ -517,7 +517,7 @@ contract BicTokenPaymaster is
             return;
         }
 
-        _validateBeforeTransfer(from);
+        _validateBeforeTransfer(from, to);
 
         // Handle pre-public sale restrictions
         if (_prePublic && isPool[from]) {
@@ -535,9 +535,9 @@ contract BicTokenPaymaster is
      * @dev Checks if transfer is paused and if sender is blocked
      * @param from Address attempting to send tokens
      */
-    function _validateBeforeTransfer(address from) internal view {
-        if (paused() || isBlocked[from]) {
-            revert BICValidateBeforeTransfer(from);
+    function _validateBeforeTransfer(address from, address to) internal view {
+        if (paused() || isBlocked[from] || isBlocked[to]) {
+            revert BICValidateBeforeTransfer(from, to);
         }
     }
 
