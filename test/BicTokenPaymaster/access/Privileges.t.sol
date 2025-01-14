@@ -8,7 +8,7 @@ contract Privileges is BicTokenPaymasterTestBase {
     address public randomUser1 = vm.addr(0xabcde);
     address public randomUser2 = vm.addr(0xabcdd);
 
-    function test_block_address_send_and_receive() public {
+    function test_block_address_only_send() public {
         vm.prank(owner);
         bic.transfer(randomUser1, 1000);
         vm.startPrank(randomUser1);
@@ -18,15 +18,11 @@ contract Privileges is BicTokenPaymasterTestBase {
         vm.startPrank(randomUser1);
         vm.expectRevert(abi.encodeWithSelector(
             BICErrors.BICValidateBeforeTransfer.selector,
-            randomUser1, randomUser2
+            randomUser1
         ));
         bic.transfer(randomUser2, 100);
         vm.stopPrank();
         vm.prank(randomUser2);
-        vm.expectRevert(abi.encodeWithSelector(
-            BICErrors.BICValidateBeforeTransfer.selector,
-            randomUser2, randomUser1
-        ));
         bic.transfer(randomUser1, 100);
     }
 

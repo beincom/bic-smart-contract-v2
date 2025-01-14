@@ -13,7 +13,7 @@ interface BICErrors {
     error BICInvalidCoolDown(uint256 coolDown);
     error BICInvalidMaxAmountPerBuy(uint256 maxAmountPerBuy);
     error BICPrePublicWhitelist(address[] addresses, uint256[] categories);
-    error BICValidateBeforeTransfer(address from, address to);
+    error BICValidateBeforeTransfer(address from);
     error BICInvalidCategory(address user, uint256 category);
     error BICNotActiveRound(address user, uint256 category);
     error BICWaitForCoolDown(address user, uint256 coolDown);
