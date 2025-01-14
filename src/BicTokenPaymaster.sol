@@ -4,7 +4,6 @@ pragma solidity ^0.8.23;
 
 import {IUniswapV2Factory} from "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
 import {IUniswapV2Router02} from "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
-import {SafeMath} from "./utils/math/SafeMath.sol";
 import {TokenSingletonPaymaster} from "./base/TokenSingletonPaymaster.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -17,8 +16,6 @@ contract BicTokenPaymaster is
     Pausable,
     BICErrors
 {
-    using SafeMath for uint256;
-
     /// DEX Pre-public
     /// Pre-public structure
     struct PrePublic {
@@ -139,6 +136,9 @@ contract BicTokenPaymaster is
     /// @dev Emitted when changing liquidity treasury
     event LiquidityTreasuryUpdated(address updater, address newLFTreasury);
 
+    /// @dev Emitted when withdrawing stuck tokens
+    event WithdrawToken(address caller, address token, address beneficiary, uint256 amount);
+
     constructor(
         address _entryPoint,
         address superController,
@@ -152,7 +152,7 @@ contract BicTokenPaymaster is
         maxLF = 1500;
         minLF = 300;
         LFReduction = 50;
-        LFPeriod = 60 * 60 * 24 * 30; // 30 days
+        LFPeriod = 30 days;
         LFStartTime = block.timestamp;
         isExcluded[superController] = true;
         isExcluded[address(this)] = true;
@@ -160,7 +160,7 @@ contract BicTokenPaymaster is
         _prePublic = true;
 
         swapBackEnabled = true;
-        minSwapBackAmount = _totalSupply.div(10000);
+        minSwapBackAmount = _totalSupply / 10000;
 
         uniswapV2Router = 0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24;
         uniswapV2Pair = IUniswapV2Factory(
@@ -187,16 +187,12 @@ contract BicTokenPaymaster is
      * @return current liquidity fee
      */
     function getCurrentLF() public view returns (uint256) {
-        uint256 totalReduction = block
-            .timestamp
-            .sub(LFStartTime)
-            .div(LFPeriod)
-            .mul(LFReduction);
+        uint256 totalReduction = (block.timestamp - LFStartTime) / LFPeriod * LFReduction;
 
         if (totalReduction + minLF >= maxLF) {
             return minLF;
         } else {
-            return maxLF.sub(totalReduction);
+            return maxLF - totalReduction;
         }
     }
 
@@ -260,7 +256,7 @@ contract BicTokenPaymaster is
      * @param min min liquidity fee basic points.
      */
     function setLiquidityFee(uint256 min, uint256 max) external onlyOwner {
-        if (min < 0 || min > max || max > 5000) {
+        if (min > max || max > 5000) {
             revert BICInvalidMinMaxLF(min, max);
         }
         minLF = min;
@@ -273,7 +269,7 @@ contract BicTokenPaymaster is
      * @param _LFReduction liquidity fee reduction percent
      */
     function setLFReduction(uint256 _LFReduction) external onlyOwner {
-        if (_LFReduction <= 0) {
+        if (_LFReduction == 0) {
             revert BICLFReduction(_LFReduction);
         }
         LFReduction = _LFReduction;
@@ -352,6 +348,7 @@ contract BicTokenPaymaster is
         } else {
             ERC20(token).transfer(to, amount);
         }
+        emit WithdrawToken(_msgSender(), token, to, amount);
     }
 
     /**
@@ -360,6 +357,9 @@ contract BicTokenPaymaster is
      */
     function blockAddress(address addr, bool status) public onlyOwner {
         isBlocked[addr] = status;
+        if (status && isExcluded[addr]) {
+            isExcluded[addr] = false;
+        }
         emit BlockUpdated(_msgSender(), addr, status);
     }
 
@@ -404,6 +404,15 @@ contract BicTokenPaymaster is
      * @param _prePublicRound Pre-public round info.
      */
     function _setPrePublicRound(PrePublic memory _prePublicRound) private {
+        if (_prePublicRound.startTime > _prePublicRound.endTime) {
+            revert BICInvalidTimestampPrePublicRound(_prePublicRound.startTime, _prePublicRound.endTime);
+        }
+        if (_prePublicRound.coolDown > _prePublicRound.endTime - _prePublicRound.startTime) {
+            revert BICInvalidCoolDown(_prePublicRound.coolDown);
+        }
+        if (_prePublicRound.maxAmountPerBuy > totalSupply()) {
+            revert BICInvalidMaxAmountPerBuy(_prePublicRound.maxAmountPerBuy);
+        }
         prePublicRounds[_prePublicRound.category] = _prePublicRound;
         emit PrePublicRoundUpdated(_msgSender(), _prePublicRound.category);
     }
@@ -479,8 +488,8 @@ contract BicTokenPaymaster is
             return;
         }
 
-        uint256 liquidityTokens = minSwapBackAmount.div(2);
-        uint256 amounTokensToSwap = minSwapBackAmount.sub(liquidityTokens);
+        uint256 liquidityTokens = minSwapBackAmount / 2;
+        uint256 amounTokensToSwap = minSwapBackAmount - liquidityTokens;
 
         _initialToken1Balance = address(this).balance;
 
@@ -488,7 +497,7 @@ contract BicTokenPaymaster is
 
         uint256 _liquidityToken1;
 
-        _liquidityToken1 = address(this).balance.sub(_initialToken1Balance);
+        _liquidityToken1 = address(this).balance - _initialToken1Balance;
 
         if (liquidityTokens > 0 && _liquidityToken1 > 0) {
             _addLiquidity(liquidityTokens, _liquidityToken1);
@@ -677,7 +686,7 @@ contract BicTokenPaymaster is
         }
 
         if (isPool[to] && minLF > 0) {
-            return amount.mul(getCurrentLF()).div(10000);
+            return amount * getCurrentLF() / 10000;
         }
 
         return 0;

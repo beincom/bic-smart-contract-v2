@@ -9,6 +9,9 @@ interface BICErrors {
     error BICLFReduction(uint256 LFReduction);
     error BICLFPeriod(uint256 LFPeriod);
     error BICLFStartTime(uint256 LFStartTime);
+    error BICInvalidTimestampPrePublicRound(uint256 startTime, uint256 endTime);
+    error BICInvalidCoolDown(uint256 coolDown);
+    error BICInvalidMaxAmountPerBuy(uint256 maxAmountPerBuy);
     error BICPrePublicWhitelist(address[] addresses, uint256[] categories);
     error BICValidateBeforeTransfer(address from);
     error BICInvalidCategory(address user, uint256 category);
