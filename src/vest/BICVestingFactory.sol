@@ -80,6 +80,7 @@ contract BICVestingFactory is Ownable, BICVestingErrors {
             totalAmount == 0 ||
             durationSeconds == 0 ||
             redeemRate == 0 ||
+            redeemRate > DENOMINATOR ||
             erc20 == address(0)
         ) {
             revert InvalidVestingConfig(totalAmount, durationSeconds, redeemRate, erc20);

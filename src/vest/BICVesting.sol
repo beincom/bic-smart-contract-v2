@@ -115,6 +115,7 @@ contract BICVesting is
             totalAmount == 0 ||
             durationSeconds == 0 ||
             redeemRateNumber == 0 ||
+            redeemRateNumber > DENOMINATOR ||
             erc20Address == address(0)
         ) {
             revert InvalidVestingConfig(totalAmount, durationSeconds, redeemRate, erc20Address);
