@@ -263,7 +263,7 @@ contract BicTokenPaymaster is
      * @param min min liquidity fee basic points.
      */
     function setLiquidityFee(uint256 min, uint256 max) external onlyOwner {
-        if (min < 0 || min > max || max > 5000) {
+        if (min > max || max > 5000) {
             revert BICInvalidMinMaxLF(min, max);
         }
         minLF = min;
@@ -276,7 +276,7 @@ contract BicTokenPaymaster is
      * @param _LFReduction liquidity fee reduction percent
      */
     function setLFReduction(uint256 _LFReduction) external onlyOwner {
-        if (_LFReduction <= 0) {
+        if (_LFReduction == 0) {
             revert BICLFReduction(_LFReduction);
         }
         LFReduction = _LFReduction;
