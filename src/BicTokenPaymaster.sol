@@ -4,7 +4,6 @@ pragma solidity ^0.8.23;
 
 import {IUniswapV2Factory} from "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
 import {IUniswapV2Router02} from "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
-import {SafeMath} from "./utils/math/SafeMath.sol";
 import {TokenSingletonPaymaster} from "./base/TokenSingletonPaymaster.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -17,8 +16,6 @@ contract BicTokenPaymaster is
     Pausable,
     BICErrors
 {
-    using SafeMath for uint256;
-
     /// DEX Pre-public
     /// Pre-public structure
     struct PrePublic {
@@ -163,7 +160,7 @@ contract BicTokenPaymaster is
         _prePublic = true;
 
         swapBackEnabled = true;
-        minSwapBackAmount = _totalSupply.div(10000);
+        minSwapBackAmount = _totalSupply / 10000;
 
         uniswapV2Router = 0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24;
         uniswapV2Pair = IUniswapV2Factory(
@@ -190,16 +187,12 @@ contract BicTokenPaymaster is
      * @return current liquidity fee
      */
     function getCurrentLF() public view returns (uint256) {
-        uint256 totalReduction = block
-            .timestamp
-            .sub(LFStartTime)
-            .div(LFPeriod)
-            .mul(LFReduction);
+        uint256 totalReduction = (block.timestamp - LFStartTime) / LFPeriod * LFReduction;
 
         if (totalReduction + minLF >= maxLF) {
             return minLF;
         } else {
-            return maxLF.sub(totalReduction);
+            return maxLF - totalReduction;
         }
     }
 
@@ -495,8 +488,8 @@ contract BicTokenPaymaster is
             return;
         }
 
-        uint256 liquidityTokens = minSwapBackAmount.div(2);
-        uint256 amounTokensToSwap = minSwapBackAmount.sub(liquidityTokens);
+        uint256 liquidityTokens = minSwapBackAmount / 2;
+        uint256 amounTokensToSwap = minSwapBackAmount - liquidityTokens;
 
         _initialToken1Balance = address(this).balance;
 
@@ -504,7 +497,7 @@ contract BicTokenPaymaster is
 
         uint256 _liquidityToken1;
 
-        _liquidityToken1 = address(this).balance.sub(_initialToken1Balance);
+        _liquidityToken1 = address(this).balance - _initialToken1Balance;
 
         if (liquidityTokens > 0 && _liquidityToken1 > 0) {
             _addLiquidity(liquidityTokens, _liquidityToken1);
@@ -693,7 +686,7 @@ contract BicTokenPaymaster is
         }
 
         if (isPool[to] && minLF > 0) {
-            return amount.mul(getCurrentLF()).div(10000);
+            return amount * getCurrentLF() / 10000;
         }
 
         return 0;
