@@ -56,7 +56,6 @@ contract BICVestingFactory is Ownable, BICVestingErrors {
     /// @param allocations The percentage of total tokens to allocate to each beneficiary
     /// @param durationSeconds The duration over which the tokens will redeem
     /// @param redeemRate The percentage of total tokens to redeem per interval
-    /// @param nonce The nonce used to create a deterministic address for the redeem contract
     /// @return ret The address of the newly created redeem token contract
     function createRedeem(
         address erc20,
@@ -64,8 +63,7 @@ contract BICVestingFactory is Ownable, BICVestingErrors {
         address[] calldata beneficiaries,
         uint16[] calldata allocations,
         uint64 durationSeconds,
-        uint64 redeemRate,
-        uint256 nonce
+        uint64 redeemRate
     ) public onlyOwner returns (BICVesting ret) {
         if (
             beneficiaries.length == 0 ||
@@ -88,7 +86,7 @@ contract BICVestingFactory is Ownable, BICVestingErrors {
             revert InvalidVestingConfig(totalAmount, durationSeconds, redeemRate, erc20);
         }
 
-        bytes32 salthash = getHash(erc20, totalAmount, beneficiaries, allocations, durationSeconds, redeemRate, nonce);
+        bytes32 salthash = getHash(erc20, totalAmount, beneficiaries, allocations, durationSeconds, redeemRate);
 
         ret = BICVesting(Clones.cloneDeterministic(address(bicVestingImplementation), salthash));
         ret.initialize(erc20, totalAmount, beneficiaries, allocations, uint64(block.timestamp), durationSeconds, redeemRate);
@@ -110,7 +108,6 @@ contract BICVestingFactory is Ownable, BICVestingErrors {
     /// @param allocations The percentage of total tokens to allocate to each beneficiary
     /// @param durationSeconds The potential duration of the redeem
     /// @param redeemRate The percentage of total tokens to redeem at each interval
-    /// @param nonce The nonce used to create a deterministic address for the redeem contract
     /// @return predicted The address of the potential redeem contract
     function computeRedeem(
         address erc20,
@@ -118,8 +115,7 @@ contract BICVestingFactory is Ownable, BICVestingErrors {
         address[] calldata beneficiaries,
         uint16[] calldata allocations,
         uint64 durationSeconds,
-        uint64 redeemRate,
-        uint256 nonce
+        uint64 redeemRate
     ) public view returns (address) {
         if (
             beneficiaries.length == 0 ||
@@ -131,7 +127,7 @@ contract BICVestingFactory is Ownable, BICVestingErrors {
         // only need to validate allocations
         _validateAllocations(allocations);
         
-        bytes32 salthash = getHash(erc20, totalAmount, beneficiaries, allocations, durationSeconds, redeemRate, nonce);
+        bytes32 salthash = getHash(erc20, totalAmount, beneficiaries, allocations, durationSeconds, redeemRate);
 
         address predicted = Clones.predictDeterministicAddress(address(bicVestingImplementation), salthash);
 
@@ -153,10 +149,9 @@ contract BICVestingFactory is Ownable, BICVestingErrors {
         address[] calldata beneficiaries,
         uint16[] calldata allocations,
         uint64 durationSeconds,
-        uint64 redeemRate,
-        uint256 nonce
+        uint64 redeemRate
     ) public pure returns (bytes32) {
-        return keccak256(abi.encodePacked(erc20, totalAmount, beneficiaries, allocations, durationSeconds, redeemRate, nonce));
+        return keccak256(abi.encodePacked(erc20, totalAmount, beneficiaries, allocations, durationSeconds, redeemRate));
     }
 
     /// @notice validate beneficiary addresses

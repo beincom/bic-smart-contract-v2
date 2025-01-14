@@ -24,7 +24,6 @@ contract BICVestingTestBase is Test {
         uint16[] allocations;
         uint64 duration;
         uint64 redeemRate;
-        uint256 nonce;
     }
 
     BICVestingFactory public bicVestingFactory;
@@ -65,8 +64,7 @@ contract BICVestingTestBase is Test {
             beneficiaries: beneficiaries,
             allocations: allocations,
             duration: 1000,
-            redeemRate: 200,
-            nonce: 0
+            redeemRate: 200
         });
         createVesting(redeem1);
     }
@@ -91,8 +89,7 @@ contract BICVestingTestBase is Test {
             info.beneficiaries,
             info.allocations,
             info.duration,
-            info.redeemRate,
-            info.nonce
+            info.redeemRate
         );
         vm.stopPrank();
     }
@@ -107,8 +104,7 @@ contract BICVestingTestBase is Test {
                 info.beneficiaries,
                 info.allocations,
                 info.duration,
-                info.redeemRate,
-                info.nonce
+                info.redeemRate
             );
     }
 

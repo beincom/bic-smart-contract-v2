@@ -251,8 +251,7 @@ contract BICVestingTest is BICVestingTestBase {
             beneficiaries: duplicateBeneficiaries,
             allocations: duplicateAllocations,
             duration: 1000,
-            redeemRate: 200,
-            nonce: 0 
+            redeemRate: 200
         });
 
         vm.startPrank(owner);
@@ -265,8 +264,7 @@ contract BICVestingTest is BICVestingTestBase {
             duplicateRedeem.beneficiaries,
             duplicateRedeem.allocations,
             duplicateRedeem.duration,
-            duplicateRedeem.redeemRate,
-            duplicateRedeem.nonce
+            duplicateRedeem.redeemRate
         );
         vm.stopPrank();
     }
@@ -290,8 +288,7 @@ contract BICVestingTest is BICVestingTestBase {
             beneficiaries: beneficiaries,
             allocations: allocations,
             duration: 1000,
-            redeemRate: 200,
-            nonce: 0
+            redeemRate: 200
         });
 
         createVesting(oddRedeem);
@@ -331,8 +328,7 @@ contract BICVestingTest is BICVestingTestBase {
             beneficiaries: beneficiaries,
             allocations: allocations,
             duration: 1000,
-            redeemRate: 200,
-            nonce: 0
+            redeemRate: 200
         });
         createVesting(oddRedeem);
 
