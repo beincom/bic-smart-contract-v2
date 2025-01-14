@@ -83,16 +83,16 @@ abstract contract TokenSingletonPaymaster is
 
     constructor (
         address _entryPoint,
-        address[] memory _singers
-    )  BasePaymaster(IEntryPoint(_entryPoint)) MultiSigner(_singers)  {}
+        address[] memory _signers
+    )  BasePaymaster(IEntryPoint(_entryPoint)) MultiSigner(_signers)  {}
 
     /**
      * @notice Set the oracle to use for token exchange rate.
      * @param _oracle the oracle to use.
      */
     function setOracle(address _oracle) external onlyOwner {
-        oracle = _oracle;
         emit SetOracle(oracle, _oracle, msg.sender);
+        oracle = _oracle;
     }
 
     /**
