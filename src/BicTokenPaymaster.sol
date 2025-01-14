@@ -142,8 +142,8 @@ contract BicTokenPaymaster is
     constructor(
         address _entryPoint,
         address superController,
-        address[] memory _singers
-    ) ERC20("Beincom", "BIC") EIP712("beincom", "1") TokenSingletonPaymaster(_entryPoint, _singers) Ownable(_msgSender()) {
+        address[] memory _signers
+    ) ERC20("Beincom", "BIC") EIP712("beincom", "1") TokenSingletonPaymaster(_entryPoint, _signers) Ownable(_msgSender()) {
         uint256 _totalSupply = 5 * 1e27;
         _mint(superController, _totalSupply);
 
