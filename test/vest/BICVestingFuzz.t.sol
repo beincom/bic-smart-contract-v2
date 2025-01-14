@@ -97,7 +97,7 @@ contract BICVestingFuzzTest is Test {
         uint256 leapDuration = 5;
         uint256 currentRewardStacks = 0;
 
-        uint256 amountPerDuration = vesting.amountPerDuration();
+        // uint256 amountPerDuration = vesting.amountPerDuration();
         uint256 maxRewardStacks = vesting.maxRewardStacks();
         uint256 buffer = DENOMINATOR % redeemRate > 0 ? 1 : 0;
 
