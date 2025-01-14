@@ -94,50 +94,50 @@ contract BicTokenPaymaster is
 
     // EVENTS
     /// @dev Emitted when changing a pre-public status
-    event PrePublicStatusUpdated(address updater, bool status);
+    event PrePublicStatusUpdated(address indexed updater, bool status);
 
     /// @dev Emitted when changing a pre-public whitelist
     event PrePublicWhitelistUpdated(
-        address updater,
+        address indexed updater,
         address[] addresses,
         uint256[] categories
     );
 
     /// @dev Emitted when changing a specific pre-public round info
-    event PrePublicRoundUpdated(address updater, uint256 category);
+    event PrePublicRoundUpdated(address indexed updater, uint256 indexed category);
 
     /// @dev Emitted when swap back and liquify
     event SwapBackAndLiquify(uint256 liquidityTokens, uint256 ETHForLiquidity);
 
     /// @dev Emitted when changing swap back enabled status
-    event SwapBackEnabledUpdated(address updater, bool status);
+    event SwapBackEnabledUpdated(address indexed updater, bool status);
 
     /// @dev Emitted when chaning min swap back amount
-    event MinSwapBackAmountUpdated(address updater, uint256 amount);
+    event MinSwapBackAmountUpdated(address indexed updater, uint256 amount);
 
     /// @dev Emitted when changing liquidity fee
-    event LiquidityFeeUpdated(address updater, uint256 min, uint256 max);
+    event LiquidityFeeUpdated(address indexed updater, uint256 min, uint256 max);
 
     /// @dev Emitted when updating excluded address
-    event ExcludedUpdated(address excludedAddress, bool status);
+    event ExcludedUpdated(address indexed excludedAddress, bool status);
 
     /// @dev Emitted when updating LP pools
-    event PoolUpdated(address updater, address pool, bool status);
+    event PoolUpdated(address indexed updater, address indexed pool, bool status);
 
     /// @dev Emitted when updating blacklist
-    event BlockUpdated(address updater, address addr, bool status);
+    event BlockUpdated(address indexed updater, address indexed addr, bool status);
 
     /// @dev Emitted when liquidity fee interval step is upadted
-    event LFReductionUpdated(address updater, uint256 _LFReduction);
+    event LFReductionUpdated(address indexed updater, uint256 _LFReduction);
 
     /// @dev Emitted when changing liquidity fee period
-    event LFPeriodUpdated(address updater, uint256 LFPeriod);
+    event LFPeriodUpdated(address indexed updater, uint256 LFPeriod);
 
     /// @dev Emitted when changing LF start time
     event LFStartTimeUpdated(uint256 _newLFStartTime);
 
     /// @dev Emitted when changing liquidity treasury
-    event LiquidityTreasuryUpdated(address updater, address newLFTreasury);
+    event LiquidityTreasuryUpdated(address indexed updater, address indexed newLFTreasury);
 
     constructor(
         address _entryPoint,
