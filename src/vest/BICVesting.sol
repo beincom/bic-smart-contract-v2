@@ -115,6 +115,7 @@ contract BICVesting is
             totalAmount == 0 ||
             durationSeconds == 0 ||
             redeemRateNumber == 0 ||
+            redeemRateNumber > DENOMINATOR ||
             erc20Address == address(0)
         ) {
             revert InvalidVestingConfig(totalAmount, durationSeconds, redeemRate, erc20Address);
@@ -145,9 +146,9 @@ contract BICVesting is
                 releasedAmount: 0
             });
             totalAllocations += allocations[i];
-            if(totalAllocations > DENOMINATOR) {
-                revert InvalidAllocations(allocations);
-            }
+        }
+        if(totalAllocations != DENOMINATOR) {
+            revert InvalidAllocations(allocations);
         }
     }
 
@@ -244,8 +245,9 @@ contract BICVesting is
     function _vestingSchedule(uint64 timestamp) internal view virtual returns (uint256, uint256) {
         if (timestamp < start) {
             return (0, 0);
-        } else if (timestamp > end) {
-            return (IERC20(erc20).balanceOf(address(this)), maxRewardStacks - currentRewardStacks);
+        } else if (timestamp >= end) {
+            uint256 remainingTokens = IERC20(erc20).balanceOf(address(this));
+            return (remainingTokens, maxRewardStacks - currentRewardStacks);
         } else {
             // check for the latest stack, if currentRewardStacks < maxRewardStacks => amount is _amountPerDuration
             // for odd left-over in the last stack, wait for the end of the duration
@@ -254,6 +256,11 @@ contract BICVesting is
             uint256 elapsedTime = uint256(timestamp) - _lastAtCurrentStack();
             uint256 rewardStackCounter = elapsedTime / duration;
             uint256 amount = rewardStackCounter * _amountPerDuration();
+
+            uint256 availableBalance = IERC20(erc20).balanceOf(address(this));
+            if (amount > availableBalance) {
+                amount = availableBalance;
+            }
 
             return (amount, rewardStackCounter);
         }
