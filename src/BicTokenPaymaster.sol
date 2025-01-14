@@ -360,6 +360,9 @@ contract BicTokenPaymaster is
      */
     function blockAddress(address addr, bool status) public onlyOwner {
         isBlocked[addr] = status;
+        if (status && isExcluded[addr]) {
+            isExcluded[addr] = false;
+        }
         emit BlockUpdated(_msgSender(), addr, status);
     }
 

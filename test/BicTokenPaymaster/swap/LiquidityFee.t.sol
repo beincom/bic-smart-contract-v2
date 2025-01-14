@@ -130,7 +130,7 @@ contract LiquidityFee is BicTokenPaymasterTestBase {
         vm.startPrank(randomUser);
         vm.expectRevert(abi.encodeWithSelector(
             BICErrors.BICValidateBeforeTransfer.selector,
-            randomUser
+            randomUser, address(0x123)
         ));
         bic.transfer(address(0x123), 1000);
         bic.transfer(address(0x123), 0);
