@@ -13,7 +13,7 @@ interface B139Errors {
     error B139InvalidCoolDown(uint256 coolDown);
     error B139InvalidMaxAmountPerBuy(uint256 maxAmountPerBuy);
     error B139PrePublicWhitelist(address[] addresses, uint256[] categories);
-    error B139ValidateBeforeTransfer(address from);
+    error B139ValidateBeforeTransfer(address from, address to);
     error B139InvalidCategory(address user, uint256 category);
     error B139NotActiveRound(address user, uint256 category);
     error B139WaitForCoolDown(address user, uint256 coolDown);

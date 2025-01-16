@@ -544,7 +544,7 @@ contract B139TokenPaymaster is
      * @dev Checks if transfer is paused and if sender is blocked
      * @param from Address attempting to send tokens
      */
-    function _validateBeforeTransfer(address from) internal view {
+    function _validateBeforeTransfer(address from, address to) internal view {
         if (paused() || isBlocked[from] || isBlocked[to]) {
             revert B139ValidateBeforeTransfer(from, to);
         }
