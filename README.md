@@ -51,6 +51,9 @@ $ anvil
 $ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
 ```
 
+### Verify
+$ forge verify-contract --etherscan-api-key $API_KEY $CONTRACT_ADDRESS $PATH_NAME_CONTRACT --compiler-version $VERSION --chain $CHAIN
+
 ### Deploy BIC Token in Unichain Sepolia
 
 ```shell
