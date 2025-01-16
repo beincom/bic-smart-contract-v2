@@ -27,7 +27,7 @@ contract B139TokenPaymaster is
     }
 
     /// Enabled DEX pre-public
-    bool private _prePublic;
+    bool public prePublic;
     
     /// Liquidity fee
     /// The start time to calculate liquidity fee reduction
@@ -75,7 +75,7 @@ contract B139TokenPaymaster is
     mapping(address => uint256) private _prePublicWhitelist;
 
     /// Cooldown in Pre-public round in DEX
-    mapping(address => uint256) private _coolDown;
+    mapping(address => uint256) public coolDown;
 
     /// Pre-public round in DEX
     mapping(uint256 => PrePublic) public prePublicRounds;
@@ -157,7 +157,7 @@ contract B139TokenPaymaster is
         isExcluded[superController] = true;
         isExcluded[address(this)] = true;
 
-        _prePublic = true;
+        prePublic = true;
 
         swapBackEnabled = true;
         minSwapBackAmount = _totalSupply / 10000;
@@ -202,7 +202,7 @@ contract B139TokenPaymaster is
      * @param status pre-public status.
      */
     function setPrePublic(bool status) external onlyOwner {
-        _prePublic = status;
+        prePublic = status;
         emit PrePublicStatusUpdated(_msgSender(), status);
     }
 
@@ -529,7 +529,7 @@ contract B139TokenPaymaster is
         _validateBeforeTransfer(from, to);
 
         // Handle pre-public sale restrictions
-        if (_prePublic && isPool[from]) {
+        if (prePublic && isPool[from]) {
             _validatePrePublicTransfer(to, amount);
         }
 
@@ -580,13 +580,13 @@ contract B139TokenPaymaster is
             revert B139NotActiveRound(to, category);
         }
         if (!_isValidCooldown(to, round.coolDown)) {
-            revert B139WaitForCoolDown(to, _coolDown[to] + round.coolDown);
+            revert B139WaitForCoolDown(to, coolDown[to] + round.coolDown);
         }
         if (amount > round.maxAmountPerBuy) {
             revert B139MaxAmountPerBuy(to, round.maxAmountPerBuy);
         }
 
-        _coolDown[to] = block.timestamp;
+        coolDown[to] = block.timestamp;
     }
 
     /**
@@ -607,16 +607,16 @@ contract B139TokenPaymaster is
      * @notice Validates cooldown period for pre-public purchases
      * @dev Ensures sufficient time has passed since last purchase
      * @param to Buyer address
-     * @param coolDown Required cooldown period
+     * @param _coolDown Required cooldown period
      * @return bool True if cooldown period has passed
      */
     function _isValidCooldown(
         address to,
-        uint256 coolDown
+        uint256 _coolDown
     ) internal view returns (bool) {
         return
-            _coolDown[to] == 0 ||
-            _coolDown[to] + coolDown <= block.timestamp;
+            coolDown[to] == 0 ||
+            coolDown[to] + _coolDown <= block.timestamp;
     }
 
     /**
