@@ -9,12 +9,12 @@ import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {BICErrors} from "./interfaces/BICErrors.sol";
+import {B139Errors} from "./interfaces/B139Errors.sol";
 
-contract BicTokenPaymaster is
+contract B139TokenPaymaster is
     TokenSingletonPaymaster,
     Pausable,
-    BICErrors
+    B139Errors
 {
     /// DEX Pre-public
     /// Pre-public structure
@@ -143,8 +143,8 @@ contract BicTokenPaymaster is
         address _entryPoint,
         address superController,
         address[] memory _signers
-    ) ERC20("Beincom", "BIC") EIP712("beincom", "1") TokenSingletonPaymaster(_entryPoint, _signers) Ownable(_msgSender()) {
-        uint256 _totalSupply = 5 * 1e27;
+    ) ERC20("Bamboo139", "B139") EIP712("bamboo139", "1") TokenSingletonPaymaster(_entryPoint, _signers) Ownable(_msgSender()) {
+        uint256 _totalSupply = 888 * 1e27;
         _mint(superController, _totalSupply);
 
         liquidityTreasury = superController;
@@ -235,7 +235,7 @@ contract BicTokenPaymaster is
      */
     function setLFStartTime(uint256 _newLFStartTime) external onlyOwner {
         if (_newLFStartTime < block.timestamp) {
-            revert BICInvalidLFStartTime(_newLFStartTime);
+            revert B139InvalidLFStartTime(_newLFStartTime);
         }
         LFStartTime = _newLFStartTime;
         emit LFStartTimeUpdated(_newLFStartTime);
@@ -257,7 +257,7 @@ contract BicTokenPaymaster is
      */
     function setLiquidityFee(uint256 min, uint256 max) external onlyOwner {
         if (min > max || max > 5000) {
-            revert BICInvalidMinMaxLF(min, max);
+            revert B139InvalidMinMaxLF(min, max);
         }
         minLF = min;
         maxLF = max;
@@ -270,7 +270,7 @@ contract BicTokenPaymaster is
      */
     function setLFReduction(uint256 _LFReduction) external onlyOwner {
         if (_LFReduction == 0) {
-            revert BICLFReduction(_LFReduction);
+            revert B139LFReduction(_LFReduction);
         }
         LFReduction = _LFReduction;
         emit LFReductionUpdated(_msgSender(), _LFReduction);
@@ -282,7 +282,7 @@ contract BicTokenPaymaster is
      */
     function setLFPeriod(uint256 _LFPeriod) external onlyOwner {
         if (_LFPeriod <= 0) {
-            revert BICLFPeriod(_LFPeriod);
+            revert B139LFPeriod(_LFPeriod);
         }
         LFPeriod = _LFPeriod;
         emit LFPeriodUpdated(_msgSender(), _LFPeriod);
@@ -391,7 +391,7 @@ contract BicTokenPaymaster is
         uint256[] memory _categories
     ) private {
         if (_addresses.length != _categories.length) {
-            revert BICPrePublicWhitelist(_addresses, _categories);
+            revert B139PrePublicWhitelist(_addresses, _categories);
         }
         for (uint256 i = 0; i < _addresses.length; i++) {
             _prePublicWhitelist[_addresses[i]] = _categories[i];
@@ -405,13 +405,13 @@ contract BicTokenPaymaster is
      */
     function _setPrePublicRound(PrePublic memory _prePublicRound) private {
         if (_prePublicRound.startTime > _prePublicRound.endTime) {
-            revert BICInvalidTimestampPrePublicRound(_prePublicRound.startTime, _prePublicRound.endTime);
+            revert B139InvalidTimestampPrePublicRound(_prePublicRound.startTime, _prePublicRound.endTime);
         }
         if (_prePublicRound.coolDown > _prePublicRound.endTime - _prePublicRound.startTime) {
-            revert BICInvalidCoolDown(_prePublicRound.coolDown);
+            revert B139InvalidCoolDown(_prePublicRound.coolDown);
         }
         if (_prePublicRound.maxAmountPerBuy > totalSupply()) {
-            revert BICInvalidMaxAmountPerBuy(_prePublicRound.maxAmountPerBuy);
+            revert B139InvalidMaxAmountPerBuy(_prePublicRound.maxAmountPerBuy);
         }
         prePublicRounds[_prePublicRound.category] = _prePublicRound;
         emit PrePublicRoundUpdated(_msgSender(), _prePublicRound.category);
@@ -546,7 +546,7 @@ contract BicTokenPaymaster is
      */
     function _validateBeforeTransfer(address from) internal view {
         if (paused() || isBlocked[from]) {
-            revert BICValidateBeforeTransfer(from);
+            revert B139ValidateBeforeTransfer(from);
         }
     }
 
@@ -572,18 +572,18 @@ contract BicTokenPaymaster is
     function _validatePrePublicTransfer(address to, uint256 amount) internal {
         uint256 category = _prePublicWhitelist[to];
         if (category == 0) {
-            revert BICInvalidCategory(to, category);
+            revert B139InvalidCategory(to, category);
         }
 
         PrePublic memory round = prePublicRounds[category];
         if (!_isActivePrePublicRound(round)) {
-            revert BICNotActiveRound(to, category);
+            revert B139NotActiveRound(to, category);
         }
         if (!_isValidCooldown(to, round.coolDown)) {
-            revert BICWaitForCoolDown(to, _coolDown[to] + round.coolDown);
+            revert B139WaitForCoolDown(to, _coolDown[to] + round.coolDown);
         }
         if (amount > round.maxAmountPerBuy) {
-            revert BICMaxAmountPerBuy(to, round.maxAmountPerBuy);
+            revert B139MaxAmountPerBuy(to, round.maxAmountPerBuy);
         }
 
         _coolDown[to] = block.timestamp;
