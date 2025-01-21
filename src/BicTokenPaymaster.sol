@@ -5,6 +5,7 @@ pragma solidity ^0.8.23;
 import {IUniswapV2Factory} from "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
 import {IUniswapV2Router02} from "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 import {TokenSingletonPaymaster} from "./base/TokenSingletonPaymaster.sol";
+import {Treasury} from "./base/Treasury.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
@@ -57,9 +58,6 @@ contract BicTokenPaymaster is
     
     /// Accumulated liquidity fee
     uint256 public accumulatedLF;
-    
-    /// Liquidity treasury
-    address public liquidityTreasury;
 
     /// Swap back and liquify threshold
     uint256 public minSwapBackAmount;
@@ -133,9 +131,6 @@ contract BicTokenPaymaster is
     /// @dev Emitted when changing LF start time
     event LFStartTimeUpdated(uint256 _newLFStartTime);
 
-    /// @dev Emitted when changing liquidity treasury
-    event LiquidityTreasuryUpdated(address indexed updater, address indexed newLFTreasury);
-
     /// @dev Emitted when withdrawing stuck tokens
     event WithdrawToken(address caller, address token, address beneficiary, uint256 amount);
 
@@ -143,11 +138,13 @@ contract BicTokenPaymaster is
         address _entryPoint,
         address superController,
         address[] memory _signers
-    ) ERC20("Beincom", "BIC") EIP712("beincom", "1") TokenSingletonPaymaster(_entryPoint, _signers) Ownable(_msgSender()) {
+    ) ERC20("Beincom", "BIC")
+    EIP712("beincom", "1")
+    TokenSingletonPaymaster(_entryPoint, _signers)
+    Ownable(_msgSender())
+    Treasury(superController) {
         uint256 _totalSupply = 5 * 1e27;
         _mint(superController, _totalSupply);
-
-        liquidityTreasury = superController;
 
         maxLF = 1500;
         minLF = 300;
@@ -239,15 +236,6 @@ contract BicTokenPaymaster is
         }
         LFStartTime = _newLFStartTime;
         emit LFStartTimeUpdated(_newLFStartTime);
-    }
-
-    /**
-     * @notice Update liquidity treasury.
-     * @param newLFTreasury new liquidity treasury.
-     */
-    function setLiquidityTreasury(address newLFTreasury) external onlyOwner {
-        liquidityTreasury = newLFTreasury;
-        emit LiquidityTreasuryUpdated(_msgSender(), newLFTreasury);
     }
 
     /**
@@ -476,7 +464,7 @@ contract BicTokenPaymaster is
             _liquidityToken0,
             0,
             0,
-            liquidityTreasury,
+            treasury,
             block.timestamp
         );
     }

@@ -36,11 +36,11 @@ contract LiquidityFee is BicTokenPaymasterTestBase {
         assertEq(uniswapV2Factory.feeToSetter(), address(54321));
     }
 
-    function test_setLiquidityTreasury() public {
+    function test_setTreasury() public {
         address newTreasury = vm.addr(0x00001);
         vm.prank(owner);
-        bic.setLiquidityTreasury(newTreasury);
-        assertEq(newTreasury, bic.liquidityTreasury());
+        bic.updateTreasury(newTreasury);
+        assertEq(newTreasury, bic.treasury());
     }
 
     function test_setLiquidityFee() public {

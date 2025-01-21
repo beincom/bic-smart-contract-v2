@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.23;
 
-import "./MultiSigner.sol";
 import "../interfaces/PaymasterErrors.sol";
+import "./MultiSigner.sol";
+import "./Treasury.sol";
 import "@account-abstraction/contracts/core/BasePaymaster.sol";
 import "@account-abstraction/contracts/core/Helpers.sol";
-import "@account-abstraction/contracts/samples/IOracle.sol";
 import "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
+import "@account-abstraction/contracts/samples/IOracle.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
@@ -16,7 +17,8 @@ abstract contract TokenSingletonPaymaster is
     BasePaymaster,
     ERC20Votes,
     MultiSigner,
-    PaymasterErrors
+    PaymasterErrors,
+    Treasury
 {
     /// The factory that creates accounts. used to validate account creation. Just to make sure not have any unexpected account creation trying to bug the system
     mapping(address => bool) public factories;
@@ -374,7 +376,7 @@ abstract contract TokenSingletonPaymaster is
             exchangeRate
         );
 
-        _transfer(sender, address(this), costInToken);
+        _transfer(sender, treasury, costInToken);
 
         emit ChargeFee(userOpHash, sender, costInToken);
     }
