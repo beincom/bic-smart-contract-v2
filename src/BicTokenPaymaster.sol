@@ -327,7 +327,7 @@ contract BicTokenPaymaster is
         bool status
     ) external onlyOwner {
         for (uint256 i = 0; i < excludedAddresses.length; i++) {
-            _setisExcluded(excludedAddresses[i], status);
+            _setExcluded(excludedAddresses[i], status);
         }
     }
 
@@ -410,7 +410,10 @@ contract BicTokenPaymaster is
         if (_prePublicRound.coolDown > _prePublicRound.endTime - _prePublicRound.startTime) {
             revert BICInvalidCoolDown(_prePublicRound.coolDown);
         }
-        if (_prePublicRound.maxAmountPerBuy > totalSupply()) {
+        if (
+            _prePublicRound.maxAmountPerBuy == 0 ||
+            _prePublicRound.maxAmountPerBuy > totalSupply()
+        ) {
             revert BICInvalidMaxAmountPerBuy(_prePublicRound.maxAmountPerBuy);
         }
         prePublicRounds[_prePublicRound.category] = _prePublicRound;
@@ -422,7 +425,10 @@ contract BicTokenPaymaster is
      * @param _excludedAddress excluded address
      * @param _status status of excluded address
      */
-    function _setisExcluded(address _excludedAddress, bool _status) internal {
+    function _setExcluded(address _excludedAddress, bool _status) internal {
+        if (_status && isBlocked[_excludedAddress]) {
+            isBlocked[_excludedAddress] = false;
+        }
         isExcluded[_excludedAddress] = _status;
         emit ExcludedUpdated(_excludedAddress, _status);
     }
