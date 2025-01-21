@@ -24,6 +24,9 @@ abstract contract TokenSingletonPaymaster is
     /// The oracle to use for token exchange rate.
     address public oracle;
 
+    // @notice The address of the gasTreasury for receiving gas fees
+    address public gasTreasury;
+
     /// Calculated cost of the postOp, minimum value that need verificationGasLimit to be higher than
     uint256 public COST_OF_POST = 60000;
 
@@ -50,6 +53,9 @@ abstract contract TokenSingletonPaymaster is
 
     /// @dev Emitted when a factory is added
     event AddFactory(address factory, address indexed _operator);
+
+    /// @dev Emitted when changing gas treasury
+    event GasTreasuryUpdated(address indexed updater, address indexed newTreasury);
 
     /// @notice Hold all configs needed in ERC-20 mode.
     struct VerifyingPaymasterData {
@@ -84,7 +90,9 @@ abstract contract TokenSingletonPaymaster is
     constructor (
         address _entryPoint,
         address[] memory _signers
-    )  BasePaymaster(IEntryPoint(_entryPoint)) MultiSigner(_signers)  {}
+    )  BasePaymaster(IEntryPoint(_entryPoint)) MultiSigner(_signers)  {
+        gasTreasury = address(this);
+    }
 
     /**
      * @notice Set the oracle to use for token exchange rate.
@@ -93,6 +101,15 @@ abstract contract TokenSingletonPaymaster is
     function setOracle(address _oracle) external onlyOwner {
         emit SetOracle(oracle, _oracle, msg.sender);
         oracle = _oracle;
+    }
+
+    /**
+     * @notice Set the gas treasury address.
+     * @param _gasTreasury the gas treasury address.
+     */
+    function setGasTreasury(address _gasTreasury) external onlyOwner {
+        gasTreasury = _gasTreasury;
+        emit GasTreasuryUpdated(msg.sender, _gasTreasury);
     }
 
     /**
@@ -374,7 +391,7 @@ abstract contract TokenSingletonPaymaster is
             exchangeRate
         );
 
-        _transfer(sender, address(this), costInToken);
+        _transfer(sender, gasTreasury, costInToken);
 
         emit ChargeFee(userOpHash, sender, costInToken);
     }
