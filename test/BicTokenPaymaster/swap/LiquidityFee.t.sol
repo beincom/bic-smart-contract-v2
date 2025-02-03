@@ -11,6 +11,7 @@ contract LiquidityFee is BicTokenPaymasterTestBase {
     uint256 public initPoolBicAmount = 800_000_000 * 1e18;
     uint256 public initPoolEthAmount = 5 ether;
     function setUp() public override {
+        vm.warp(1740967200);
         super.setUp();
         bicUniswapPair = uniswapV2Factory.getPair(address(bic), address(weth));
 
