@@ -46,8 +46,6 @@ contract BicTokenPaymaster is
     uint256 public maxLF;
     uint256 public minLF;
 
-
-    
     /// swap back and liquify
     /// Uniswap V2 router
     address public immutable uniswapV2Router;
@@ -70,7 +68,6 @@ contract BicTokenPaymaster is
     /// Guard _swapping
     bool private _swapping;
 
-    
     /// Whitelist for pre-public in DEX
     mapping(address => uint256) private _prePublicWhitelist;
 
@@ -149,18 +146,18 @@ contract BicTokenPaymaster is
 
         liquidityTreasury = superController;
 
-        maxLF = 1500;
-        minLF = 300;
+        maxLF = 2400;
+        minLF = 100;
         LFReduction = 50;
         LFPeriod = 30 days;
-        LFStartTime = block.timestamp;
+        LFStartTime = 1740967200; // Monday, March 3, 2025 9:00:00 AM GMT+07:00
         isExcluded[superController] = true;
         isExcluded[address(this)] = true;
 
         _prePublic = true;
 
         swapBackEnabled = true;
-        minSwapBackAmount = _totalSupply / 10000;
+        minSwapBackAmount = 8386 * 1e18;
 
         uniswapV2Router = 0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24;
         uniswapV2Pair = IUniswapV2Factory(

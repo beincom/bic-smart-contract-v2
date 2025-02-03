@@ -18,9 +18,9 @@ contract BicForkUniswapV2 is BicTokenPaymasterTestBase {
 
     // Liquidity fee info
     uint256 maxAllocation = 50000000 * 1e18;
-    uint256 minSwapBackAndLiquify = 500000 * 1e18;
-    uint256 maxLF = 1500;
-    uint256 minLF = 300;
+    uint256 minSwapBackAndLiquify = 8386 * 1e18;
+    uint256 maxLF = 2400;
+    uint256 minLF = 100;
     uint256 LFReduction = 50;
     uint256 LFPeriod = 30 days;
     uint256 user1Balance = 5000000 * 1e18;
@@ -31,7 +31,7 @@ contract BicForkUniswapV2 is BicTokenPaymasterTestBase {
     address user2 = address(0x3);
 
     // Get LFStartTime
-    uint256 LFStartTime = block.timestamp;
+    uint256 LFStartTime = 1740967200;
 
     // Pool variables
     IUniswapV2Pair pair;
@@ -60,6 +60,7 @@ contract BicForkUniswapV2 is BicTokenPaymasterTestBase {
 
     // Constants
     function setUp() public virtual override {
+        vm.warp(1740967200);
         super.setUp();
 
         // 1. First ensure owner has both ETH and BIC
