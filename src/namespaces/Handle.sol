@@ -4,6 +4,7 @@ pragma solidity ^0.8.23;
 import {Address} from '@openzeppelin/contracts/utils/Address.sol';
 import {ERC2981} from '@openzeppelin/contracts/token/common/ERC2981.sol';
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {ERC721Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol';
 
 import {IHandles} from "../interfaces/IHandles.sol";
@@ -227,8 +228,11 @@ contract Handles is ERC721Upgradeable, ERC2981, IHandles {
     /// @dev Returns true if this contract implements the interface defined by `interfaceId`.
     function supportsInterface(
         bytes4 interfaceId
-    ) public view virtual override(ERC721Upgradeable, ERC2981) returns (bool) {
-        return (ERC721Upgradeable.supportsInterface(interfaceId) || ERC2981.supportsInterface(interfaceId));
+    ) public view virtual override(ERC721Upgradeable, ERC2981, IERC165) returns (bool) {
+        return (
+            interfaceId == type(IHandles).interfaceId ||
+            super.supportsInterface(interfaceId) || ERC2981.supportsInterface(interfaceId)
+        );
     }
 
     //////////////////////////////////////

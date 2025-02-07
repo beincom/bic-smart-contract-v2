@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.23;
 
+import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+
+
 /// @title A Handles interface for creating and interacting with handles
 /// @dev Details about handles can be found in the Handles contract
-interface IHandles {
+interface IHandles is IERC721 {
     event SetOperator(address indexed operator);
     event RemoveController(address indexed controller);
     event SetController(address indexed controller);
