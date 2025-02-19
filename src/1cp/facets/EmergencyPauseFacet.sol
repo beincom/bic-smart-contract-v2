@@ -8,6 +8,13 @@ import { IDiamondLoupe } from "../interfaces/IDiamondLoupe.sol";
 import { DiamondCutFacet } from "./DiamondCutFacet.sol";
 
 contract EmergencyPauseFacet {
+     /// Errors ///
+    error DiamondIsPaused();
+    error FacetIsNotRegistered();
+    error InvalidCallData();
+    error NoFacetToPause();
+    error UnAuthorized();
+    
     /// Events ///
     event EmergencyFacetRemoved(
         address indexed facetAddress,
@@ -16,17 +23,10 @@ contract EmergencyPauseFacet {
     event EmergencyPaused(address indexed msgSender);
     event EmergencyUnpaused(address indexed msgSender);
 
-    /// Errors ///
-    error DiamondIsPaused();
-    error FacetIsNotRegistered();
-    error InvalidCallData();
-    error NoFacetToPause();
-    error UnAuthorized();
-
     /// Storage ///
     address public immutable pauserWallet;
-    bytes32 internal constant NAMESPACE =
-        keccak256("com.lifi.facets.emergencyPauseFacet");
+    bytes32 internal constant EMERGENCY_PAUSE_STORAGE_POSITION =
+        keccak256("1CP.emergency.pause.storage");
     address internal immutable _emergencyPauseFacetAddress;
 
     struct Storage {
@@ -217,10 +217,10 @@ contract EmergencyPauseFacet {
 
     /// @dev fetch local storage
     function getStorage() private pure returns (Storage storage s) {
-        bytes32 namespace = NAMESPACE;
+        bytes32 position = EMERGENCY_PAUSE_STORAGE_POSITION;
         // solhint-disable-next-line no-inline-assembly
         assembly {
-            s.slot := namespace
+            s.slot := position
         }
     }
 
