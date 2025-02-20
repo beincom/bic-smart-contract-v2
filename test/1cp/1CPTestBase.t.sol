@@ -6,26 +6,34 @@ import {OneCPDiamond} from "../../src/1cp/1CPDiamond.sol";
 import {DiamondCutFacet} from "../../src/1cp/facets/DiamondCutFacet.sol";
 import {DiamondLoupeFacet} from "../../src/1cp/facets/DiamondLoupeFacet.sol";
 import {OwnershipFacet} from "../../src/1cp/facets/OwnershipFacet.sol";
+import {AccessManagerFacet} from "../../src/1cp/facets/AccessManagerFacet.sol";
+import {EmergencyPauseFacet} from "../../src/1cp/facets/EmergencyPauseFacet.sol";
 import {LibDiamond} from "../../src/1cp/libraries/LibDiamond.sol";
 
 contract OneCPTestBase is Test {
     OneCPDiamond public oneCP;
     DiamondCutFacet public diamondCutFacet;
+    DiamondLoupeFacet public diamondLoupeFacet;
+    OwnershipFacet public ownershipFacet;
+    AccessManagerFacet public accessManagerFacet;
+    EmergencyPauseFacet public emergencyPauseFacet;
     address public oneCPOwner;
+    address public pauserWallet;
 
     function setUp() public virtual {
         oneCPOwner = address(1234);
+        pauserWallet = address(123455);
         diamondCutFacet = new DiamondCutFacet();
         oneCP = new OneCPDiamond(oneCPOwner, address(diamondCutFacet));
+        addOwnershipFacet();
+        addDiamondLoupeFacet();
+        addAccessManagerFacet();
+        addEmergencyPauseFacet(pauserWallet);
     }
 
-    function test_deployNew1CP() public {
-        oneCP = new OneCPDiamond(oneCPOwner, address(diamondCutFacet));
-    }
-
-    function test_deployAndAddOwnershipFacet() public {
+    function addOwnershipFacet() internal {
         vm.startPrank(oneCPOwner);
-        OwnershipFacet ownershipFacet = new OwnershipFacet();
+        ownershipFacet = new OwnershipFacet();
 
         // prepare function selectors
         bytes4[] memory functionSelectors = new bytes4[](2);
@@ -42,9 +50,9 @@ contract OneCPTestBase is Test {
         DiamondCutFacet(address(oneCP)).diamondCut(cut, address(0), "");
     }
     
-    function test_deployAndAddDiamondLoupeFacet() public {
+    function addDiamondLoupeFacet() public {
         vm.startPrank(oneCPOwner);
-        DiamondLoupeFacet diamondLoupeFacet = new DiamondLoupeFacet();
+        diamondLoupeFacet = new DiamondLoupeFacet();
 
         // make sure that this call fails (without ending the test)
         bool failed = false;
@@ -56,16 +64,64 @@ contract OneCPTestBase is Test {
         if (!failed) revert("InvalidDiamondSetup");
 
         // prepare function selectors
-        bytes4[] memory functionSelectors = new bytes4[](4);
+        bytes4[] memory functionSelectors = new bytes4[](5);
         functionSelectors[0] = diamondLoupeFacet.facets.selector;
         functionSelectors[1] = diamondLoupeFacet.facetFunctionSelectors.selector;
         functionSelectors[2] = diamondLoupeFacet.facetAddresses.selector;
         functionSelectors[3] = diamondLoupeFacet.facetAddress.selector;
+        functionSelectors[4] = diamondLoupeFacet.supportsInterface.selector;
 
         // add facet
         LibDiamond.FacetCut[] memory cut = new LibDiamond.FacetCut[](1);
         cut[0] = LibDiamond.FacetCut({
             facetAddress: address(diamondLoupeFacet),
+            action: LibDiamond.FacetCutAction.Add,
+            functionSelectors: functionSelectors
+        });
+        // add facet
+        DiamondCutFacet(address(oneCP)).diamondCut(cut, address(0), "");
+    }
+
+    function addAccessManagerFacet() internal {
+        vm.startPrank(oneCPOwner);
+        accessManagerFacet = new AccessManagerFacet();
+
+        // prepare function selectors
+        bytes4[] memory functionSelectors = new bytes4[](2);
+        functionSelectors[0] = accessManagerFacet.setCanExecute.selector;
+        functionSelectors[1] = accessManagerFacet.addressCanExecuteMethod.selector;
+
+        LibDiamond.FacetCut[] memory cut = new LibDiamond.FacetCut[](1);
+        cut[0] = LibDiamond.FacetCut({
+            facetAddress: address(accessManagerFacet),
+            action: LibDiamond.FacetCutAction.Add,
+            functionSelectors: functionSelectors
+        });
+        // add facet
+        DiamondCutFacet(address(oneCP)).diamondCut(cut, address(0), "");
+    }
+
+    function setAccessToSelector(
+        bytes4 selector,
+        address executor,
+        bool canAccess
+    ) internal {
+        AccessManagerFacet(address(oneCP)).setCanExecute(selector, executor, canAccess);
+    }
+
+    function addEmergencyPauseFacet(address _pauserWallet) internal {
+        vm.startPrank(oneCPOwner);
+        emergencyPauseFacet = new EmergencyPauseFacet(_pauserWallet);
+
+        // prepare function selectors
+        bytes4[] memory functionSelectors = new bytes4[](3);
+        functionSelectors[0] = emergencyPauseFacet.removeFacet.selector;
+        functionSelectors[1] = emergencyPauseFacet.pauseDiamond.selector;
+        functionSelectors[2] = emergencyPauseFacet.unpauseDiamond.selector;
+
+        LibDiamond.FacetCut[] memory cut = new LibDiamond.FacetCut[](1);
+        cut[0] = LibDiamond.FacetCut({
+            facetAddress: address(emergencyPauseFacet),
             action: LibDiamond.FacetCutAction.Add,
             functionSelectors: functionSelectors
         });

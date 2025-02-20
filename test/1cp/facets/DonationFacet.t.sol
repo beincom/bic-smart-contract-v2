@@ -3,9 +3,9 @@ pragma solidity ^0.8.23;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {OneCPTestBase} from "../1CPTestBase.t.sol";
-import {AccessManagerTest} from "./AccessManagerFacet.t.sol";
 import {DiamondCutFacet} from "../../../src/1cp/facets/DiamondCutFacet.sol";
 import {DonationFacet} from "../../../src/1cp/facets/DonationFacet.sol";
+import {EmergencyPauseFacet} from "../../../src/1cp/facets/EmergencyPauseFacet.sol";
 import {LibDiamond} from "../../../src/1cp/libraries/LibDiamond.sol";
 
 contract TestERC20 is ERC20 {
@@ -18,7 +18,7 @@ contract TestERC20 is ERC20 {
     }
 }
 
-contract DonationFacetTest is AccessManagerTest {
+contract DonationFacetTest is OneCPTestBase {
     TestERC20 public tBIC;
     address public donator;
     address public receiver;
@@ -129,5 +129,100 @@ contract DonationFacetTest is AccessManagerTest {
         );
         assertEq(0, tBIC.balanceOf(donationTreasury), "Surcharge fee mismatch");
         assertEq(0, tBIC.balanceOf(receiver), "Received amount fee mismatch");
+    }
+
+    function test_pause_donate() public {
+        vm.startPrank(donator);
+        uint256 donateAmount = 1e24;
+        tBIC.mint(donateAmount);
+        tBIC.approve(address(oneCP), donateAmount);
+
+        vm.startPrank(oneCPOwner);
+        EmergencyPauseFacet(payable(address(oneCP))).pauseDiamond();
+
+        vm.expectRevert();
+        DonationFacet(address(oneCP)).donate(
+            address(tBIC),
+            receiver,
+            donateAmount,
+            "donate"
+        );
+        assertEq(0, tBIC.balanceOf(donationTreasury), "Surcharge fee mismatch");
+        assertEq(0, tBIC.balanceOf(receiver), "Received amount fee mismatch");
+    }
+
+    function test_pause_callDonation() public {
+        vm.startPrank(donator);
+        tBIC.mint(1e25);
+        uint256 donateAmount = 1e24;
+        uint256 maxFeePerGas = 1e9;
+        uint256 maxPriorityFeePerGas = 1e8;
+        uint256 paymentPrice = 1e6;
+        tBIC.approve(address(oneCP), 1e25);
+
+        vm.startPrank(pauserWallet);
+        EmergencyPauseFacet(payable(address(oneCP))).pauseDiamond();
+
+        vm.startPrank(caller);
+        vm.expectRevert();
+        (uint256 actualGasCost, uint256 actualPayment) = DonationFacet(address(oneCP)).callDonation(
+            donateAmount,
+            maxFeePerGas,
+            maxPriorityFeePerGas,
+            paymentPrice,
+            address(tBIC),
+            donator,
+            receiver,
+            "donate"
+        );
+        assertEq(0, tBIC.balanceOf(donationTreasury), "Surcharge fee mismatch");
+        assertEq(0, tBIC.balanceOf(receiver), "Received amount fee mismatch");
+    }
+
+    function test_unpause_callDonation() public {
+        vm.startPrank(donator);
+        tBIC.mint(1e25);
+        uint256 donateAmount = 1e24;
+        uint256 maxFeePerGas = 1e9;
+        uint256 maxPriorityFeePerGas = 1e8;
+        uint256 paymentPrice = 1e6;
+        tBIC.approve(address(oneCP), 1e25);
+
+        vm.startPrank(pauserWallet);
+        EmergencyPauseFacet(payable(address(oneCP))).pauseDiamond();
+
+        vm.startPrank(caller);
+        vm.expectRevert();
+        (uint256 actualGasCost, uint256 actualPayment) = DonationFacet(address(oneCP)).callDonation(
+            donateAmount,
+            maxFeePerGas,
+            maxPriorityFeePerGas,
+            paymentPrice,
+            address(tBIC),
+            donator,
+            receiver,
+            "donate"
+        );
+        assertEq(0, tBIC.balanceOf(donationTreasury), "Surcharge fee mismatch");
+        assertEq(0, tBIC.balanceOf(receiver), "Received amount fee mismatch");
+
+        vm.startPrank(oneCPOwner);
+        address[] memory blacklist;
+        EmergencyPauseFacet(payable(address(oneCP))).unpauseDiamond(blacklist);
+
+        vm.startPrank(caller);
+        (actualGasCost, actualPayment) = DonationFacet(address(oneCP)).callDonation(
+            donateAmount,
+            maxFeePerGas,
+            maxPriorityFeePerGas,
+            paymentPrice,
+            address(tBIC),
+            donator,
+            receiver,
+            "donate"
+        );
+        assertEq(actualGasCost * paymentPrice, actualPayment, "Gas Payment mismatch");
+        assertEq((donateAmount * surchargeFee / 10_000) + actualPayment, tBIC.balanceOf(donationTreasury), "Surcharge fee mismatch");
+        assertEq(donateAmount - (donateAmount * surchargeFee / 10_000), tBIC.balanceOf(receiver), "Received amount fee mismatch");
     }
 }
