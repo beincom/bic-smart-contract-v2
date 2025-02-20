@@ -26,6 +26,9 @@ contract TierStaking is Ownable {
     event Staked(address indexed user, uint256 amount, uint256 tierIndex);
     event Withdrawn(address indexed user, uint256 amount);
 
+    error ZeroStakeAmount();
+    error CannotStakeInCurrentTier();
+    error TierAlreadyStaked();
     constructor(address _token, address _owner) Ownable(_owner) {
         token = IERC20(_token);
     }
@@ -37,14 +40,7 @@ contract TierStaking is Ownable {
         uint256 _lockDuration
     ) external onlyOwner {
         if (tiers[_tierIndex].totalStaked > 0) {
-            tiers[_tierIndex] = Tier(
-                tiers[_tierIndex].maxTokens == tiers[_tierIndex].totalStaked
-                    ? tiers[_tierIndex].maxTokens
-                    : _maxTokens,
-                _annualInterestRate,
-                _lockDuration,
-                tiers[_tierIndex].totalStaked
-            );
+            revert TierAlreadyStaked();
         } else {
             tiers[_tierIndex] = Tier(
                 _maxTokens,
@@ -57,10 +53,10 @@ contract TierStaking is Ownable {
 
     function stake(uint256 _amount) external {
         if (_amount == 0) {
-            return;
+            revert ZeroStakeAmount();
         }
         if (tiers[currentTierIndex].maxTokens == 0) {
-            return;
+            revert CannotStakeInCurrentTier();
         }
         token.transferFrom(msg.sender, address(this), _amount);
 
