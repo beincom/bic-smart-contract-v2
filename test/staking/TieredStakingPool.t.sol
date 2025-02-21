@@ -132,4 +132,50 @@ contract TieredStakingPoolTest is Test {
         uint256 tier1StakedAmount = (amount-maxTokens);
         assertEq(token.balanceOf(user), tier1StakedAmount + tier1StakedAmount*annualInterestRate*lockDuration/(365 days * 10000));
     }
+
+    function test_revertWhenDepositZero() public {
+        uint256 amount = 0;
+        address user = address(0x1);
+        token.transfer(user, amount);
+        vm.startPrank(user);
+        token.approve(address(tierStaking), amount);
+        vm.expectRevert(abi.encodeWithSelector(TieredStakingPool.ZeroStakeAmount.selector));
+        tierStaking.deposit(amount);
+    }
+
+    function test_revertWhenNotEnoughCapacityInTier() public {
+        uint256 amount = 6000 ether;
+        address user = address(0x1);
+        token.transfer(user, amount);
+        vm.startPrank(user);
+        token.approve(address(tierStaking), amount);
+        vm.expectRevert(abi.encodeWithSelector(TieredStakingPool.NotEnoughCapacityInTier.selector));
+        tierStaking.deposit(amount);
+    }
+
+    function test_revertWhenWithdrawBeforeLockDuration() public {
+        uint256 amount = 1000 ether;
+        address user = address(0x1);
+        token.transfer(user, amount);
+        vm.startPrank(user);
+        token.approve(address(tierStaking), amount);
+        tierStaking.deposit(amount);
+        vm.stopPrank();
+        vm.startPrank(user);
+        vm.expectRevert(abi.encodeWithSelector(TieredStakingPool.ZeroWithdrawAmount.selector));
+        tierStaking.withdrawAll();
+    }
+
+    function test_revertWhenWithdrawBeforeLockDuration_usingWithdrawBatch() public {
+        uint256 amount = 1000 ether;
+        address user = address(0x1);
+        token.transfer(user, amount);
+        vm.startPrank(user);
+        token.approve(address(tierStaking), amount);
+        tierStaking.deposit(amount);
+        vm.stopPrank();
+        vm.startPrank(user);
+        vm.expectRevert(abi.encodeWithSelector(TieredStakingPool.ZeroWithdrawAmount.selector));
+        tierStaking.withdrawBatch(0, 1);
+    }
 }
