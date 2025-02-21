@@ -30,13 +30,18 @@ contract AccessManagerFacet {
             revert CannotAuthoriseSelf();
         }
         LibDiamond.enforceIsContractOwner();
-        _canExecute
-            ? LibAccess.addAccess(_selector, _executor)
-            : LibAccess.removeAccess(_selector, _executor);
-        if (_canExecute) {
-            emit ExecutionAllowed(_executor, _selector);
-        } else {
-            emit ExecutionDenied(_executor, _selector);
+
+        bool hasAccess = LibAccess.accessStorage().execAccess[_selector][_executor];
+
+        // Only processd if state is changing
+        if (hasAccess != _canExecute) {
+            if (_canExecute) {
+                LibAccess.addAccess(_selector, _executor);
+                emit ExecutionAllowed(_executor, _selector);
+            } else {
+                LibAccess.removeAccess(_selector, _executor);
+                emit ExecutionDenied(_executor, _selector);
+            }
         }
     }
 

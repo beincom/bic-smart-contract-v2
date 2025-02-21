@@ -103,7 +103,7 @@ contract DonationFacet {
         if (amount == 0) {
             revert ZeroDonation();
         }
-        DonationConfigStruct memory s = getStorage();
+        DonationConfigStruct storage s = getStorage();
         uint256 surcharge = amount * s.surchargeFee / 10_000;
         IERC20(token).safeTransferFrom(msg.sender, to, amount - surcharge);
         IERC20(token).safeTransferFrom(msg.sender, s.donationTreasury, surcharge);
@@ -125,7 +125,7 @@ contract DonationFacet {
         if (amount == 0) {
             revert ZeroDonation();
         }
-        DonationConfigStruct memory s = getStorage();
+        DonationConfigStruct storage s = getStorage();
         uint256 gasPrice = getUserOpGasPrice(maxFeePerGas, maxPriorityFeePerGas);
         uint256 actualGas = preGas - gasleft() + s.bufferPostOp;
         uint256 actualGasCost = actualGas * gasPrice;

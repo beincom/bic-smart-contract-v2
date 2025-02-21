@@ -106,7 +106,7 @@ contract ContentPaymentFacet {
         if (amount == 0) {
             revert ZeroPayment();
         }
-        ContentPaymentStruct memory s = getStorage();
+        ContentPaymentStruct storage s = getStorage();
         uint256 surcharge = amount * s.surchargeFee / 10_000;
         IERC20(token).safeTransferFrom(msg.sender, to, amount - surcharge);
         IERC20(token).safeTransferFrom(msg.sender, s.contentTreasury, surcharge);
@@ -129,7 +129,7 @@ contract ContentPaymentFacet {
         if (amount == 0) {
             revert ZeroPayment();
         }
-        ContentPaymentStruct memory s = getStorage();
+        ContentPaymentStruct storage s = getStorage();
         uint256 gasPrice = getUserOpGasPrice(maxFeePerGas, maxPriorityFeePerGas);
         uint256 actualGas = preGas - gasleft() + s.bufferPostOp;
         uint256 actualGasCost = actualGas * gasPrice;
