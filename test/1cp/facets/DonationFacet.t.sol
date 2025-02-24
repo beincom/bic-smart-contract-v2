@@ -93,14 +93,14 @@ contract DonationFacetTest is OneCPTestBase {
         tBIC.approve(address(oneCP), 1e25);
         vm.startPrank(caller);
         (uint256 actualGasCost, uint256 actualPayment) = DonationFacet(address(oneCP)).callDonation(
-            donateAmount,
-            maxFeePerGas,
-            maxPriorityFeePerGas,
-            paymentPrice,
             address(tBIC),
             donator,
             receiver,
-            "donate"
+            donateAmount,
+            "donate",
+            maxFeePerGas,
+            maxPriorityFeePerGas,
+            paymentPrice
         );
         assertEq(actualGasCost * paymentPrice, actualPayment, "Gas Payment mismatch");
         assertEq((donateAmount * surchargeFee / 10_000) + actualPayment, tBIC.balanceOf(donationTreasury), "Surcharge fee mismatch");
@@ -118,14 +118,14 @@ contract DonationFacetTest is OneCPTestBase {
         vm.startPrank(receiver);
         vm.expectRevert();
         (uint256 actualGasCost, uint256 actualPayment) = DonationFacet(address(oneCP)).callDonation(
-            donateAmount,
-            maxFeePerGas,
-            maxPriorityFeePerGas,
-            paymentPrice,
             address(tBIC),
             donator,
             receiver,
-            "donate"
+            donateAmount,
+            "donate",
+            maxFeePerGas,
+            maxPriorityFeePerGas,
+            paymentPrice
         );
         assertEq(0, tBIC.balanceOf(donationTreasury), "Surcharge fee mismatch");
         assertEq(0, tBIC.balanceOf(receiver), "Received amount fee mismatch");
@@ -166,14 +166,14 @@ contract DonationFacetTest is OneCPTestBase {
         vm.startPrank(caller);
         vm.expectRevert();
         (uint256 actualGasCost, uint256 actualPayment) = DonationFacet(address(oneCP)).callDonation(
-            donateAmount,
-            maxFeePerGas,
-            maxPriorityFeePerGas,
-            paymentPrice,
             address(tBIC),
             donator,
             receiver,
-            "donate"
+            donateAmount,
+            "donate",
+            maxFeePerGas,
+            maxPriorityFeePerGas,
+            paymentPrice
         );
         assertEq(0, tBIC.balanceOf(donationTreasury), "Surcharge fee mismatch");
         assertEq(0, tBIC.balanceOf(receiver), "Received amount fee mismatch");
@@ -194,14 +194,14 @@ contract DonationFacetTest is OneCPTestBase {
         vm.startPrank(caller);
         vm.expectRevert();
         (uint256 actualGasCost, uint256 actualPayment) = DonationFacet(address(oneCP)).callDonation(
-            donateAmount,
-            maxFeePerGas,
-            maxPriorityFeePerGas,
-            paymentPrice,
             address(tBIC),
             donator,
             receiver,
-            "donate"
+            donateAmount,
+            "donate",
+            maxFeePerGas,
+            maxPriorityFeePerGas,
+            paymentPrice
         );
         assertEq(0, tBIC.balanceOf(donationTreasury), "Surcharge fee mismatch");
         assertEq(0, tBIC.balanceOf(receiver), "Received amount fee mismatch");
@@ -212,14 +212,14 @@ contract DonationFacetTest is OneCPTestBase {
 
         vm.startPrank(caller);
         (actualGasCost, actualPayment) = DonationFacet(address(oneCP)).callDonation(
-            donateAmount,
-            maxFeePerGas,
-            maxPriorityFeePerGas,
-            paymentPrice,
             address(tBIC),
             donator,
             receiver,
-            "donate"
+            donateAmount,
+            "donate",
+            maxFeePerGas,
+            maxPriorityFeePerGas,
+            paymentPrice
         );
         assertEq(actualGasCost * paymentPrice, actualPayment, "Gas Payment mismatch");
         assertEq((donateAmount * surchargeFee / 10_000) + actualPayment, tBIC.balanceOf(donationTreasury), "Surcharge fee mismatch");

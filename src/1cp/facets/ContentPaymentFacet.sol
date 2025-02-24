@@ -51,6 +51,7 @@ contract ContentPaymentFacet {
         string contentId
     );
 
+    /// @notice Get storage position of content configuration
     function getStorage() internal pure returns (ContentPaymentStruct storage dc) {
         bytes32 position = CONTENT_CONFIG_STORAGE_POSITION;
         // solhint-disable-next-line no-inline-assembly
@@ -59,6 +60,8 @@ contract ContentPaymentFacet {
         }
     }
 
+    /// @notice Update donation treasury address
+    /// @param newTreasury The new donation treasury address
     function updateContentTreasury(address newTreasury) external {
         LibDiamond.enforceIsContractOwner();
         if (newTreasury == address(0)) {
@@ -69,6 +72,8 @@ contract ContentPaymentFacet {
         emit ContentTreasuryUpdated(msg.sender, newTreasury);
     }
 
+    /// @notice Update donation payment token address
+    /// @param paymentToken The payment token address used for reimbursing gas fee via callBuyContent
     function updatePaymentToken(address paymentToken) external {
         LibDiamond.enforceIsContractOwner();
         if (paymentToken == address(0)) {
@@ -79,6 +84,8 @@ contract ContentPaymentFacet {
         emit PaymentTokenUpdated(msg.sender, paymentToken);
     }
 
+    /// @notice Update surcharge fee
+    /// @param surchargeFee The surcharge fee used for deducting upfront fee of the specific services
     function updateSurchargeFee(uint256 surchargeFee) external {
         LibDiamond.enforceIsContractOwner();
         if (surchargeFee > 10_000) {
@@ -89,6 +96,8 @@ contract ContentPaymentFacet {
         emit SurchargeFeeUpdated(msg.sender, surchargeFee);
     }
 
+    /// @notice Update buffer gas for post ops
+    /// @param bufferPostOp The additional gas used for additional execution via callBuyContent
     function updateBufferPostOp(uint256 bufferPostOp) external {
         LibDiamond.enforceIsContractOwner();
         ContentPaymentStruct storage s = getStorage();
@@ -96,6 +105,14 @@ contract ContentPaymentFacet {
         emit BufferPostOpUpdated(msg.sender, bufferPostOp);
     }
 
+    /**
+     * @notice Buy a specific content
+     * @param token The payment token
+     * @param to The seller adderss
+     * @param amount The selling amount
+     * @param customerId The customer ID
+     * @param contentId  The content ID
+     */
     function buyContent(
         address token,
         address to,
@@ -113,16 +130,30 @@ contract ContentPaymentFacet {
         emit ContentBought(token, msg.sender, to, amount, surcharge, customerId, contentId);
     }
 
+    /**
+     * @notice Buy a specific content via callers
+     * @param token The payment token
+     * @param from The buyer address
+     * @param to The seller address
+     * @param amount The selling amount
+     * @param customerId The customer ID
+     * @param contentId  The content ID
+     * @param maxFeePerGas The maximum fee per a gas unit
+     * @param maxPriorityFeePerGas The maximum priority fee per a gas unit
+     * @param paymentPrice The exchanged ratio of payment token and native gas token
+     * @return The actual gas cost
+     * @return The actual payment cost
+     */
     function callBuyContent(
-        uint256 amount,
-        uint256 maxFeePerGas,
-        uint256 maxPriorityFeePerGas,
-        uint256 paymentPrice,
         address token,
         address from,
         address to,
+        uint256 amount,
         string memory customerId,
-        string memory contentId
+        string memory contentId,
+        uint256 maxFeePerGas,
+        uint256 maxPriorityFeePerGas,
+        uint256 paymentPrice
     ) external returns (uint256, uint256) {
         uint256 preGas = gasleft();
         LibAccess.enforceAccessControl();

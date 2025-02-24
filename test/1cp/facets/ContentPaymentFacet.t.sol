@@ -97,15 +97,15 @@ contract ContentPaymentFacetTest is OneCPTestBase {
         tBIC.approve(address(oneCP), 1e25);
         vm.startPrank(caller);
         (uint256 actualGasCost, uint256 actualPayment) = ContentPaymentFacet(address(oneCP)).callBuyContent(
-            buyAmount,
-            maxFeePerGas,
-            maxPriorityFeePerGas,
-            paymentPrice,
             address(tBIC),
             buyer,
             creator,
+            buyAmount,
             customerId,
-            contentId
+            contentId,
+            maxFeePerGas,
+            maxPriorityFeePerGas,
+            paymentPrice
         );
         assertEq(actualGasCost * paymentPrice, actualPayment, "Gas Payment mismatch");
         assertEq((buyAmount * surchargeFee / 10_000) + actualPayment, tBIC.balanceOf(contentTreasury), "Surcharge fee mismatch");
@@ -123,15 +123,15 @@ contract ContentPaymentFacetTest is OneCPTestBase {
         vm.startPrank(creator);
         vm.expectRevert();
         (uint256 actualGasCost, uint256 actualPayment) = ContentPaymentFacet(address(oneCP)).callBuyContent(
-            buyAmount,
-            maxFeePerGas,
-            maxPriorityFeePerGas,
-            paymentPrice,
             address(tBIC),
             buyer,
             creator,
+            buyAmount,
             customerId,
-            contentId
+            contentId,
+            maxFeePerGas,
+            maxPriorityFeePerGas,
+            paymentPrice
         );
         assertEq(0, tBIC.balanceOf(contentTreasury), "Surcharge fee mismatch");
         assertEq(0, tBIC.balanceOf(creator), "Received amount fee mismatch");
@@ -173,15 +173,15 @@ contract ContentPaymentFacetTest is OneCPTestBase {
         vm.startPrank(caller);
         vm.expectRevert();
         (uint256 actualGasCost, uint256 actualPayment) = ContentPaymentFacet(address(oneCP)).callBuyContent(
-            buyAmount,
-            maxFeePerGas,
-            maxPriorityFeePerGas,
-            paymentPrice,
             address(tBIC),
             buyer,
             creator,
+            buyAmount,
             customerId,
-            contentId
+            contentId,
+            maxFeePerGas,
+            maxPriorityFeePerGas,
+            paymentPrice
         );
         assertEq(0, tBIC.balanceOf(contentTreasury), "Surcharge fee mismatch");
         assertEq(0, tBIC.balanceOf(creator), "Received amount fee mismatch");
@@ -202,15 +202,15 @@ contract ContentPaymentFacetTest is OneCPTestBase {
         vm.startPrank(caller);
         vm.expectRevert();
         (uint256 actualGasCost, uint256 actualPayment) = ContentPaymentFacet(address(oneCP)).callBuyContent(
-            buyAmount,
-            maxFeePerGas,
-            maxPriorityFeePerGas,
-            paymentPrice,
             address(tBIC),
             buyer,
             creator,
+            buyAmount,
             customerId,
-            contentId
+            contentId,
+            maxFeePerGas,
+            maxPriorityFeePerGas,
+            paymentPrice
         );
         assertEq(0, tBIC.balanceOf(contentTreasury), "Surcharge fee mismatch");
         assertEq(0, tBIC.balanceOf(creator), "Received amount fee mismatch");
@@ -221,15 +221,15 @@ contract ContentPaymentFacetTest is OneCPTestBase {
 
         vm.startPrank(caller);
         (actualGasCost, actualPayment) = ContentPaymentFacet(address(oneCP)).callBuyContent(
-            buyAmount,
-            maxFeePerGas,
-            maxPriorityFeePerGas,
-            paymentPrice,
             address(tBIC),
             buyer,
             creator,
+            buyAmount,
             customerId,
-            contentId
+            contentId,
+            maxFeePerGas,
+            maxPriorityFeePerGas,
+            paymentPrice
         );
         assertEq(actualGasCost * paymentPrice, actualPayment, "Gas Payment mismatch");
         assertEq((buyAmount * surchargeFee / 10_000) + actualPayment, tBIC.balanceOf(contentTreasury), "Surcharge fee mismatch");

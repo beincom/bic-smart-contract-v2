@@ -9,7 +9,7 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 
 contract DonationFacet {
     using SafeERC20 for IERC20;
-    // Struct
+    /// Struct
     struct DonationConfigStruct {
         uint256 surchargeFee;
         uint256 bufferPostOp;
@@ -49,6 +49,7 @@ contract DonationFacet {
         string message
     );
 
+    /// @notice Get storage position of donation configuration
     function getStorage() internal pure returns (DonationConfigStruct storage dc) {
         bytes32 position = DONATION_CONFIG_STORAGE_POSITION;
         // solhint-disable-next-line no-inline-assembly
@@ -57,6 +58,8 @@ contract DonationFacet {
         }
     }
 
+    /// @notice Update donation treasury address
+    /// @param newTreasury The new donation treasury address
     function updateDonationTreasury(address newTreasury) external {
         LibDiamond.enforceIsContractOwner();
         if (newTreasury == address(0)) {
@@ -67,6 +70,8 @@ contract DonationFacet {
         emit DonationTreasuryUpdated(msg.sender, newTreasury);
     }
 
+    /// @notice Update donation payment token address
+    /// @param paymentToken The payment token address used for reimbursing gas fee via callDonation
     function updatePaymentToken(address paymentToken) external {
         LibDiamond.enforceIsContractOwner();
         if (paymentToken == address(0)) {
@@ -77,6 +82,8 @@ contract DonationFacet {
         emit PaymentTokenUpdated(msg.sender, paymentToken);
     }
 
+    /// @notice Update surcharge fee
+    /// @param surchargeFee The surcharge fee used for deducting upfront fee of the specific services
     function updateSurchargeFee(uint256 surchargeFee) external {
         LibDiamond.enforceIsContractOwner();
         if (surchargeFee > 10_000) {
@@ -87,6 +94,8 @@ contract DonationFacet {
         emit SurchargeFeeUpdated(msg.sender, surchargeFee);
     }
 
+    /// @notice Update buffer gas for post ops
+    /// @param bufferPostOp The additional gas used for additional execution via callDonation
     function updateBufferPostOp(uint256 bufferPostOp) external {
         LibDiamond.enforceIsContractOwner();
         DonationConfigStruct storage s = getStorage();
@@ -94,6 +103,13 @@ contract DonationFacet {
         emit BufferPostOpUpdated(msg.sender, bufferPostOp);
     }
 
+    /**
+     * @notice Donate a specific token
+     * @param token The token donated
+     * @param to The beneficiary address received donation
+     * @param amount The donated amount
+     * @param message The message triggered to donation
+     */
     function donate(
         address token,
         address to,
@@ -106,19 +122,36 @@ contract DonationFacet {
         DonationConfigStruct storage s = getStorage();
         uint256 surcharge = amount * s.surchargeFee / 10_000;
         IERC20(token).safeTransferFrom(msg.sender, to, amount - surcharge);
-        IERC20(token).safeTransferFrom(msg.sender, s.donationTreasury, surcharge);
+        
+        if (surcharge > 0) {
+            IERC20(token).safeTransferFrom(msg.sender, s.donationTreasury, surcharge);
+        }
+
         emit Donated(token, msg.sender, to, amount, surcharge, message);
     }
 
+    /**
+     * @notice Donate a specific token via callers
+     * @param token The token donated
+     * @param from The donator address
+     * @param to The beneficiary address received donation
+     * @param amount The donated amount
+     * @param message The message triggered to donation
+     * @param maxFeePerGas The maximum fee per a gas unit
+     * @param maxPriorityFeePerGas The maximum priority fee per a gas unit
+     * @param paymentPrice The exchanged ratio of payment token and native gas token
+     * @return The actual gas cost
+     * @return The actual payment cost
+     */
     function callDonation(
-        uint256 amount,
-        uint256 maxFeePerGas,
-        uint256 maxPriorityFeePerGas,
-        uint256 paymentPrice,
         address token,
         address from,
         address to,
-        string memory message
+        uint256 amount,
+        string memory message,
+        uint256 maxFeePerGas,
+        uint256 maxPriorityFeePerGas,
+        uint256 paymentPrice
     ) external returns (uint256, uint256) {
         uint256 preGas = gasleft();
         LibAccess.enforceAccessControl();
@@ -126,14 +159,20 @@ contract DonationFacet {
             revert ZeroDonation();
         }
         DonationConfigStruct storage s = getStorage();
+        uint256 surcharge = amount * s.surchargeFee / 10_000;
+        IERC20(token).safeTransferFrom(from, to, amount - surcharge);
+        
+        if (surcharge > 0) {
+            IERC20(token).safeTransferFrom(from, s.donationTreasury, surcharge);
+        }
+        
         uint256 gasPrice = getUserOpGasPrice(maxFeePerGas, maxPriorityFeePerGas);
         uint256 actualGas = preGas - gasleft() + s.bufferPostOp;
         uint256 actualGasCost = actualGas * gasPrice;
         uint256 actualPaymentCost = actualGasCost * paymentPrice;
-        uint256 surcharge = amount * s.surchargeFee / 10_000;
-        IERC20(token).safeTransferFrom(from, to, amount - surcharge);
-        IERC20(token).safeTransferFrom(from, s.donationTreasury, surcharge);
+        
         IERC20(s.paymentToken).safeTransferFrom(from, s.donationTreasury, actualPaymentCost);
+        
         emit CallDonation(
             msg.sender,
             token,
@@ -147,10 +186,9 @@ contract DonationFacet {
         return (actualGasCost, actualPaymentCost);
     }
 
-    /**
-     * the gas price this UserOp agrees to pay.
-     * relayer/block builder might submit the TX with higher priorityFee, but the user should not
-     */
+    
+    /// the gas price this UserOp agrees to pay.
+    /// relayer/block builder might submit the TX with higher priorityFee, but the user should not
     function getUserOpGasPrice(uint256 maxFeePerGas, uint256 maxPriorityFeePerGas) internal view returns (uint256) {
         unchecked {
             if (maxFeePerGas == maxPriorityFeePerGas) {
