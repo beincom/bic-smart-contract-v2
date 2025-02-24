@@ -39,11 +39,12 @@ contract TieredStakingPool is Ownable, ReentrancyGuard, Pausable {
 
     // Errors
     error ZeroAddress();
-    error InvalidInterestRate();
-    error InvalidLockDuration();
+    error InvalidInterestRate(uint256 interestRate);
+    error ZeroLockDuration();
     error ZeroStakeAmount();
     error NotEnoughCapacityInTier();
-    error InvalidStartIndex();
+    error InvalidStartIndex(uint256 tierIndex);
+    error InvalidTierIndex(uint256 tierIndex);
     error ZeroWithdrawAmount();
 
     constructor(IERC20 _token, address _owner) Ownable(_owner) {
@@ -80,10 +81,10 @@ contract TieredStakingPool is Ownable, ReentrancyGuard, Pausable {
         uint256 _lockDuration
     ) external onlyOwner {
         if (_annualInterestRate > 10000) {
-            revert InvalidInterestRate();
+            revert InvalidInterestRate(_annualInterestRate);
         }
         if (_lockDuration == 0) {
-            revert InvalidLockDuration();
+            revert ZeroLockDuration();
         }
 
         tiers.push(
@@ -131,8 +132,13 @@ contract TieredStakingPool is Ownable, ReentrancyGuard, Pausable {
         }
     }
 
+    /**
+     * @notice Depositing tokens in the specific tiered staking pool
+     * @param tierIndex The index of the tiered staking pool
+     * @param amount The amount of tokens staked in the tiered staking pool
+     */
     function depositIntoTier(uint256 tierIndex, uint256 amount) external nonReentrant whenNotPaused {
-        if (tierIndex >= tiers.length) revert("Invalid tier index");
+        if (tierIndex >= tiers.length) revert InvalidTierIndex(tierIndex);
         if (amount == 0) revert ZeroStakeAmount();
 
         Tier storage tier = tiers[tierIndex];
@@ -163,7 +169,7 @@ contract TieredStakingPool is Ownable, ReentrancyGuard, Pausable {
         Deposit[] storage userDeposits = deposits[msg.sender];
 
         if (startIndex >= userDeposits.length) {
-            revert InvalidStartIndex();
+            revert InvalidStartIndex(startIndex);
         }
         uint256 totalPrincipal;
         uint256 totalInterest;
@@ -236,7 +242,7 @@ contract TieredStakingPool is Ownable, ReentrancyGuard, Pausable {
     }
 
     /**
-     * @notice Pause transfers using this token. For emergency use.
+     * @notice Pause stake and deposit. For emergency use.
      * @dev Event already defined and emitted in Pausable.sol
      */
     function pause() public onlyOwner {
@@ -244,7 +250,7 @@ contract TieredStakingPool is Ownable, ReentrancyGuard, Pausable {
     }
 
     /**
-     * @notice Unpause transfers using this token.
+     * @notice Unpause stake and deposit.
      * @dev Event already defined and emitted in Pausable.sol
      */
     function unpause() public onlyOwner {
