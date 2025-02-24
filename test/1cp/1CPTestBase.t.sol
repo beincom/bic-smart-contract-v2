@@ -50,7 +50,7 @@ contract OneCPTestBase is Test {
         DiamondCutFacet(address(oneCP)).diamondCut(cut, address(0), "");
     }
     
-    function addDiamondLoupeFacet() public {
+    function addDiamondLoupeFacet() internal {
         vm.startPrank(oneCPOwner);
         diamondLoupeFacet = new DiamondLoupeFacet();
 
