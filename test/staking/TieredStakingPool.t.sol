@@ -133,6 +133,60 @@ contract TieredStakingPoolTest is Test {
         assertEq(token.balanceOf(user), tier1StakedAmount + tier1StakedAmount*annualInterestRate*lockDuration/(365 days * 10000));
     }
 
+    function test_depositIntoTier_deposit_toTier1() public {
+        uint256 maxTokens = 5000 ether;
+        uint256 annualInterestRate = 2_000;
+        uint256 lockDuration = 180 days;
+        tierStaking.addTier(maxTokens, annualInterestRate, lockDuration);
+        uint256 amount = 1000 ether;
+
+        address user = address(0x1);
+        token.transfer(user, amount);
+        token.transfer(address(tierStaking), amount);
+        vm.startPrank(user);
+        token.approve(address(tierStaking), amount);
+        tierStaking.depositIntoTier(1, amount);
+        vm.stopPrank();
+        TieredStakingPool.Deposit[] memory depositInfo = tierStaking.getUserDeposits(user);
+        assertEq(depositInfo.length, 1);
+        assertEq(depositInfo[0].amount, amount);
+        assertEq(depositInfo[0].tierIndex, 1);
+    }
+
+    function test_deposit2TimeOnSameTier() public {
+        uint256 amount = 1000 ether;
+        address user = address(0x1);
+        uint256 amount2 = 2000 ether;
+        token.transfer(user, amount + amount2);
+        vm.startPrank(user);
+        token.approve(address(tierStaking), amount);
+        tierStaking.deposit(amount);
+        token.approve(address(tierStaking), amount2);
+        tierStaking.deposit(amount2);
+        vm.stopPrank();
+        TieredStakingPool.Deposit[] memory depositInfo = tierStaking.getUserDeposits(user);
+        assertEq(depositInfo.length, 2);
+        assertEq(depositInfo[0].amount, amount);
+        assertEq(depositInfo[1].amount, amount2);
+    }
+
+    function test_deposit2TimeOnSameTier_usingDepositTier() public {
+        uint256 amount = 1000 ether;
+        address user = address(0x1);
+        uint256 amount2 = 2000 ether;
+        token.transfer(user, amount + amount2);
+        vm.startPrank(user);
+        token.approve(address(tierStaking), amount);
+        tierStaking.depositIntoTier(0,amount);
+        token.approve(address(tierStaking), amount2);
+        tierStaking.depositIntoTier(0, amount2);
+        vm.stopPrank();
+        TieredStakingPool.Deposit[] memory depositInfo = tierStaking.getUserDeposits(user);
+        assertEq(depositInfo.length, 2);
+        assertEq(depositInfo[0].amount, amount);
+        assertEq(depositInfo[1].amount, amount2);
+    }
+
     function test_revertWhenDepositZero() public {
         uint256 amount = 0;
         address user = address(0x1);
@@ -177,5 +231,15 @@ contract TieredStakingPoolTest is Test {
         vm.startPrank(user);
         vm.expectRevert(abi.encodeWithSelector(TieredStakingPool.ZeroWithdrawAmount.selector));
         tierStaking.withdrawBatch(0, 1);
+    }
+
+    function test_revertWhenDepositIntoTier1_WhenTier1NotExist() public {
+        uint256 amount = 1000 ether;
+        address user = address(0x1);
+        token.transfer(user, amount);
+        vm.startPrank(user);
+        token.approve(address(tierStaking), amount);
+        vm.expectRevert(abi.encodeWithSelector(TieredStakingPool.InvalidTierIndex.selector, 1));
+        tierStaking.depositIntoTier(1, amount);
     }
 }

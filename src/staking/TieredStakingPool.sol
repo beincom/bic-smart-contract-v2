@@ -4,8 +4,9 @@ pragma solidity ^0.8.23;
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 
-contract TieredStakingPool is Ownable, ReentrancyGuard {
+contract TieredStakingPool is Ownable, ReentrancyGuard, Pausable {
     using SafeERC20 for IERC20;
 
     // Structs
@@ -38,11 +39,12 @@ contract TieredStakingPool is Ownable, ReentrancyGuard {
 
     // Errors
     error ZeroAddress();
-    error InvalidInterestRate();
-    error InvalidLockDuration();
+    error InvalidInterestRate(uint256 interestRate);
+    error ZeroLockDuration();
     error ZeroStakeAmount();
     error NotEnoughCapacityInTier();
-    error InvalidStartIndex();
+    error InvalidStartIndex(uint256 tierIndex);
+    error InvalidTierIndex(uint256 tierIndex);
     error ZeroWithdrawAmount();
 
     constructor(IERC20 _token, address _owner) Ownable(_owner) {
@@ -79,10 +81,10 @@ contract TieredStakingPool is Ownable, ReentrancyGuard {
         uint256 _lockDuration
     ) external onlyOwner {
         if (_annualInterestRate > 10000) {
-            revert InvalidInterestRate();
+            revert InvalidInterestRate(_annualInterestRate);
         }
         if (_lockDuration == 0) {
-            revert InvalidLockDuration();
+            revert ZeroLockDuration();
         }
 
         tiers.push(
@@ -100,7 +102,7 @@ contract TieredStakingPool is Ownable, ReentrancyGuard {
      * @notice Depositing tokens in the tiered staking pools
      * @param amount The amount of tokens staked in the tiered staking pools
      */
-    function deposit(uint256 amount) external nonReentrant {
+    function deposit(uint256 amount) external nonReentrant whenNotPaused {
         if (amount == 0) {
             revert ZeroStakeAmount();
         }
@@ -131,6 +133,34 @@ contract TieredStakingPool is Ownable, ReentrancyGuard {
     }
 
     /**
+     * @notice Depositing tokens in the specific tiered staking pool
+     * @param tierIndex The index of the tiered staking pool
+     * @param amount The amount of tokens staked in the tiered staking pool
+     */
+    function depositIntoTier(uint256 tierIndex, uint256 amount) external nonReentrant whenNotPaused {
+        if (tierIndex >= tiers.length) revert InvalidTierIndex(tierIndex);
+        if (amount == 0) revert ZeroStakeAmount();
+
+        Tier storage tier = tiers[tierIndex];
+        uint256 available = tier.maxTokens - tier.totalStaked;
+        if (amount > available) revert NotEnoughCapacityInTier();
+
+        token.safeTransferFrom(msg.sender, address(this), amount);
+
+        deposits[msg.sender].push(
+            Deposit({
+                amount: amount,
+                tierIndex: tierIndex,
+                depositTime: block.timestamp,
+                withdrawn: false
+            })
+        );
+        tier.totalStaked += amount;
+
+        emit Deposited(msg.sender, amount, tierIndex);
+    }
+
+    /**
      * @notice Withdrawing staking tokens after the maturity
      * @param startIndex The start index to look up in the users' deposits
      * @param batchSize The size will be loop from the start index in the users' deposits
@@ -139,7 +169,7 @@ contract TieredStakingPool is Ownable, ReentrancyGuard {
         Deposit[] storage userDeposits = deposits[msg.sender];
 
         if (startIndex >= userDeposits.length) {
-            revert InvalidStartIndex();
+            revert InvalidStartIndex(startIndex);
         }
         uint256 totalPrincipal;
         uint256 totalInterest;
@@ -170,7 +200,7 @@ contract TieredStakingPool is Ownable, ReentrancyGuard {
                 }
             }
         }
-        if (totalInterest == 0) {
+        if (totalPrincipal == 0) {
             revert ZeroWithdrawAmount();
         }
         uint256 payout = totalPrincipal + totalInterest;
@@ -181,7 +211,7 @@ contract TieredStakingPool is Ownable, ReentrancyGuard {
     /**
      * @notice Withdrawing all staking tokens after the maturity
      */
-    function withdrawAll() external nonReentrant {
+    function withdrawAll() external nonReentrant whenNotPaused {
         Deposit[] storage userDeposits = deposits[msg.sender];
         uint256 totalPrincipal;
         uint256 totalInterest;
@@ -209,5 +239,21 @@ contract TieredStakingPool is Ownable, ReentrancyGuard {
         uint256 payout = totalPrincipal + totalInterest;
         token.safeTransfer(msg.sender, payout);
         emit Withdrawn(msg.sender, totalPrincipal, totalInterest);
+    }
+
+    /**
+     * @notice Pause stake and deposit. For emergency use.
+     * @dev Event already defined and emitted in Pausable.sol
+     */
+    function pause() public onlyOwner {
+        _pause();
+    }
+
+    /**
+     * @notice Unpause stake and deposit.
+     * @dev Event already defined and emitted in Pausable.sol
+     */
+    function unpause() public onlyOwner {
+        _unpause();
     }
 }
