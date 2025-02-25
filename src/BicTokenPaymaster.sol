@@ -159,14 +159,14 @@ contract BicTokenPaymaster is
         swapBackEnabled = true;
         minSwapBackAmount = 8386 * 1e18;
 
-        uniswapV2Router = 0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24;
-        uniswapV2Pair = IUniswapV2Factory(
-            IUniswapV2Router02(uniswapV2Router).factory()
-        ).createPair(
-                address(this),
-                IUniswapV2Router02(uniswapV2Router).WETH()
-            );
-        _setPool(uniswapV2Pair, true);
+        // uniswapV2Router = 0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24;
+        // uniswapV2Pair = IUniswapV2Factory(
+        //     IUniswapV2Router02(uniswapV2Router).factory()
+        // ).createPair(
+        //         address(this),
+        //         IUniswapV2Router02(uniswapV2Router).WETH()
+        //     );
+        // _setPool(uniswapV2Pair, true);
 
         transferOwnership(superController);
     }

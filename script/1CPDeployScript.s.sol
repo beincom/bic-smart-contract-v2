@@ -15,8 +15,8 @@ import {LibDiamond} from "../src/1cp/libraries/LibDiamond.sol";
 contract OneCPDeployScript is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        address oneCPOwner = vm.envAddress("1CP_OWNER");
-        address pauserWaller = vm.envAddress("PAUSER_WALLER");
+        address oneCPOwner = vm.envAddress("ONECP_OWNER");
+        address pauserWaller = vm.envAddress("PAUSER_WALLET");
         vm.startBroadcast(deployerPrivateKey);
 
         DiamondCutFacet diamondCutFacet = new DiamondCutFacet();

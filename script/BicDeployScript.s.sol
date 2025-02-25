@@ -7,8 +7,8 @@ import {BicTokenPaymaster} from "../src/BicTokenPaymaster.sol";
 
 contract BicDeployScript is Script {
     address entrypoint = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
-    address superController = 0xeaBcd21B75349c59a4177E10ed17FBf2955fE697;
-    address[] signers = [0xeaBcd21B75349c59a4177E10ed17FBf2955fE697];
+    address superController = 0xaCc34513D10bd5c57109bF83A8754856FF0b0eb0;
+    address[] signers = [0xaCc34513D10bd5c57109bF83A8754856FF0b0eb0];
 
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");

@@ -36,8 +36,7 @@ contract ContentPaymentFacet {
         address to,
         uint256 amount,
         uint256 surcharge,
-        string customerId,
-        string contentId
+        string orderId
     );
     event CallBuyContent(
         address caller,
@@ -47,8 +46,7 @@ contract ContentPaymentFacet {
         uint256 amount,
         uint256 surcharge,
         uint256 fee,
-        string customerId,
-        string contentId
+        string orderId
     );
 
     /// @notice Get storage position of content configuration
@@ -74,7 +72,7 @@ contract ContentPaymentFacet {
 
     /// @notice Update donation payment token address
     /// @param paymentToken The payment token address used for reimbursing gas fee via callBuyContent
-    function updatePaymentToken(address paymentToken) external {
+    function updateContentPaymentToken(address paymentToken) external {
         LibDiamond.enforceIsContractOwner();
         if (paymentToken == address(0)) {
             revert ZeroAddress();
@@ -86,7 +84,7 @@ contract ContentPaymentFacet {
 
     /// @notice Update surcharge fee
     /// @param surchargeFee The surcharge fee used for deducting upfront fee of the specific services
-    function updateSurchargeFee(uint256 surchargeFee) external {
+    function updateContentSurchargeFee(uint256 surchargeFee) external {
         LibDiamond.enforceIsContractOwner();
         if (surchargeFee > 10_000) {
             revert InvalidSurchargeFee(surchargeFee);
@@ -98,7 +96,7 @@ contract ContentPaymentFacet {
 
     /// @notice Update buffer gas for post ops
     /// @param bufferPostOp The additional gas used for additional execution via callBuyContent
-    function updateBufferPostOp(uint256 bufferPostOp) external {
+    function updateContentBufferPostOp(uint256 bufferPostOp) external {
         LibDiamond.enforceIsContractOwner();
         ContentPaymentStruct storage s = getStorage();
         s.bufferPostOp = bufferPostOp;
@@ -110,15 +108,13 @@ contract ContentPaymentFacet {
      * @param token The payment token
      * @param to The seller adderss
      * @param amount The selling amount
-     * @param customerId The customer ID
-     * @param contentId  The content ID
+     * @param orderId The off-chain orderId based on services
      */
     function buyContent(
         address token,
         address to,
         uint256 amount,
-        string memory customerId,
-        string memory contentId
+        string memory orderId
     ) external {
         if (amount == 0) {
             revert ZeroPayment();
@@ -127,7 +123,7 @@ contract ContentPaymentFacet {
         uint256 surcharge = amount * s.surchargeFee / 10_000;
         IERC20(token).safeTransferFrom(msg.sender, to, amount - surcharge);
         IERC20(token).safeTransferFrom(msg.sender, s.contentTreasury, surcharge);
-        emit ContentBought(token, msg.sender, to, amount, surcharge, customerId, contentId);
+        emit ContentBought(token, msg.sender, to, amount, surcharge, orderId);
     }
 
     /**
@@ -136,8 +132,7 @@ contract ContentPaymentFacet {
      * @param from The buyer address
      * @param to The seller address
      * @param amount The selling amount
-     * @param customerId The customer ID
-     * @param contentId  The content ID
+     * @param orderId The off-chain orderId based on services
      * @param maxFeePerGas The maximum fee per a gas unit
      * @param maxPriorityFeePerGas The maximum priority fee per a gas unit
      * @param paymentPrice The exchanged ratio of payment token and native gas token
@@ -149,8 +144,7 @@ contract ContentPaymentFacet {
         address from,
         address to,
         uint256 amount,
-        string memory customerId,
-        string memory contentId,
+        string memory orderId,
         uint256 maxFeePerGas,
         uint256 maxPriorityFeePerGas,
         uint256 paymentPrice
@@ -177,8 +171,7 @@ contract ContentPaymentFacet {
             amount,
             surcharge,
             actualPaymentCost,
-            customerId,
-            contentId
+            orderId
         );
         return (actualGasCost, actualPaymentCost);
     }

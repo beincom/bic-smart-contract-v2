@@ -72,7 +72,7 @@ contract DonationFacet {
 
     /// @notice Update donation payment token address
     /// @param paymentToken The payment token address used for reimbursing gas fee via callDonation
-    function updatePaymentToken(address paymentToken) external {
+    function updateDonationPaymentToken(address paymentToken) external {
         LibDiamond.enforceIsContractOwner();
         if (paymentToken == address(0)) {
             revert ZeroAddress();
@@ -84,7 +84,7 @@ contract DonationFacet {
 
     /// @notice Update surcharge fee
     /// @param surchargeFee The surcharge fee used for deducting upfront fee of the specific services
-    function updateSurchargeFee(uint256 surchargeFee) external {
+    function updateDonationSurchargeFee(uint256 surchargeFee) external {
         LibDiamond.enforceIsContractOwner();
         if (surchargeFee > 10_000) {
             revert InvalidSurchargeFee(surchargeFee);
@@ -96,7 +96,7 @@ contract DonationFacet {
 
     /// @notice Update buffer gas for post ops
     /// @param bufferPostOp The additional gas used for additional execution via callDonation
-    function updateBufferPostOp(uint256 bufferPostOp) external {
+    function updateDonationBufferPostOp(uint256 bufferPostOp) external {
         LibDiamond.enforceIsContractOwner();
         DonationConfigStruct storage s = getStorage();
         s.bufferPostOp = bufferPostOp;
@@ -185,7 +185,6 @@ contract DonationFacet {
         );
         return (actualGasCost, actualPaymentCost);
     }
-
     
     /// the gas price this UserOp agrees to pay.
     /// relayer/block builder might submit the TX with higher priorityFee, but the user should not
