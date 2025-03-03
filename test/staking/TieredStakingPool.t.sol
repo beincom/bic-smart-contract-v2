@@ -20,8 +20,9 @@ contract TieredStakingPoolTest is Test {
         tierStaking = new TieredStakingPool(token, address(this));
         uint256 maxTokens = 5000 ether;
         uint256 annualInterestRate = 3_000;
-        uint256 lockDuration = 365 days;
-        tierStaking.addTier(maxTokens, annualInterestRate, lockDuration);
+        uint256 lockDuration = 365 days / 2;
+        uint256 maxRewardDuration = 365 days;
+        tierStaking.addTier(maxTokens, annualInterestRate, lockDuration, maxRewardDuration);
     }
 
     function test_stakesSuccessfully() public {
@@ -44,8 +45,9 @@ contract TieredStakingPoolTest is Test {
     function test_staking_2tier() public {
         uint256 maxTokens = 5000 ether;
         uint256 annualInterestRate = 2_000;
-        uint256 lockDuration = 365 days;
-        tierStaking.addTier(maxTokens, annualInterestRate, lockDuration);
+        uint256 lockDuration = 365 days/2;
+        uint256 maxRewardDuration = 365 days;
+        tierStaking.addTier(maxTokens, annualInterestRate, lockDuration, maxRewardDuration);
         address user = address(0x1);
         uint256 amount = 6000 ether;
         token.transfer(user, amount);
@@ -68,8 +70,9 @@ contract TieredStakingPoolTest is Test {
     function test_stakes_and_withdraw_all_success() public {
         uint256 maxTokens = 5000 ether;
         uint256 annualInterestRate = 2_000;
-        uint256 lockDuration = 365 days;
-        tierStaking.addTier(maxTokens, annualInterestRate, lockDuration);
+        uint256 lockDuration = 365 days/2;
+        uint256 maxRewardDuration = 365 days;
+        tierStaking.addTier(maxTokens, annualInterestRate, lockDuration, maxRewardDuration);
         uint256 amount = 6000 ether;
 
         address user = address(0x1);
@@ -93,8 +96,9 @@ contract TieredStakingPoolTest is Test {
     function test_stakes_and_withdraw_batch_success() public {
         uint256 maxTokens = 5000 ether;
         uint256 annualInterestRate = 2_000;
-        uint256 lockDuration = 365 days;
-        tierStaking.addTier(maxTokens, annualInterestRate, lockDuration);
+        uint256 lockDuration = 365 days/2;
+        uint256 maxRewardDuration = 365 days;
+        tierStaking.addTier(maxTokens, annualInterestRate, lockDuration, maxRewardDuration);
         uint256 amount = 6000 ether;
 
         address user = address(0x1);
@@ -111,11 +115,12 @@ contract TieredStakingPoolTest is Test {
         assertEq(token.balanceOf(user), (amount-maxTokens)*12/10);
     }
 
-    function test_stakes_and_withdraw_batch_6month_success() public {
+    function test_stakes_and_withdraw_batch_1years_success() public {
         uint256 maxTokens = 5000 ether;
         uint256 annualInterestRate = 2_000;
         uint256 lockDuration = 180 days;
-        tierStaking.addTier(maxTokens, annualInterestRate, lockDuration);
+        uint256 maxRewardDuration = 365 days;
+        tierStaking.addTier(maxTokens, annualInterestRate, lockDuration, maxRewardDuration);
         uint256 amount = 6000 ether;
 
         address user = address(0x1);
@@ -130,14 +135,15 @@ contract TieredStakingPoolTest is Test {
         tierStaking.withdrawBatch(1, 1);
         vm.stopPrank();
         uint256 tier1StakedAmount = (amount-maxTokens);
-        assertEq(token.balanceOf(user), tier1StakedAmount + tier1StakedAmount*annualInterestRate*lockDuration/(365 days * 10000));
+        assertEq(token.balanceOf(user), tier1StakedAmount + tier1StakedAmount*annualInterestRate*maxRewardDuration/(365 days * 10000));
     }
 
     function test_depositIntoTier_deposit_toTier1() public {
         uint256 maxTokens = 5000 ether;
         uint256 annualInterestRate = 2_000;
         uint256 lockDuration = 180 days;
-        tierStaking.addTier(maxTokens, annualInterestRate, lockDuration);
+        uint256 maxRewardDuration = 365 days;
+        tierStaking.addTier(maxTokens, annualInterestRate, lockDuration, maxRewardDuration);
         uint256 amount = 1000 ether;
 
         address user = address(0x1);

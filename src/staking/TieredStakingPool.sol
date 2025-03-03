@@ -15,6 +15,7 @@ contract TieredStakingPool is Ownable, ReentrancyGuard, Pausable {
         uint256 annualInterestRate;
         uint256 lockDuration;
         uint256 totalStaked;
+        uint256 maxRewardDuration;
     }
 
     struct Deposit {
@@ -46,6 +47,7 @@ contract TieredStakingPool is Ownable, ReentrancyGuard, Pausable {
     error InvalidStartIndex(uint256 tierIndex);
     error InvalidTierIndex(uint256 tierIndex);
     error ZeroWithdrawAmount();
+    error InvalidLockDuration(uint256 lockDuration, uint256 maxRewardDuration);
 
     constructor(IERC20 _token, address _owner) Ownable(_owner) {
         if (address(_token) == address(0) || _owner == address(0)) {
@@ -78,7 +80,8 @@ contract TieredStakingPool is Ownable, ReentrancyGuard, Pausable {
     function addTier(
         uint256 _maxTokens,
         uint256 _annualInterestRate,
-        uint256 _lockDuration
+        uint256 _lockDuration,
+        uint256 _maxRewardDuration
     ) external onlyOwner {
         if (_annualInterestRate > 10000) {
             revert InvalidInterestRate(_annualInterestRate);
@@ -86,12 +89,16 @@ contract TieredStakingPool is Ownable, ReentrancyGuard, Pausable {
         if (_lockDuration == 0) {
             revert ZeroLockDuration();
         }
+        if (_lockDuration > _maxRewardDuration) {
+            revert InvalidLockDuration(_lockDuration, _maxRewardDuration);
+        }
 
         tiers.push(
             Tier({
                 maxTokens: _maxTokens,
                 annualInterestRate: _annualInterestRate,
                 lockDuration: _lockDuration,
+                maxRewardDuration: _maxRewardDuration,
                 totalStaked: 0
             })
         );
@@ -186,7 +193,10 @@ contract TieredStakingPool is Ownable, ReentrancyGuard, Pausable {
             if (!dep.withdrawn) {
                 Tier storage tier = tiers[dep.tierIndex];
                 if (block.timestamp >= dep.depositTime + tier.lockDuration) {
-                    uint256 interest = (dep.amount * tier.annualInterestRate * tier.lockDuration) / (365 days * 10000);
+                    uint256 rewardDuration = block.timestamp - dep.depositTime > tier.maxRewardDuration
+                        ? tier.maxRewardDuration
+                        : block.timestamp - dep.depositTime;
+                    uint256 interest = (dep.amount * tier.annualInterestRate * rewardDuration) / (365 days * 10000);
                     totalPrincipal += dep.amount;
                     totalInterest += interest;
                     dep.withdrawn = true;
@@ -221,7 +231,10 @@ contract TieredStakingPool is Ownable, ReentrancyGuard, Pausable {
             if (!dep.withdrawn) {
                 Tier storage tier = tiers[dep.tierIndex];
                 if (block.timestamp >= dep.depositTime + tier.lockDuration) {
-                    uint256 interest = (dep.amount * tier.annualInterestRate * tier.lockDuration) / (365 days * 10000);
+                    uint256 rewardDuration = block.timestamp - dep.depositTime > tier.maxRewardDuration
+                        ? tier.maxRewardDuration
+                        : block.timestamp - dep.depositTime;
+                    uint256 interest = (dep.amount * tier.annualInterestRate * rewardDuration) / (365 days * 10000);
                     totalPrincipal += dep.amount;
                     totalInterest += interest;
                     dep.withdrawn = true;
