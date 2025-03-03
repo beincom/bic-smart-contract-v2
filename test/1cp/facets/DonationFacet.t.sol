@@ -39,13 +39,14 @@ contract DonationFacetTest is OneCPTestBase {
         DonationFacet donationFacet = new DonationFacet();
 
         // prepare function selectors
-        bytes4[] memory functionSelectors = new bytes4[](6);
+        bytes4[] memory functionSelectors = new bytes4[](7);
         functionSelectors[0] = donationFacet.updateDonationTreasury.selector;
         functionSelectors[1] = donationFacet.updateDonationPaymentToken.selector;
         functionSelectors[2] = donationFacet.updateDonationSurchargeFee.selector;
         functionSelectors[3] = donationFacet.updateDonationBufferPostOp.selector;
         functionSelectors[4] = donationFacet.donate.selector;
         functionSelectors[5] = donationFacet.callDonation.selector;
+        functionSelectors[6] = donationFacet.getDonationConfigStorage.selector;
 
         // prepare diamondCut
         LibDiamond.FacetCut[] memory cuts = new LibDiamond.FacetCut[](1);
@@ -66,6 +67,20 @@ contract DonationFacetTest is OneCPTestBase {
 
         // grant caller access to callDonation
         setAccessToSelector(donationFacet.callDonation.selector, caller, true); 
+    }
+
+    function test_config() public view {
+        (
+            uint256 surchargeConfig,
+            uint256 postOpConfig,
+            address treasury,
+            address payment
+            
+        ) = DonationFacet(address(oneCP)).getDonationConfigStorage();
+        assertEq(surchargeConfig, surchargeFee);
+        assertEq(postOpConfig, bufferPostOp);
+        assertEq(treasury, donationTreasury);
+        assertEq(payment, address(tBIC));
     }
 
     function test_donate() public {

@@ -43,13 +43,14 @@ contract ContentPaymentFacetDeployScript is Script {
         ContentPaymentFacet contentPaymentFacet = new ContentPaymentFacet();
 
         // prepare function selectors
-        bytes4[] memory functionSelectors = new bytes4[](6);
+        bytes4[] memory functionSelectors = new bytes4[](7);
         functionSelectors[0] = contentPaymentFacet.updateContentTreasury.selector;
         functionSelectors[1] = contentPaymentFacet.updateContentPaymentToken.selector;
         functionSelectors[2] = contentPaymentFacet.updateContentSurchargeFee.selector;
         functionSelectors[3] = contentPaymentFacet.updateContentBufferPostOp.selector;
         functionSelectors[4] = contentPaymentFacet.buyContent.selector;
         functionSelectors[5] = contentPaymentFacet.callBuyContent.selector;
+        functionSelectors[6] = contentPaymentFacet.getContentPaymentStorage.selector;
 
         // prepare diamondCut
         LibDiamond.FacetCut[] memory cuts = new LibDiamond.FacetCut[](1);

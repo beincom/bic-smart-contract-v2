@@ -10,7 +10,7 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 contract ContentPaymentFacet {
     using SafeERC20 for IERC20;
     // Struct
-    struct ContentPaymentStruct {
+    struct ContentPaymentStorage {
         uint256 surchargeFee;
         uint256 bufferPostOp;
         address contentTreasury;
@@ -49,13 +49,15 @@ contract ContentPaymentFacet {
         string orderId
     );
 
-    /// @notice Get storage position of content configuration
-    function getStorage() internal pure returns (ContentPaymentStruct storage dc) {
-        bytes32 position = CONTENT_CONFIG_STORAGE_POSITION;
-        // solhint-disable-next-line no-inline-assembly
-        assembly {
-            dc.slot := position
-        }
+    /// @notice Get content config storage
+    function getContentPaymentStorage() external pure returns (
+        uint256 surchargeFee,
+        uint256 bufferPostOp,
+        address contentTreasury,
+        address paymentToken
+    ) {
+        ContentPaymentStorage memory s = getStorage();
+        return (s.surchargeFee, s.bufferPostOp, s.contentTreasury, s.paymentToken);
     }
 
     /// @notice Update donation treasury address
@@ -65,7 +67,7 @@ contract ContentPaymentFacet {
         if (newTreasury == address(0)) {
             revert ZeroAddress();
         }
-        ContentPaymentStruct storage s = getStorage();
+        ContentPaymentStorage storage s = getStorage();
         s.contentTreasury = newTreasury;
         emit ContentTreasuryUpdated(msg.sender, newTreasury);
     }
@@ -77,7 +79,7 @@ contract ContentPaymentFacet {
         if (paymentToken == address(0)) {
             revert ZeroAddress();
         }
-        ContentPaymentStruct storage s = getStorage();
+        ContentPaymentStorage storage s = getStorage();
         s.paymentToken = paymentToken;
         emit PaymentTokenUpdated(msg.sender, paymentToken);
     }
@@ -89,7 +91,7 @@ contract ContentPaymentFacet {
         if (surchargeFee > 10_000) {
             revert InvalidSurchargeFee(surchargeFee);
         }
-        ContentPaymentStruct storage s = getStorage();
+        ContentPaymentStorage storage s = getStorage();
         s.surchargeFee = surchargeFee;
         emit SurchargeFeeUpdated(msg.sender, surchargeFee);
     }
@@ -98,7 +100,7 @@ contract ContentPaymentFacet {
     /// @param bufferPostOp The additional gas used for additional execution via callBuyContent
     function updateContentBufferPostOp(uint256 bufferPostOp) external {
         LibDiamond.enforceIsContractOwner();
-        ContentPaymentStruct storage s = getStorage();
+        ContentPaymentStorage storage s = getStorage();
         s.bufferPostOp = bufferPostOp;
         emit BufferPostOpUpdated(msg.sender, bufferPostOp);
     }
@@ -119,7 +121,7 @@ contract ContentPaymentFacet {
         if (amount == 0) {
             revert ZeroPayment();
         }
-        ContentPaymentStruct storage s = getStorage();
+        ContentPaymentStorage storage s = getStorage();
         uint256 surcharge = amount * s.surchargeFee / 10_000;
         IERC20(token).safeTransferFrom(msg.sender, to, amount - surcharge);
         IERC20(token).safeTransferFrom(msg.sender, s.contentTreasury, surcharge);
@@ -154,7 +156,7 @@ contract ContentPaymentFacet {
         if (amount == 0) {
             revert ZeroPayment();
         }
-        ContentPaymentStruct storage s = getStorage();
+        ContentPaymentStorage storage s = getStorage();
         uint256 gasPrice = getUserOpGasPrice(maxFeePerGas, maxPriorityFeePerGas);
         uint256 actualGas = preGas - gasleft() + s.bufferPostOp;
         uint256 actualGasCost = actualGas * gasPrice;
@@ -176,10 +178,17 @@ contract ContentPaymentFacet {
         return (actualGasCost, actualPaymentCost);
     }
 
-    /**
-     * the gas price this UserOp agrees to pay.
-     * relayer/block builder might submit the TX with higher priorityFee, but the user should not
-     */
+    /// @notice Get storage position of content configuration
+    function getStorage() internal pure returns (ContentPaymentStorage storage dc) {
+        bytes32 position = CONTENT_CONFIG_STORAGE_POSITION;
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            dc.slot := position
+        }
+    }
+
+    /// The gas price this UserOp agrees to pay.
+    /// relayer/block builder might submit the TX with higher priorityFee, but the user should not
     function getUserOpGasPrice(uint256 maxFeePerGas, uint256 maxPriorityFeePerGas) internal view returns (uint256) {
         unchecked {
             if (maxFeePerGas == maxPriorityFeePerGas) {

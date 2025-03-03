@@ -10,7 +10,7 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 contract DonationFacet {
     using SafeERC20 for IERC20;
     /// Struct
-    struct DonationConfigStruct {
+    struct DonationConfigStorage {
         uint256 surchargeFee;
         uint256 bufferPostOp;
         address donationTreasury;
@@ -49,13 +49,15 @@ contract DonationFacet {
         string message
     );
 
-    /// @notice Get storage position of donation configuration
-    function getStorage() internal pure returns (DonationConfigStruct storage dc) {
-        bytes32 position = DONATION_CONFIG_STORAGE_POSITION;
-        // solhint-disable-next-line no-inline-assembly
-        assembly {
-            dc.slot := position
-        }
+    /// @notice Get donation config storage
+    function getDonationConfigStorage() external pure returns (
+        uint256 surchargeFee,
+        uint256 bufferPostOp,
+        address contentTreasury,
+        address paymentToken
+    ) {
+        DonationConfigStorage memory s = getStorage();
+        return (s.surchargeFee, s.bufferPostOp, s.donationTreasury, s.paymentToken);
     }
 
     /// @notice Update donation treasury address
@@ -65,7 +67,7 @@ contract DonationFacet {
         if (newTreasury == address(0)) {
             revert ZeroAddress();
         }
-        DonationConfigStruct storage s = getStorage();
+        DonationConfigStorage storage s = getStorage();
         s.donationTreasury = newTreasury;
         emit DonationTreasuryUpdated(msg.sender, newTreasury);
     }
@@ -77,7 +79,7 @@ contract DonationFacet {
         if (paymentToken == address(0)) {
             revert ZeroAddress();
         }
-        DonationConfigStruct storage s = getStorage();
+        DonationConfigStorage storage s = getStorage();
         s.paymentToken = paymentToken;
         emit PaymentTokenUpdated(msg.sender, paymentToken);
     }
@@ -89,7 +91,7 @@ contract DonationFacet {
         if (surchargeFee > 10_000) {
             revert InvalidSurchargeFee(surchargeFee);
         }
-        DonationConfigStruct storage s = getStorage();
+        DonationConfigStorage storage s = getStorage();
         s.surchargeFee = surchargeFee;
         emit SurchargeFeeUpdated(msg.sender, surchargeFee);
     }
@@ -98,7 +100,7 @@ contract DonationFacet {
     /// @param bufferPostOp The additional gas used for additional execution via callDonation
     function updateDonationBufferPostOp(uint256 bufferPostOp) external {
         LibDiamond.enforceIsContractOwner();
-        DonationConfigStruct storage s = getStorage();
+        DonationConfigStorage storage s = getStorage();
         s.bufferPostOp = bufferPostOp;
         emit BufferPostOpUpdated(msg.sender, bufferPostOp);
     }
@@ -119,7 +121,7 @@ contract DonationFacet {
         if (amount == 0) {
             revert ZeroDonation();
         }
-        DonationConfigStruct storage s = getStorage();
+        DonationConfigStorage storage s = getStorage();
         uint256 surcharge = amount * s.surchargeFee / 10_000;
         IERC20(token).safeTransferFrom(msg.sender, to, amount - surcharge);
         
@@ -158,7 +160,7 @@ contract DonationFacet {
         if (amount == 0) {
             revert ZeroDonation();
         }
-        DonationConfigStruct storage s = getStorage();
+        DonationConfigStorage storage s = getStorage();
         uint256 surcharge = amount * s.surchargeFee / 10_000;
         IERC20(token).safeTransferFrom(from, to, amount - surcharge);
         
@@ -186,6 +188,15 @@ contract DonationFacet {
         return (actualGasCost, actualPaymentCost);
     }
     
+    /// @notice Get storage position of donation configuration
+    function getStorage() internal pure returns (DonationConfigStorage storage dc) {
+        bytes32 position = DONATION_CONFIG_STORAGE_POSITION;
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            dc.slot := position
+        }
+    }
+
     /// the gas price this UserOp agrees to pay.
     /// relayer/block builder might submit the TX with higher priorityFee, but the user should not
     function getUserOpGasPrice(uint256 maxFeePerGas, uint256 maxPriorityFeePerGas) internal view returns (uint256) {

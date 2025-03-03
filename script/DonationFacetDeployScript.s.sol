@@ -43,13 +43,14 @@ contract DonationFacetDeployScript is Script {
         DonationFacet donationFacet = new DonationFacet();
 
         // prepare function selectors
-        bytes4[] memory functionSelectors = new bytes4[](6);
+        bytes4[] memory functionSelectors = new bytes4[](7);
         functionSelectors[0] = donationFacet.updateDonationTreasury.selector;
         functionSelectors[1] = donationFacet.updateDonationPaymentToken.selector;
         functionSelectors[2] = donationFacet.updateDonationSurchargeFee.selector;
         functionSelectors[3] = donationFacet.updateDonationBufferPostOp.selector;
         functionSelectors[4] = donationFacet.donate.selector;
         functionSelectors[5] = donationFacet.callDonation.selector;
+        functionSelectors[6] = donationFacet.getDonationConfigStorage.selector;
 
         // prepare diamondCut
         LibDiamond.FacetCut[] memory cuts = new LibDiamond.FacetCut[](1);

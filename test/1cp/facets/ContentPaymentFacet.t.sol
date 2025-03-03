@@ -41,13 +41,14 @@ contract ContentPaymentFacetTest is OneCPTestBase {
         ContentPaymentFacet contentPaymentFacet = new ContentPaymentFacet();
 
         // prepare function selectors
-        bytes4[] memory functionSelectors = new bytes4[](6);
+        bytes4[] memory functionSelectors = new bytes4[](7);
         functionSelectors[0] = contentPaymentFacet.updateContentTreasury.selector;
         functionSelectors[1] = contentPaymentFacet.updateContentPaymentToken.selector;
         functionSelectors[2] = contentPaymentFacet.updateContentSurchargeFee.selector;
         functionSelectors[3] = contentPaymentFacet.updateContentBufferPostOp.selector;
         functionSelectors[4] = contentPaymentFacet.buyContent.selector;
         functionSelectors[5] = contentPaymentFacet.callBuyContent.selector;
+        functionSelectors[6] = contentPaymentFacet.getContentPaymentStorage.selector;
 
         // prepare diamondCut
         LibDiamond.FacetCut[] memory cuts = new LibDiamond.FacetCut[](1);
@@ -68,6 +69,20 @@ contract ContentPaymentFacetTest is OneCPTestBase {
 
         // grant caller access to callDonation
         setAccessToSelector(contentPaymentFacet.callBuyContent.selector, caller, true); 
+    }
+
+    function test_config() public view {
+        (
+            uint256 surchargeConfig,
+            uint256 postOpConfig,
+            address treasury,
+            address payment
+            
+        ) = ContentPaymentFacet(address(oneCP)).getContentPaymentStorage();
+        assertEq(surchargeConfig, surchargeFee);
+        assertEq(postOpConfig, bufferPostOp);
+        assertEq(treasury, contentTreasury);
+        assertEq(payment, address(tBIC));
     }
 
     function test_buyContent() public {
