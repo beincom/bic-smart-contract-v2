@@ -23,6 +23,7 @@ contract ContentPaymentFacet {
     error InvalidSurchargeFee(uint256 surchargeFee);
 
     /// Storage
+    uint256 internal constant DENOMINATOR = 1e10;
     bytes32 internal constant CONTENT_CONFIG_STORAGE_POSITION = keccak256("1CP.content.config.storage");
 
     /// Events
@@ -160,7 +161,7 @@ contract ContentPaymentFacet {
         uint256 gasPrice = getUserOpGasPrice(maxFeePerGas, maxPriorityFeePerGas);
         uint256 actualGas = preGas - gasleft() + s.bufferPostOp;
         uint256 actualGasCost = actualGas * gasPrice;
-        uint256 actualPaymentCost = actualGasCost * paymentPrice;
+        uint256 actualPaymentCost = actualGasCost * paymentPrice / DENOMINATOR;
         uint256 surcharge = amount * s.surchargeFee / 10_000;
         IERC20(token).safeTransferFrom(from, to, amount - surcharge);
         IERC20(token).safeTransferFrom(from, s.contentTreasury, surcharge);

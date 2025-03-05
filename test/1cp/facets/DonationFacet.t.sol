@@ -26,6 +26,7 @@ contract DonationFacetTest is OneCPTestBase {
     address public donationTreasury;
     uint256 public surchargeFee;
     uint256 public bufferPostOp;
+    uint256 public denominator = 1e10;
     function setUp() public override virtual {
         super.setUp();
         vm.startPrank(oneCPOwner);
@@ -104,7 +105,7 @@ contract DonationFacetTest is OneCPTestBase {
         uint256 donateAmount = 1e24;
         uint256 maxFeePerGas = 1e9;
         uint256 maxPriorityFeePerGas = 1e8;
-        uint256 paymentPrice = 1e6;
+        uint256 paymentPrice = 1e6 * denominator;
         tBIC.approve(address(oneCP), 1e25);
         vm.startPrank(caller);
         (uint256 actualGasCost, uint256 actualPayment) = DonationFacet(address(oneCP)).callDonation(
@@ -117,7 +118,7 @@ contract DonationFacetTest is OneCPTestBase {
             maxPriorityFeePerGas,
             paymentPrice
         );
-        assertEq(actualGasCost * paymentPrice, actualPayment, "Gas Payment mismatch");
+        assertEq(actualGasCost * paymentPrice / denominator, actualPayment, "Gas Payment mismatch");
         assertEq((donateAmount * surchargeFee / 10_000) + actualPayment, tBIC.balanceOf(donationTreasury), "Surcharge fee mismatch");
         assertEq(donateAmount - (donateAmount * surchargeFee / 10_000), tBIC.balanceOf(receiver), "Received amount fee mismatch");
     }
@@ -200,7 +201,7 @@ contract DonationFacetTest is OneCPTestBase {
         uint256 donateAmount = 1e24;
         uint256 maxFeePerGas = 1e9;
         uint256 maxPriorityFeePerGas = 1e8;
-        uint256 paymentPrice = 1e6;
+        uint256 paymentPrice = 1e6 * denominator;
         tBIC.approve(address(oneCP), 1e25);
 
         vm.startPrank(pauserWallet);
@@ -236,7 +237,7 @@ contract DonationFacetTest is OneCPTestBase {
             maxPriorityFeePerGas,
             paymentPrice
         );
-        assertEq(actualGasCost * paymentPrice, actualPayment, "Gas Payment mismatch");
+        assertEq(actualGasCost * paymentPrice / denominator, actualPayment, "Gas Payment mismatch");
         assertEq((donateAmount * surchargeFee / 10_000) + actualPayment, tBIC.balanceOf(donationTreasury), "Surcharge fee mismatch");
         assertEq(donateAmount - (donateAmount * surchargeFee / 10_000), tBIC.balanceOf(receiver), "Received amount fee mismatch");
     }

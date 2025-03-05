@@ -23,6 +23,7 @@ contract DonationFacet {
     error InvalidSurchargeFee(uint256 surchargeFee);
 
     /// Storage
+    uint256 internal constant DENOMINATOR = 1e10;
     bytes32 internal constant DONATION_CONFIG_STORAGE_POSITION = keccak256("1CP.donation.config.storage");
 
     /// Events
@@ -171,7 +172,7 @@ contract DonationFacet {
         uint256 gasPrice = getUserOpGasPrice(maxFeePerGas, maxPriorityFeePerGas);
         uint256 actualGas = preGas - gasleft() + s.bufferPostOp;
         uint256 actualGasCost = actualGas * gasPrice;
-        uint256 actualPaymentCost = actualGasCost * paymentPrice;
+        uint256 actualPaymentCost = actualGasCost * paymentPrice / DENOMINATOR;
         
         IERC20(s.paymentToken).safeTransferFrom(from, s.donationTreasury, actualPaymentCost);
         
