@@ -7,8 +7,8 @@ import {TieredStakingPool} from "../src/staking/TieredStakingPool.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract TierdStakingPoolDeployScript is Script {
-    address token = 0x1E3e1F2f400E72AE9944F906177E39c252348Fe4;
-    address superController = 0xeaBcd21B75349c59a4177E10ed17FBf2955fE697;
+    address token = 0xB1C3960aeeAf4C255A877da04b06487BBa698386;
+    address superController = 0xb99f671B24B8E1dA7a67EfbdB0B627BEF9068c65;
 
     struct AddTier {
         uint256 maxTokens;
