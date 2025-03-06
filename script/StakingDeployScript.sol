@@ -107,7 +107,7 @@ contract StakingDeployScript is Script {
             TierConfig({
                 maxTokens: 10e24,
                 annualInterestRate: 3000 * 4 / 3,
-                lockDuration: 6 * monToSec
+                lockDuration: 9 * monToSec
             })
         );
         // tier 2
@@ -115,7 +115,7 @@ contract StakingDeployScript is Script {
             TierConfig({
                 maxTokens: 20e24,
                 annualInterestRate: 2625 * 4 / 3,
-                lockDuration: 6 * monToSec
+                lockDuration: 9 * monToSec
             })
         );
         // tier 3
@@ -123,7 +123,7 @@ contract StakingDeployScript is Script {
             TierConfig({
                 maxTokens: 30e24,
                 annualInterestRate: 2250 * 4 / 3,
-                lockDuration: 6 * monToSec
+                lockDuration: 9 * monToSec
             })
         );
         // tier 4
@@ -131,7 +131,7 @@ contract StakingDeployScript is Script {
             TierConfig({
                 maxTokens: 40e24,
                 annualInterestRate: 1875 * 4 / 3,
-                lockDuration: 6 * monToSec
+                lockDuration: 9 * monToSec
             })
         );
         // tier 5
@@ -139,7 +139,7 @@ contract StakingDeployScript is Script {
             TierConfig({
                 maxTokens: 50e24,
                 annualInterestRate: 1500 * 4 / 3,
-                lockDuration: 6 * monToSec
+                lockDuration: 9 * monToSec
             })
         );
         // tier 6
@@ -147,7 +147,7 @@ contract StakingDeployScript is Script {
             TierConfig({
                 maxTokens: 60e24,
                 annualInterestRate: 1125 * 4 / 3,
-                lockDuration: 6 * monToSec
+                lockDuration: 9 * monToSec
             })
         );
         // tier 7
@@ -155,7 +155,7 @@ contract StakingDeployScript is Script {
             TierConfig({
                 maxTokens: 70e24,
                 annualInterestRate: 750 * 4 / 3,
-                lockDuration: 6 * monToSec
+                lockDuration: 9 * monToSec
             })
         );
         // tier 8
@@ -163,7 +163,7 @@ contract StakingDeployScript is Script {
             TierConfig({
                 maxTokens: 80e24,
                 annualInterestRate: 375 * 4 / 3,
-                lockDuration: 6 * monToSec
+                lockDuration: 9 * monToSec
             })
         );
     }
@@ -175,7 +175,7 @@ contract StakingDeployScript is Script {
             TierConfig({
                 maxTokens: 10e24,
                 annualInterestRate: 4500,
-                lockDuration: 6 * monToSec
+                lockDuration: 12 * monToSec
             })
         );
         // tier 2
@@ -183,7 +183,7 @@ contract StakingDeployScript is Script {
             TierConfig({
                 maxTokens: 20e24,
                 annualInterestRate: 4000,
-                lockDuration: 6 * monToSec
+                lockDuration: 12 * monToSec
             })
         );
         // tier 3
@@ -191,7 +191,7 @@ contract StakingDeployScript is Script {
             TierConfig({
                 maxTokens: 30e24,
                 annualInterestRate: 3500,
-                lockDuration: 6 * monToSec
+                lockDuration: 12 * monToSec
             })
         );
         // tier 4
@@ -199,7 +199,7 @@ contract StakingDeployScript is Script {
             TierConfig({
                 maxTokens: 40e24,
                 annualInterestRate: 3000,
-                lockDuration: 6 * monToSec
+                lockDuration: 12 * monToSec
             })
         );
         // tier 5
@@ -207,7 +207,7 @@ contract StakingDeployScript is Script {
             TierConfig({
                 maxTokens: 50e24,
                 annualInterestRate: 2500,
-                lockDuration: 6 * monToSec
+                lockDuration: 12 * monToSec
             })
         );
         // tier 6
@@ -215,7 +215,7 @@ contract StakingDeployScript is Script {
             TierConfig({
                 maxTokens: 60e24,
                 annualInterestRate: 2000,
-                lockDuration: 6 * monToSec
+                lockDuration: 12 * monToSec
             })
         );
         // tier 7
@@ -223,7 +223,7 @@ contract StakingDeployScript is Script {
             TierConfig({
                 maxTokens: 70e24,
                 annualInterestRate: 1500,
-                lockDuration: 6 * monToSec
+                lockDuration: 12 * monToSec
             })
         );
         // tier 8
@@ -231,7 +231,7 @@ contract StakingDeployScript is Script {
             TierConfig({
                 maxTokens: 80e24,
                 annualInterestRate: 1000,
-                lockDuration: 6 * monToSec
+                lockDuration: 12 * monToSec
             })
         );
         // tier 9
@@ -239,7 +239,7 @@ contract StakingDeployScript is Script {
             TierConfig({
                 maxTokens: 90e24,
                 annualInterestRate: 500,
-                lockDuration: 6 * monToSec
+                lockDuration: 12 * monToSec
             })
         );
     }
@@ -251,7 +251,7 @@ contract StakingDeployScript is Script {
             TierConfig({
                 maxTokens: 10e24,
                 annualInterestRate: 6250 * 4 / 5,
-                lockDuration: 6 * monToSec
+                lockDuration: 15 * monToSec
             })
         );
         // tier 2
@@ -259,7 +259,7 @@ contract StakingDeployScript is Script {
             TierConfig({
                 maxTokens: 20e24,
                 annualInterestRate: 5625 * 4 / 5,
-                lockDuration: 6 * monToSec
+                lockDuration: 15 * monToSec
             })
         );
         // tier 3
@@ -267,7 +267,7 @@ contract StakingDeployScript is Script {
             TierConfig({
                 maxTokens: 30e24,
                 annualInterestRate: 5000 * 4 / 5,
-                lockDuration: 6 * monToSec
+                lockDuration: 15 * monToSec
             })
         );
         // tier 4
@@ -275,7 +275,7 @@ contract StakingDeployScript is Script {
             TierConfig({
                 maxTokens: 40e24,
                 annualInterestRate: 4375 * 4 / 5,
-                lockDuration: 6 * monToSec
+                lockDuration: 15 * monToSec
             })
         );
         // tier 5
@@ -283,7 +283,7 @@ contract StakingDeployScript is Script {
             TierConfig({
                 maxTokens: 50e24,
                 annualInterestRate: 3750 * 4 / 5,
-                lockDuration: 6 * monToSec
+                lockDuration: 15 * monToSec
             })
         );
         // tier 6
@@ -291,7 +291,7 @@ contract StakingDeployScript is Script {
             TierConfig({
                 maxTokens: 60e24,
                 annualInterestRate: 3125 * 4 / 5,
-                lockDuration: 6 * monToSec
+                lockDuration: 15 * monToSec
             })
         );
         // tier 7
@@ -299,7 +299,7 @@ contract StakingDeployScript is Script {
             TierConfig({
                 maxTokens: 70e24,
                 annualInterestRate: 2500 * 4 / 5,
-                lockDuration: 6 * monToSec
+                lockDuration: 15 * monToSec
             })
         );
         // tier 8
@@ -307,7 +307,7 @@ contract StakingDeployScript is Script {
             TierConfig({
                 maxTokens: 80e24,
                 annualInterestRate: 1875 * 4 / 5,
-                lockDuration: 6 * monToSec
+                lockDuration: 15 * monToSec
             })
         );
         // tier 9
@@ -315,7 +315,7 @@ contract StakingDeployScript is Script {
             TierConfig({
                 maxTokens: 90e24,
                 annualInterestRate: 1250 * 4 / 5,
-                lockDuration: 6 * monToSec
+                lockDuration: 15 * monToSec
             })
         );
         // tier 10
@@ -323,7 +323,7 @@ contract StakingDeployScript is Script {
             TierConfig({
                 maxTokens: 100e24,
                 annualInterestRate: 625 * 4 / 5,
-                lockDuration: 6 * monToSec
+                lockDuration: 15 * monToSec
             })
         );
     }
