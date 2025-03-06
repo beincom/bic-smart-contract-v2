@@ -242,4 +242,64 @@ contract TieredStakingPoolTest is Test {
         vm.expectRevert(abi.encodeWithSelector(TieredStakingPool.InvalidTierIndex.selector, 1));
         tierStaking.depositIntoTier(1, amount);
     }
+
+    function test_addTiers() public {
+        uint256[] memory maxTokens = new uint256[](3);
+        maxTokens[0] = 5000 ether;
+        maxTokens[1] = 10000 ether;
+        maxTokens[2] = 15000 ether;
+
+        uint256[] memory annualInterestRates = new uint256[](3);
+        annualInterestRates[0] = 2000;
+        annualInterestRates[1] = 2500;
+        annualInterestRates[2] = 3000;
+
+        uint256[] memory lockDurations = new uint256[](3);
+        lockDurations[0] = 180 days;
+        lockDurations[1] = 365 days;
+        lockDurations[2] = 730 days;
+        tierStaking.addTiers(maxTokens, annualInterestRates, lockDurations);
+        TieredStakingPool.Tier[] memory tiers = tierStaking.getTiers();
+        assertEq(tiers.length, 4); // 3 tiers + 1 default tier from setup
+
+        assertEq(tiers[0].maxTokens, 5000 ether);
+        assertEq(tiers[0].annualInterestRate, 3000);
+        assertEq(tiers[0].lockDuration, 365 days);
+
+        assertEq(tiers[1].maxTokens, 5000 ether);
+        assertEq(tiers[1].annualInterestRate, 2000);
+        assertEq(tiers[1].lockDuration, 180 days);
+
+        assertEq(tiers[2].maxTokens, 10000 ether);
+        assertEq(tiers[2].annualInterestRate, 2500);
+        assertEq(tiers[2].lockDuration, 365 days);
+
+        assertEq(tiers[3].maxTokens, 15000 ether);
+        assertEq(tiers[3].annualInterestRate, 3000);
+        assertEq(tiers[3].lockDuration, 730 days);
+    
+    }
+
+    function test_revertWhenAddTierZeroLockDuration() public {
+        uint256[] memory maxTokens = new uint256[](1);
+        maxTokens[0] = 5000 ether;
+        uint256[] memory annualInterestRates = new uint256[](1);
+        annualInterestRates[0] = 2000;
+        uint256[] memory lockDurations = new uint256[](1);
+        lockDurations[0] = 0;
+        vm.expectRevert(abi.encodeWithSelector(TieredStakingPool.ZeroLockDuration.selector));
+        tierStaking.addTiers(maxTokens, annualInterestRates, lockDurations);
+    }
+
+    function test_revertWhenAddTierInvalidInterestRate() public {
+        uint256[] memory maxTokens = new uint256[](1);
+        maxTokens[0] = 5000 ether;
+        uint256[] memory annualInterestRates = new uint256[](1);
+        annualInterestRates[0] = 20000;
+        uint256[] memory lockDurations = new uint256[](1);
+        lockDurations[0] = 365 days;
+        vm.expectRevert(abi.encodeWithSelector(TieredStakingPool.InvalidInterestRate.selector, 20000));
+        tierStaking.addTiers(maxTokens, annualInterestRates, lockDurations);
+    }
+
 }
