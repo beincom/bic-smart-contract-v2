@@ -17,24 +17,24 @@ contract TierdStakingPoolDeployScript is Script {
     }
 
     AddTier[] tier_6months = [
-        AddTier(10_000_000 ether, 1750, 180 days),
-        AddTier(20_000_000 ether, 1500, 180 days), 
-        AddTier(30_000_000 ether, 1250, 180 days),
-        AddTier(40_000_000 ether, 1000, 180 days),
-        AddTier(50_000_000 ether, 750, 180 days),
-        AddTier(60_000_000 ether, 500, 180 days),
-        AddTier(70_000_000 ether, 250, 180 days)
+        AddTier(10_000_000 ether, 3500, 182 days),
+        AddTier(20_000_000 ether, 3000, 182 days), 
+        AddTier(30_000_000 ether, 2500, 182 days),
+        AddTier(40_000_000 ether, 2000, 182 days),
+        AddTier(50_000_000 ether, 1500, 182 days),
+        AddTier(60_000_000 ether, 1000, 182 days),
+        AddTier(70_000_000 ether, 500, 182 days)
     ];
 
     AddTier[] tier_9months = [
-        AddTier(10_000_000 ether, 3000, 270 days),
-        AddTier(20_000_000 ether, 2625, 270 days),
-        AddTier(30_000_000 ether, 2250, 270 days),
-        AddTier(40_000_000 ether, 1875, 270 days),
-        AddTier(50_000_000 ether, 1500, 270 days),
-        AddTier(60_000_000 ether, 1125, 270 days),
-        AddTier(70_000_000 ether, 750, 270 days),
-        AddTier(80_000_000 ether, 375, 270 days)
+        AddTier(10_000_000 ether, 4000, 273 days),
+        AddTier(20_000_000 ether, 3500, 273 days),
+        AddTier(30_000_000 ether, 3000, 273 days),
+        AddTier(40_000_000 ether, 2500, 273 days),
+        AddTier(50_000_000 ether, 2000, 273 days),
+        AddTier(60_000_000 ether, 1500, 273 days),
+        AddTier(70_000_000 ether, 1000, 273 days),
+        AddTier(80_000_000 ether, 500, 273 days)
     ];
 
     AddTier[] tier_12months = [
@@ -50,16 +50,16 @@ contract TierdStakingPoolDeployScript is Script {
     ];
 
     AddTier[] tier_15months = [
-        AddTier(10_000_000 ether, 6250, 450 days),
-        AddTier(20_000_000 ether, 5625, 450 days),
-        AddTier(30_000_000 ether, 5000, 450 days),
-        AddTier(40_000_000 ether, 4375, 450 days),
-        AddTier(50_000_000 ether, 3750, 450 days),
-        AddTier(60_000_000 ether, 3125, 450 days),
-        AddTier(70_000_000 ether, 2500, 450 days),
-        AddTier(80_000_000 ether, 1875, 450 days),
-        AddTier(90_000_000 ether, 1250, 450 days),
-        AddTier(100_000_000 ether, 625, 450 days)
+        AddTier(10_000_000 ether, 5000, 456 days),
+        AddTier(20_000_000 ether, 4500, 456 days),
+        AddTier(30_000_000 ether, 4000, 456 days),
+        AddTier(40_000_000 ether, 3500, 456 days),
+        AddTier(50_000_000 ether, 3000, 456 days),
+        AddTier(60_000_000 ether, 2500, 456 days),
+        AddTier(70_000_000 ether, 2000, 456 days),
+        AddTier(80_000_000 ether, 1500, 456 days),
+        AddTier(90_000_000 ether, 1000, 456 days),
+        AddTier(100_000_000 ether, 500, 456 days)
     ];
 
     function run() external {
