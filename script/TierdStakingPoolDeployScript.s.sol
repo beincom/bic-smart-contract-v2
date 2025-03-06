@@ -50,16 +50,16 @@ contract TierdStakingPoolDeployScript is Script {
     ];
 
     AddTier[] tier_15months = [
-        AddTier(10_000_000 ether, 6250, 547 days),
-        AddTier(20_000_000 ether, 5625, 547 days),
-        AddTier(30_000_000 ether, 5000, 547 days),
-        AddTier(40_000_000 ether, 4375, 547 days),
-        AddTier(50_000_000 ether, 3750, 547 days),
-        AddTier(60_000_000 ether, 3125, 547 days),
-        AddTier(70_000_000 ether, 2500, 547 days),
-        AddTier(80_000_000 ether, 1875, 547 days),
-        AddTier(90_000_000 ether, 1250, 547 days),
-        AddTier(100_000_000 ether, 625, 547 days)
+        AddTier(10_000_000 ether, 6250, 450 days),
+        AddTier(20_000_000 ether, 5625, 450 days),
+        AddTier(30_000_000 ether, 5000, 450 days),
+        AddTier(40_000_000 ether, 4375, 450 days),
+        AddTier(50_000_000 ether, 3750, 450 days),
+        AddTier(60_000_000 ether, 3125, 450 days),
+        AddTier(70_000_000 ether, 2500, 450 days),
+        AddTier(80_000_000 ether, 1875, 450 days),
+        AddTier(90_000_000 ether, 1250, 450 days),
+        AddTier(100_000_000 ether, 625, 450 days)
     ];
 
     function run() external {
