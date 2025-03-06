@@ -69,30 +69,54 @@ contract TierdStakingPoolDeployScript is Script {
         // Deploy 6 months tier pool
         TieredStakingPool stakingPool6Months = new TieredStakingPool(IERC20(token), vm.addr(deployerPrivateKey));
         console.log("TieredStakingPool 6 months deployed contract:", address(stakingPool6Months));
+        uint256[] memory maxTokens6 = new uint256[](tier_6months.length);
+        uint256[] memory annualInterestRates6 = new uint256[](tier_6months.length);
+        uint256[] memory lockDurations6 = new uint256[](tier_6months.length);
         for (uint256 i = 0; i < tier_6months.length; i++) {
-            stakingPool6Months.addTier(tier_6months[i].maxTokens, tier_6months[i].annualInterestRate, tier_6months[i].lockDuration);
+            maxTokens6[i] = tier_6months[i].maxTokens;
+            annualInterestRates6[i] = tier_6months[i].annualInterestRate;
+            lockDurations6[i] = tier_6months[i].lockDuration;
         }
+        stakingPool6Months.addTiers(maxTokens6, annualInterestRates6, lockDurations6);
 
         // Deploy 9 months tier pool
         TieredStakingPool stakingPool9Months = new TieredStakingPool(IERC20(token), vm.addr(deployerPrivateKey));
         console.log("TieredStakingPool 9 months deployed contract:", address(stakingPool9Months));
+        uint256[] memory maxTokens9 = new uint256[](tier_9months.length);
+        uint256[] memory annualInterestRates9 = new uint256[](tier_9months.length);
+        uint256[] memory lockDurations9 = new uint256[](tier_9months.length);
         for (uint256 i = 0; i < tier_9months.length; i++) {
-            stakingPool9Months.addTier(tier_9months[i].maxTokens, tier_9months[i].annualInterestRate, tier_9months[i].lockDuration);
+            maxTokens9[i] = tier_9months[i].maxTokens;
+            annualInterestRates9[i] = tier_9months[i].annualInterestRate;
+            lockDurations9[i] = tier_9months[i].lockDuration;
         }
+        stakingPool9Months.addTiers(maxTokens9, annualInterestRates9, lockDurations9);
 
         // Deploy 12 months tier pool
         TieredStakingPool stakingPool12Months = new TieredStakingPool(IERC20(token), vm.addr(deployerPrivateKey));
         console.log("TieredStakingPool 12 months deployed contract:", address(stakingPool12Months));
+        uint256[] memory maxTokens12 = new uint256[](tier_12months.length);
+        uint256[] memory annualInterestRates12 = new uint256[](tier_12months.length);
+        uint256[] memory lockDurations12 = new uint256[](tier_12months.length);
         for (uint256 i = 0; i < tier_12months.length; i++) {
-            stakingPool12Months.addTier(tier_12months[i].maxTokens, tier_12months[i].annualInterestRate, tier_12months[i].lockDuration);
+            maxTokens12[i] = tier_12months[i].maxTokens;
+            annualInterestRates12[i] = tier_12months[i].annualInterestRate;
+            lockDurations12[i] = tier_12months[i].lockDuration;
         }
+        stakingPool12Months.addTiers(maxTokens12, annualInterestRates12, lockDurations12);
 
         // Deploy 15 months tier pool
         TieredStakingPool stakingPool15Months = new TieredStakingPool(IERC20(token), vm.addr(deployerPrivateKey));
         console.log("TieredStakingPool 15 months deployed contract:", address(stakingPool15Months));
+        uint256[] memory maxTokens15 = new uint256[](tier_15months.length);
+        uint256[] memory annualInterestRates15 = new uint256[](tier_15months.length);
+        uint256[] memory lockDurations15 = new uint256[](tier_15months.length);
         for (uint256 i = 0; i < tier_15months.length; i++) {
-            stakingPool15Months.addTier(tier_15months[i].maxTokens, tier_15months[i].annualInterestRate, tier_15months[i].lockDuration);
+            maxTokens15[i] = tier_15months[i].maxTokens;
+            annualInterestRates15[i] = tier_15months[i].annualInterestRate;
+            lockDurations15[i] = tier_15months[i].lockDuration;
         }
+        stakingPool15Months.addTiers(maxTokens15, annualInterestRates15, lockDurations15);
 
         // Transfer ownership to super controller
         stakingPool6Months.transferOwnership(superController);

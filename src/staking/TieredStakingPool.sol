@@ -99,6 +99,41 @@ contract TieredStakingPool is Ownable, ReentrancyGuard, Pausable {
     }
 
     /**
+     * @notice Add multiple tiered staking pools at once
+     * @param _maxTokens Array of maximum tokens that can be staked in each tiered staking pool
+     * @param _annualInterestRates Array of annual interest rate percentages
+     * @param _lockDurations Array of staking period times
+     */
+    function addTiers(
+        uint256[] calldata _maxTokens,
+        uint256[] calldata _annualInterestRates,
+        uint256[] calldata _lockDurations
+    ) external onlyOwner {
+        if (_maxTokens.length != _annualInterestRates.length || _maxTokens.length != _lockDurations.length) {
+            revert("Array lengths must match");
+        }
+
+        for (uint256 i = 0; i < _maxTokens.length; i++) {
+            if (_annualInterestRates[i] > 10000) {
+                revert InvalidInterestRate(_annualInterestRates[i]);
+            }
+            if (_lockDurations[i] == 0) {
+                revert ZeroLockDuration();
+            }
+
+            tiers.push(
+                Tier({
+                    maxTokens: _maxTokens[i],
+                    annualInterestRate: _annualInterestRates[i],
+                    lockDuration: _lockDurations[i],
+                    totalStaked: 0
+                })
+            );
+            emit TierAdded(tiers.length - 1, _maxTokens[i], _annualInterestRates[i], _lockDurations[i]);
+        }
+    }
+
+    /**
      * @notice Depositing tokens in the tiered staking pools
      * @param amount The amount of tokens staked in the tiered staking pools
      */
