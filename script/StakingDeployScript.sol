@@ -388,8 +388,10 @@ contract StakingDeployScript is Script {
         );
 
         for (uint256 i = 0; i < tiersLength; i++) {
-            (uint256 maxTokens,,,) = tieredStakingPool.tiers(i);
-            require(maxTokens == tiers[i].maxTokens);
+            (uint256 maxToken, uint256 apr, uint256 lockDuration,) = tieredStakingPool.tiers(i);
+            require(maxToken == tiers[i].maxTokens);
+            require(apr == tiers[i].annualInterestRate);
+            require(lockDuration == tiers[i].lockDuration);
         }
 
         tieredStakingPool.transferOwnership(stakingOwner);
