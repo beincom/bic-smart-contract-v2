@@ -10,9 +10,6 @@ extra_output = ["storageLayout"]
 unchecked_cheatcode_artifacts = true
 evm_version="cancun"
 
-[profile.fs_permissions]
-read = ["config/", "./"]
-
 [rpc_endpoints]
 unichain_sepolia = "https://sepolia.unichain.org"
 arbitrum_sepolia = "https://sepolia-rollup.arbitrum.io/rpc"

@@ -40,6 +40,7 @@ contract TieredStakingPool is Ownable, ReentrancyGuard, Pausable {
     // Errors
     error ZeroAddress();
     error InvalidInterestRate(uint256 interestRate);
+    error InvalidBatchTiers();
     error ZeroLockDuration();
     error ZeroStakeAmount();
     error NotEnoughCapacityInTier();
@@ -80,22 +81,32 @@ contract TieredStakingPool is Ownable, ReentrancyGuard, Pausable {
         uint256 _annualInterestRate,
         uint256 _lockDuration
     ) external onlyOwner {
-        if (_annualInterestRate > 10000) {
-            revert InvalidInterestRate(_annualInterestRate);
-        }
-        if (_lockDuration == 0) {
-            revert ZeroLockDuration();
-        }
+        _addTier(_maxTokens, _annualInterestRate, _lockDuration);
+    }
 
-        tiers.push(
-            Tier({
-                maxTokens: _maxTokens,
-                annualInterestRate: _annualInterestRate,
-                lockDuration: _lockDuration,
-                totalStaked: 0
-            })
-        );
-        emit TierAdded(tiers.length - 1, _maxTokens, _annualInterestRate, _lockDuration);
+    /**
+     * @notice Added a tiered staking pool
+     * @param maxTokens The maximum tokens can be staked in the tiered staking pool
+     * @param annualInterestRates The percentages of annual interest rate
+     * @param lockDurations The period time of staking
+     */
+    function addBatchTier(
+        uint256[] memory maxTokens,
+        uint256[] memory annualInterestRates,
+        uint256[] memory lockDurations
+    ) external onlyOwner {
+        if (maxTokens.length != annualInterestRates.length ||
+            maxTokens.length != lockDurations.length
+        ) {
+            revert InvalidBatchTiers();
+        }
+        for (uint256 i = 0; i < maxTokens.length; i++) {
+            _addTier(
+                maxTokens[i],
+                annualInterestRates[i],
+                lockDurations[i]
+            );
+        }
     }
 
     /**
@@ -255,5 +266,34 @@ contract TieredStakingPool is Ownable, ReentrancyGuard, Pausable {
      */
     function unpause() public onlyOwner {
         _unpause();
+    }
+
+    /**
+     * @notice Added a tiered staking pool
+     * @param _maxTokens The maximum tokens can be staked in the tiered staking pool
+     * @param _annualInterestRate The percentage of annual interest rate
+     * @param _lockDuration The period time of staking
+     */
+    function _addTier(
+        uint256 _maxTokens,
+        uint256 _annualInterestRate,
+        uint256 _lockDuration
+    ) internal {
+        if (_annualInterestRate > 10000) {
+            revert InvalidInterestRate(_annualInterestRate);
+        }
+        if (_lockDuration == 0) {
+            revert ZeroLockDuration();
+        }
+
+        tiers.push(
+            Tier({
+                maxTokens: _maxTokens,
+                annualInterestRate: _annualInterestRate,
+                lockDuration: _lockDuration,
+                totalStaked: 0
+            })
+        );
+        emit TierAdded(tiers.length - 1, _maxTokens, _annualInterestRate, _lockDuration);
     }
 }
