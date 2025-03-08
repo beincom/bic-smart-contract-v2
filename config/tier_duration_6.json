@@ -1,0 +1,15 @@
+{
+    "comment": "Tiers config for staking duration 6 month",
+    "tiers": [
+        {
+            "maxTokens": "100000",
+            "annualInterestRate": "20",
+            "lockDuration": "600"
+        },
+        {
+            "maxTokens": "100000",
+            "annualInterestRate": "10",
+            "lockDuration": "600"
+        }
+    ]
+}
