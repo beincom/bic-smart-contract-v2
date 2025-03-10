@@ -9,8 +9,8 @@ import {BICVesting} from "../src/vest/BICVesting.sol";
 contract Erc20MessageEmitterScript is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        address donationTreasury = vm.envAddress("DONATION_TREASURY");
-        address donationOwner = vm.envAddress("DONATION_OWNER");
+        address donationTreasury = vm.envAddress("DONATION_ERC20_TREASURY");
+        address donationOwner = vm.envAddress("DONATION_ERC20_OWNER");
         vm.startBroadcast(deployerPrivateKey);
 
         Erc20TransferMessage erc20MessageEmitter = new Erc20TransferMessage(donationTreasury, donationOwner);
