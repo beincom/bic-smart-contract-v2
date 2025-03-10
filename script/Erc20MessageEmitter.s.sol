@@ -9,13 +9,12 @@ import {BICVesting} from "../src/vest/BICVesting.sol";
 contract Erc20MessageEmitterScript is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+        address donationTreasury = vm.envAddress("DONATION_TREASURY");
+        address donationOwner = vm.envAddress("DONATION_OWNER");
         vm.startBroadcast(deployerPrivateKey);
 
-        Erc20TransferMessage erc20MessageEmitter = new Erc20TransferMessage(operator);
+        Erc20TransferMessage erc20MessageEmitter = new Erc20TransferMessage(donationTreasury, donationOwner);
         console.log("Erc20TransferMessage deployed at:", address(erc20MessageEmitter));
-        erc20MessageEmitter.setFeeBps(600);
-        erc20MessageEmitter.setTreasury(address(0x52cEA6663515882904d5D326dDFC272EB39134d9));
-        erc20MessageEmitter.transferOwnership(address(0x52cEA6663515882904d5D326dDFC272EB39134d9));
         vm.stopBroadcast();
     }
 }

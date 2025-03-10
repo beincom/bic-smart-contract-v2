@@ -11,6 +11,8 @@ contract TokenRegistry is Ownable {
     event TokenERC20Added(address indexed token, uint256 blockAt);
     event TokenERC721Added(address indexed token, uint256 blockAt);
 
+    constructor (address initialOwner) Ownable(initialOwner) {}
+
     function registerERC20(address token, uint256 blockAt) external onlyOwner {
         require(!tokens[token], "TokenRegistry: token already registered");
         tokens[token] = true;
