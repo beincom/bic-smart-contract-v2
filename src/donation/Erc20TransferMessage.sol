@@ -40,6 +40,7 @@ contract Erc20TransferMessage is Ownable {
 
     constructor(address _treasury, address _owner) Ownable(_owner) {
         treasury = _treasury;
+        feeBps = 600;
     }
 
     /**
