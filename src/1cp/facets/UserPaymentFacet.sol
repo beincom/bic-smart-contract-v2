@@ -8,45 +8,45 @@ import { Initializable } from "../utils/Initializable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-contract DonationFacet is Initializable {
+contract UserPaymentFacet is Initializable {
     using SafeERC20 for IERC20;
-    /// Struct
-    struct DonationConfigStorage {
+    // Struct
+    struct UserPaymentStorage {
         uint256 surchargeFee;
         uint256 bufferPostOp;
-        address donationTreasury;
+        address userTreasury;
         address paymentToken;
     }
 
     /// Errors
-    error ZeroDonation();
+    error ZeroPayment();
     error ZeroAddress();
     error InvalidSurchargeFee(uint256 surchargeFee);
 
     /// Storage
     uint256 internal constant DENOMINATOR = 1e10;
-    bytes32 internal constant DONATION_CONFIG_STORAGE_POSITION = keccak256("1CP.donation.config.storage");
+    bytes32 internal constant USER_CONFIG_STORAGE_POSITION = keccak256("1CP.user.config.storage");
 
     /// Events
-    event InitializedDonationConfig(
+    event InitializedUserPaymentConfig(
         address treasury,
         address paymentToken,
         uint256 surchargeFee,
         uint256 bufferPostOp
     );
-    event DonationTreasuryUpdated(address updater, address newTreasury);
+    event UserTreasuryUpdated(address updater, address newTreasury);
     event PaymentTokenUpdated(address updater, address newPaymentToken);
     event SurchargeFeeUpdated(address updater, uint256 surchargeFee);
     event BufferPostOpUpdated(address updater, uint256 bufferPostOp);
-    event Donated(
+    event AccountBought(
         address token,
         address from,
         address to,
         uint256 amount,
         uint256 surcharge,
-        string message
+        string orderId
     );
-    event CallDonation(
+    event CallBuyAccount(
         address caller,
         address token,
         address from,
@@ -54,28 +54,28 @@ contract DonationFacet is Initializable {
         uint256 amount,
         uint256 surcharge,
         uint256 fee,
-        string message
+        string orderId
     );
 
-    /// @notice Get donation config storage
-    function getDonationConfigStorage() external pure returns (
+    /// @notice Get user config storage
+    function getUserPaymentStorage() external pure returns (
         uint256 surchargeFee,
         uint256 bufferPostOp,
-        address contentTreasury,
+        address userTreasury,
         address paymentToken
     ) {
-        DonationConfigStorage memory s = getStorage();
-        return (s.surchargeFee, s.bufferPostOp, s.donationTreasury, s.paymentToken);
+        UserPaymentStorage memory s = getStorage();
+        return (s.surchargeFee, s.bufferPostOp, s.userTreasury, s.paymentToken);
     }
 
     /**
-     * @notice Initialize donation config
-     * @param treasury the donation treasury address
-     * @param paymentToken The payment token address used for reimbursing gas fee via callDonation
+     * @notice Initialize user payment config
+     * @param treasury the user treasury address
+     * @param paymentToken The payment token address used for reimbursing gas fee via callBuyAccount
      * @param surchargeFee The surcharge fee used for deducting upfront fee of the specific services
-     * @param bufferPostOp The additional gas used for additional execution via callDonation
+     * @param bufferPostOp The additional gas used for additional execution via callBuyAccount
      */
-    function initializeDonationConfig(
+    function initializeUserPaymentConfig(
         address treasury,
         address paymentToken,
         uint256 surchargeFee,
@@ -88,105 +88,101 @@ contract DonationFacet is Initializable {
         if (surchargeFee > 10_000) {
             revert InvalidSurchargeFee(surchargeFee);
         }
-        DonationConfigStorage storage s = getStorage();
-        s.donationTreasury = treasury;
+        UserPaymentStorage storage s = getStorage();
+        s.userTreasury = treasury;
         s.paymentToken = paymentToken;
         s.surchargeFee = surchargeFee;
         s.bufferPostOp = bufferPostOp;
-        emit InitializedDonationConfig(treasury, paymentToken, surchargeFee, bufferPostOp);
+        emit InitializedUserPaymentConfig(treasury, paymentToken, surchargeFee, bufferPostOp);
     }
 
-    /// @notice Update donation treasury address
-    /// @param newTreasury The new donation treasury address
-    function updateDonationTreasury(address newTreasury) external {
+    /// @notice Update user treasury address
+    /// @param newTreasury The new user treasury address
+    function updateUserTreasury(address newTreasury) external {
         LibDiamond.enforceIsContractOwner();
         if (newTreasury == address(0)) {
             revert ZeroAddress();
         }
-        DonationConfigStorage storage s = getStorage();
-        s.donationTreasury = newTreasury;
-        emit DonationTreasuryUpdated(msg.sender, newTreasury);
+        UserPaymentStorage storage s = getStorage();
+        s.userTreasury = newTreasury;
+        emit UserTreasuryUpdated(msg.sender, newTreasury);
     }
 
-    /// @notice Update donation payment token address
-    /// @param paymentToken The payment token address used for reimbursing gas fee via callDonation
-    function updateDonationPaymentToken(address paymentToken) external {
+    /// @notice Update user payment token address
+    /// @param paymentToken The payment token address used for reimbursing gas fee via callBuyAccount
+    function updateUserPaymentToken(address paymentToken) external {
         LibDiamond.enforceIsContractOwner();
         if (paymentToken == address(0)) {
             revert ZeroAddress();
         }
-        DonationConfigStorage storage s = getStorage();
+        UserPaymentStorage storage s = getStorage();
         s.paymentToken = paymentToken;
         emit PaymentTokenUpdated(msg.sender, paymentToken);
     }
 
     /// @notice Update surcharge fee
     /// @param surchargeFee The surcharge fee used for deducting upfront fee of the specific services
-    function updateDonationSurchargeFee(uint256 surchargeFee) external {
+    function updateUserSurchargeFee(uint256 surchargeFee) external {
         LibDiamond.enforceIsContractOwner();
         if (surchargeFee > 10_000) {
             revert InvalidSurchargeFee(surchargeFee);
         }
-        DonationConfigStorage storage s = getStorage();
+        UserPaymentStorage storage s = getStorage();
         s.surchargeFee = surchargeFee;
         emit SurchargeFeeUpdated(msg.sender, surchargeFee);
     }
 
     /// @notice Update buffer gas for post ops
-    /// @param bufferPostOp The additional gas used for additional execution via callDonation
-    function updateDonationBufferPostOp(uint256 bufferPostOp) external {
+    /// @param bufferPostOp The additional gas used for additional execution via callBuyAccount
+    function updateUserBufferPostOp(uint256 bufferPostOp) external {
         LibDiamond.enforceIsContractOwner();
-        DonationConfigStorage storage s = getStorage();
+        UserPaymentStorage storage s = getStorage();
         s.bufferPostOp = bufferPostOp;
         emit BufferPostOpUpdated(msg.sender, bufferPostOp);
     }
 
     /**
-     * @notice Donate a specific token
-     * @param token The token donated
-     * @param to The beneficiary address received donation
-     * @param amount The donated amount
-     * @param message The message triggered to donation
+     * @notice Buy a specific premium account
+     * @param token The payment token
+     * @param to The seller adderss
+     * @param amount The selling amount
+     * @param orderId The off-chain orderId based on services
      */
-    function donate(
+    function buyAccount(
         address token,
         address to,
         uint256 amount,
-        string calldata message
+        string memory orderId
     ) external {
         if (amount == 0) {
-            revert ZeroDonation();
+            revert ZeroPayment();
         }
-        DonationConfigStorage storage s = getStorage();
+        UserPaymentStorage storage s = getStorage();
         uint256 surcharge = amount * s.surchargeFee / 10_000;
         IERC20(token).safeTransferFrom(msg.sender, to, amount - surcharge);
-        
-        if (surcharge > 0) {
-            IERC20(token).safeTransferFrom(msg.sender, s.donationTreasury, surcharge);
-        }
-
-        emit Donated(token, msg.sender, to, amount, surcharge, message);
+        IERC20(token).safeTransferFrom(msg.sender, s.userTreasury, surcharge);
+        emit AccountBought(token, msg.sender, to, amount, surcharge, orderId);
     }
 
     /**
-     * @notice Donate a specific token via callers
-     * @param token The token donated
-     * @param from The donator address
-     * @param to The beneficiary address received donation
-     * @param amount The donated amount
-     * @param message The message triggered to donation
+     * @notice Buy a specific premium account via callers
+     * @param token The payment token
+     * @param from The buyer address
+     * @param to The seller address
+     * @param amount The selling amount
+     * @param orderId The off-chain orderId based on services
      * @param maxFeePerGas The maximum fee per a gas unit
      * @param maxPriorityFeePerGas The maximum priority fee per a gas unit
      * @param paymentPrice The exchanged ratio of payment token and native gas token
      * @return The actual gas cost
      * @return The actual payment cost
      */
-    function callDonation(
+    function callBuyAccount(
         address token,
         address from,
         address to,
         uint256 amount,
-        string memory message,
+        string memory orderId,
         uint256 maxFeePerGas,
         uint256 maxPriorityFeePerGas,
         uint256 paymentPrice
@@ -194,24 +190,18 @@ contract DonationFacet is Initializable {
         uint256 preGas = gasleft();
         LibAccess.enforceAccessControl();
         if (amount == 0) {
-            revert ZeroDonation();
+            revert ZeroPayment();
         }
-        DonationConfigStorage storage s = getStorage();
-        uint256 surcharge = amount * s.surchargeFee / 10_000;
-        IERC20(token).safeTransferFrom(from, to, amount - surcharge);
-        
-        if (surcharge > 0) {
-            IERC20(token).safeTransferFrom(from, s.donationTreasury, surcharge);
-        }
-        
+        UserPaymentStorage storage s = getStorage();
         uint256 gasPrice = getUserOpGasPrice(maxFeePerGas, maxPriorityFeePerGas);
         uint256 actualGas = preGas - gasleft() + s.bufferPostOp;
         uint256 actualGasCost = actualGas * gasPrice;
         uint256 actualPaymentCost = actualGasCost * paymentPrice / DENOMINATOR;
-        
-        IERC20(s.paymentToken).safeTransferFrom(from, s.donationTreasury, actualPaymentCost);
-        
-        emit CallDonation(
+        uint256 surcharge = amount * s.surchargeFee / 10_000;
+        IERC20(token).safeTransferFrom(from, to, amount - surcharge);
+        IERC20(token).safeTransferFrom(from, s.userTreasury, surcharge);
+        IERC20(s.paymentToken).safeTransferFrom(from, s.userTreasury, actualPaymentCost);
+        emit CallBuyAccount(
             msg.sender,
             token,
             from,
@@ -219,21 +209,21 @@ contract DonationFacet is Initializable {
             amount,
             surcharge,
             actualPaymentCost,
-            message
+            orderId
         );
         return (actualGasCost, actualPaymentCost);
     }
-    
-    /// @notice Get storage position of donation configuration
-    function getStorage() internal pure returns (DonationConfigStorage storage dc) {
-        bytes32 position = DONATION_CONFIG_STORAGE_POSITION;
+
+    /// @notice Get storage position of user configuration
+    function getStorage() internal pure returns (UserPaymentStorage storage dc) {
+        bytes32 position = USER_CONFIG_STORAGE_POSITION;
         // solhint-disable-next-line no-inline-assembly
         assembly {
             dc.slot := position
         }
     }
 
-    /// the gas price this UserOp agrees to pay.
+    /// The gas price this UserOp agrees to pay.
     /// relayer/block builder might submit the TX with higher priorityFee, but the user should not
     function getUserOpGasPrice(uint256 maxFeePerGas, uint256 maxPriorityFeePerGas) internal view returns (uint256) {
         unchecked {

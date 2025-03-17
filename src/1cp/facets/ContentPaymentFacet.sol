@@ -4,10 +4,11 @@ pragma solidity ^0.8.23;
 
 import { LibAccess } from "../libraries/LibAccess.sol";
 import { LibDiamond } from "../libraries/LibDiamond.sol";
+import { Initializable } from "../utils/Initializable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-contract ContentPaymentFacet {
+contract ContentPaymentFacet is Initializable {
     using SafeERC20 for IERC20;
     // Struct
     struct ContentPaymentStorage {
@@ -27,6 +28,12 @@ contract ContentPaymentFacet {
     bytes32 internal constant CONTENT_CONFIG_STORAGE_POSITION = keccak256("1CP.content.config.storage");
 
     /// Events
+    event InitializedContentPaymentConfig(
+        address treasury,
+        address paymentToken,
+        uint256 surchargeFee,
+        uint256 bufferPostOp
+    );
     event ContentTreasuryUpdated(address updater, address newTreasury);
     event PaymentTokenUpdated(address updater, address newPaymentToken);
     event SurchargeFeeUpdated(address updater, uint256 surchargeFee);
@@ -61,8 +68,36 @@ contract ContentPaymentFacet {
         return (s.surchargeFee, s.bufferPostOp, s.contentTreasury, s.paymentToken);
     }
 
-    /// @notice Update donation treasury address
-    /// @param newTreasury The new donation treasury address
+    /**
+     * @notice Initialize content payment config
+     * @param treasury the content treasury address
+     * @param paymentToken The payment token address used for reimbursing gas fee via callBuyContent
+     * @param surchargeFee The surcharge fee used for deducting upfront fee of the specific services
+     * @param bufferPostOp The additional gas used for additional execution via callBuyContent
+     */
+    function initializeContentPaymentConfig(
+        address treasury,
+        address paymentToken,
+        uint256 surchargeFee,
+        uint256 bufferPostOp
+    ) external initializer {
+        LibDiamond.enforceIsContractOwner();
+        if (treasury == address(0) || paymentToken == address(0)) {
+            revert ZeroAddress();
+        }
+        if (surchargeFee > 10_000) {
+            revert InvalidSurchargeFee(surchargeFee);
+        }
+        ContentPaymentStorage storage s = getStorage();
+        s.contentTreasury = treasury;
+        s.paymentToken = paymentToken;
+        s.surchargeFee = surchargeFee;
+        s.bufferPostOp = bufferPostOp;
+        emit InitializedContentPaymentConfig(treasury, paymentToken, surchargeFee, bufferPostOp);
+    }
+
+    /// @notice Update content treasury address
+    /// @param newTreasury The new content treasury address
     function updateContentTreasury(address newTreasury) external {
         LibDiamond.enforceIsContractOwner();
         if (newTreasury == address(0)) {
@@ -73,7 +108,7 @@ contract ContentPaymentFacet {
         emit ContentTreasuryUpdated(msg.sender, newTreasury);
     }
 
-    /// @notice Update donation payment token address
+    /// @notice Update content payment token address
     /// @param paymentToken The payment token address used for reimbursing gas fee via callBuyContent
     function updateContentPaymentToken(address paymentToken) external {
         LibDiamond.enforceIsContractOwner();

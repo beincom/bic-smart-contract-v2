@@ -40,7 +40,7 @@ contract DonationFacetTest is OneCPTestBase {
         DonationFacet donationFacet = new DonationFacet();
 
         // prepare function selectors
-        bytes4[] memory functionSelectors = new bytes4[](7);
+        bytes4[] memory functionSelectors = new bytes4[](8);
         functionSelectors[0] = donationFacet.updateDonationTreasury.selector;
         functionSelectors[1] = donationFacet.updateDonationPaymentToken.selector;
         functionSelectors[2] = donationFacet.updateDonationSurchargeFee.selector;
@@ -48,6 +48,7 @@ contract DonationFacetTest is OneCPTestBase {
         functionSelectors[4] = donationFacet.donate.selector;
         functionSelectors[5] = donationFacet.callDonation.selector;
         functionSelectors[6] = donationFacet.getDonationConfigStorage.selector;
+        functionSelectors[7] = donationFacet.initializeDonationConfig.selector;
 
         // prepare diamondCut
         LibDiamond.FacetCut[] memory cuts = new LibDiamond.FacetCut[](1);
@@ -61,16 +62,26 @@ contract DonationFacetTest is OneCPTestBase {
         DiamondCutFacet(address(oneCP)).diamondCut(cuts, address(0), "");
 
         // update donation config
-        DonationFacet(address(oneCP)).updateDonationTreasury(donationTreasury);
-        DonationFacet(address(oneCP)).updateDonationPaymentToken(address(tBIC));
-        DonationFacet(address(oneCP)).updateDonationSurchargeFee(surchargeFee);
-        DonationFacet(address(oneCP)).updateDonationBufferPostOp(bufferPostOp);
+        DonationFacet(address(oneCP)).initializeDonationConfig(
+            donationTreasury,
+            address(tBIC),
+            surchargeFee,
+            bufferPostOp    
+        );
 
         // grant caller access to callDonation
         setAccessToSelector(donationFacet.callDonation.selector, caller, true); 
     }
 
-    function test_config() public view {
+    function test_config() public {
+        vm.startPrank(oneCPOwner);
+        vm.expectRevert();
+        DonationFacet(address(oneCP)).initializeDonationConfig(
+            donationTreasury,
+            address(tBIC),
+            surchargeFee,
+            bufferPostOp    
+        );
         (
             uint256 surchargeConfig,
             uint256 postOpConfig,

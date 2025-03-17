@@ -23,6 +23,7 @@ contract OneCPDeployScript is Script {
         console.log("DiamondCutFacet deployed at:", address(diamondCutFacet));
 
         OneCPDiamond oneCP = new OneCPDiamond(oneCPOwner, address(diamondCutFacet));
+        console.log("OneCP deployed at:", address(oneCP));
         addOwnershipFacet(address(oneCP));
         addDiamondLoupeFacet(address(oneCP));
         addAccessManagerFacet(address(oneCP));

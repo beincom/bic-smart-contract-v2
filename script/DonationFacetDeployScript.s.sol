@@ -13,12 +13,10 @@ import {LibDiamond} from "../src/1cp/libraries/LibDiamond.sol";
 contract DonationFacetDeployScript is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        address oneCPOwner = vm.envAddress("ONECP_OWNER");
-        address pauserWaller = vm.envAddress("PAUSER_WALLET");
         address oneCP = vm.envAddress("ONE_CP");
-        address paymentToken = vm.envAddress("PAYMENT_TOKEN");
+        address donationPaymentToken = vm.envAddress("DONATION_PAYMENT_TOKEN");
         address donationTreasury = vm.envAddress("DONATION_TREASURY");
-        address caller = vm.envAddress("CALLER");
+        address donationCaller = vm.envAddress("DONATION_CALLER");
         uint256 surchargeFee = 1000;
         uint256 bufferPostOp = 21000;
 
@@ -28,13 +26,15 @@ contract DonationFacetDeployScript is Script {
         addDonationFacet(oneCP);
 
         // update donation config
-        DonationFacet(oneCP).updateDonationTreasury(donationTreasury);
-        DonationFacet(oneCP).updateDonationPaymentToken(paymentToken);
-        DonationFacet(oneCP).updateDonationSurchargeFee(surchargeFee);
-        DonationFacet(oneCP).updateDonationBufferPostOp(bufferPostOp);
-
+        DonationFacet(oneCP).initializeDonationConfig(
+            donationTreasury,
+            donationPaymentToken,
+            surchargeFee,
+            bufferPostOp    
+        );
+        
         // grant caller access to callDonation
-        setAccessToSelector(oneCP, DonationFacet.callDonation.selector, caller, true);
+        setAccessToSelector(oneCP, DonationFacet.callDonation.selector, donationCaller, true);
 
         vm.stopBroadcast();
     }
@@ -43,7 +43,7 @@ contract DonationFacetDeployScript is Script {
         DonationFacet donationFacet = new DonationFacet();
 
         // prepare function selectors
-        bytes4[] memory functionSelectors = new bytes4[](7);
+        bytes4[] memory functionSelectors = new bytes4[](8);
         functionSelectors[0] = donationFacet.updateDonationTreasury.selector;
         functionSelectors[1] = donationFacet.updateDonationPaymentToken.selector;
         functionSelectors[2] = donationFacet.updateDonationSurchargeFee.selector;
@@ -51,6 +51,7 @@ contract DonationFacetDeployScript is Script {
         functionSelectors[4] = donationFacet.donate.selector;
         functionSelectors[5] = donationFacet.callDonation.selector;
         functionSelectors[6] = donationFacet.getDonationConfigStorage.selector;
+        functionSelectors[7] = donationFacet.initializeDonationConfig.selector;
 
         // prepare diamondCut
         LibDiamond.FacetCut[] memory cuts = new LibDiamond.FacetCut[](1);
