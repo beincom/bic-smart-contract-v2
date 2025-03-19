@@ -49,7 +49,7 @@ contract ThirdwebMarketplaceV3Deployer is Script {
                 "",
                 trustedForwarders,
                 treasury,
-                6000
+                600
             ),
             0x0000000000000000000000000000000000000000000000000000000000000001
         );
