@@ -24,7 +24,7 @@ contract HandleBaseDeployScript is Script {
     function deployHandleUri(address deployOwner, address afterDeployOwner) internal {
         HandleTokenURI handleTokenURI = new HandleTokenURI(deployOwner);
         console.log("HandleTokenURI deployed at:", address(handleTokenURI));
-        // handleTokenURI.transferOwnership(afterDeployOwner);
+        handleTokenURI.transferOwnership(afterDeployOwner);
     }
 
     function deployHandle() internal {
@@ -44,7 +44,7 @@ contract HandleBaseDeployScript is Script {
         handleController.setMarketplace(marketPlace);
         handleController.setVerifier(verifier);
         console.log("HandleController deployed at:", address(handleController));
-        // handleController.transferOwnership(afterDeployOwner);
+        handleController.transferOwnership(afterDeployOwner);
 
         BicForwarder bicForwarder = BicForwarder(forwarder);
         bicForwarder.addController(address(handleController));
