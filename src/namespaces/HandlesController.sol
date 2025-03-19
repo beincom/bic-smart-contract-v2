@@ -153,6 +153,8 @@ contract HandlesController is ReentrancyGuard, Ownable {
     error InvalidBidBuffer();
     /// @dev Revert when invalid buyout
     error InvalidBuyout();
+    /// @dev Revert when invalid auction
+    error InvalidAuction();
 
     /**
      * @notice Initializes the HandlesController contract with the given BIC token address.
@@ -346,11 +348,8 @@ contract HandlesController is ReentrancyGuard, Ownable {
         if(!_verifySignature(dataHash, signature)) {
             revert InvalidCollectAuctionSignature();
         }
-
         IEnglishAuctions.Auction memory auction = IEnglishAuctions(marketplace).getAuction(auctionId);
-        if(auction.assetContract == address(0)) {
-            revert ZeroAssetContract();
-        }
+        _validateValidAuction(auction);
         _payout(amount, beneficiaries, collects, auction.tokenId, auction.assetContract);
         auctionCanClaim[auctionId] = false;
     }
@@ -509,7 +508,7 @@ contract HandlesController is ReentrancyGuard, Ownable {
 
     function _validateHandleRequest(
         HandleRequest memory rq
-    ) internal {
+    ) view internal {
         if(rq.receiver == address(0)) {
             revert ZeroAddress();
         }
@@ -545,7 +544,7 @@ contract HandlesController is ReentrancyGuard, Ownable {
         uint256 auctionId,
         address[] calldata beneficiaries,
         uint256[] calldata collects
-    ) internal {
+    ) view internal {
         if(!auctionCanClaim[auctionId]) {
             revert AuctionNotClaimable(auctionId);
         }
@@ -559,6 +558,29 @@ contract HandlesController is ReentrancyGuard, Ownable {
         if (totalCollects > collectsDenominator) {
             revert InvalidCollectsDenominator(totalCollects, collectsDenominator);
         }
+    }
+
+    function _validateValidAuction(
+        IEnglishAuctions.Auction memory auction
+        // uint256 sharedAmount
+    ) view internal {
+        if(auction.assetContract == address(0)) {
+            revert ZeroAssetContract();
+        }
+        if(auction.endTimestamp > block.timestamp) {
+            revert InvalidAuction();
+        }
+
+        // Make sure the auction has winner
+        (address bidder, ,) = IEnglishAuctions(marketplace).getWinningBid(auction.auctionId);
+        if(bidder == address(0)) {
+            revert InvalidAuction();
+        }
+        // Actual wining bid amount must to greater than or equal to amount shared revenue
+        // Should not check this condition because it can be flexible to collect by Service instead of FE
+        // if(bidAmount < sharedAmount) {
+        //     revert InvalidAuction();
+        // }
     }
 
     /**
