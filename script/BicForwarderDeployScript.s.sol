@@ -18,10 +18,10 @@ contract BicForwarderDeployScript is Script {
 }
 
 contract AddControllerScript is Script {
-    BicForwarder forwarder = BicForwarder(0xc4C47b7539F7876485b96DE6970c602050810Ca5);
+    BicForwarder forwarder = BicForwarder(0x73cc7bD89065028C700aA6b3102089938dCAbcd5);
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        address controllerAddress = address(0x134231A5F66637625c90D65a3bc5Be187BB94466);
+        address controllerAddress = address(0x5Be1D7b5552c39c0fd25C1C5cd9DfF0b094b9272);
 
         vm.startBroadcast(deployerPrivateKey);
         forwarder.addController(controllerAddress);

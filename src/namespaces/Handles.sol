@@ -229,10 +229,7 @@ contract Handles is ERC721Upgradeable, ERC2981, IHandles {
     function supportsInterface(
         bytes4 interfaceId
     ) public view virtual override(ERC721Upgradeable, ERC2981, IERC165) returns (bool) {
-        return (
-            interfaceId == type(IHandles).interfaceId ||
-            super.supportsInterface(interfaceId) || ERC2981.supportsInterface(interfaceId)
-        );
+        return (ERC721Upgradeable.supportsInterface(interfaceId));
     }
 
     //////////////////////////////////////
