@@ -1,47 +1,28 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import {IBicForwarder} from "../interfaces/IBicForwarder.sol";
 
 contract BicForwarder is IBicForwarder, Ownable {
-    using EnumerableSet for EnumerableSet.AddressSet;
-
-    /// @notice Address of the controllers with administrative privileges.
-    EnumerableSet.AddressSet private _controllers;
-
-    constructor(address _initOwner) Ownable(_initOwner) {
-        
-    }
+    bytes32 public constant CONTROLLER_ROLE = keccak256("CONTROLLER_ROLE");
+    mapping(address => bool) public isController;
     /**
      * @notice Ensures that the function is called only by the controller.
      */
+
+    constructor(address _owner) Ownable(_owner) {}
+    
     modifier onController() {
-        if (!_controllers.contains(msg.sender)) {
-            revert NotController();
-        }
+        require(
+            isController[msg.sender],
+            "BicForwarder: caller is not a controller"
+        );
         _;
     }
 
-    function getControllers() external view returns (address[] memory) {
-        return _controllers.values();
-    }
-
     function addController(address _controller) external onlyOwner {
-        if(_controllers.contains(_controller)) {
-            revert AlreadyController();
-        }
-        _controllers.add(_controller);
-        emit AddedController(_controller);
-    }
-
-    function removeController(address _controller) external onlyOwner {
-        if(!_controllers.contains(_controller)) {
-            revert NotController();
-        }
-        _controllers.remove(_controller);
-        emit RemovedController(_controller);
+        isController[_controller] = true;
     }
 
     function forwardRequest(RequestData memory requestData) external onController override {

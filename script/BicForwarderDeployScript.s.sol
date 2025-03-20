@@ -3,22 +3,19 @@ pragma solidity ^0.8.23;
 
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
-import {BicForwarder} from "../src/utils/BicForwarder.sol";
+import {BicForwarder} from "../src/forwarder/BicForwarder.sol";
 
-contract DeployBicForwarderScript is Script {
+contract BicForwarderDeployScript is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        address forwarderOwner = vm.envAddress("FORWARDER_OWNER_ADDRESS");
-
+        address deployOwner = vm.addr(deployerPrivateKey);
+        address afterDeployOwner = vm.envAddress("AFTER_DEPLOY_OWNER");
         vm.startBroadcast(deployerPrivateKey);
-        BicForwarder forwarder = new BicForwarder(forwarderOwner);
-        console.log("BicForwarder deployed at:", address(forwarder));
-
-
+        BicForwarder bicForwarder = new BicForwarder(deployOwner);
+        // bicForwarder.transferOwnership(afterDeployOwner);
         vm.stopBroadcast();
     }
 }
-
 
 contract AddControllerScript is Script {
     BicForwarder forwarder = BicForwarder(0xc4C47b7539F7876485b96DE6970c602050810Ca5);
@@ -33,3 +30,4 @@ contract AddControllerScript is Script {
         vm.stopBroadcast();
     }
 }
+

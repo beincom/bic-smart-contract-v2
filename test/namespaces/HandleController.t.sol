@@ -2,7 +2,7 @@
 pragma solidity ^0.8.23;
 
 import {HandlesController} from "../../src/namespaces/HandlesController.sol";
-import {Handles} from "../../src/namespaces/Handle.sol";
+import {Handles} from "../../src/namespaces/Handles.sol";
 import {IEnglishAuctions} from "../../src/interfaces/IMarketplace.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
@@ -191,6 +191,7 @@ contract HandleControllerTest is Test {
 
          // Record the initial token balance of the beneficiary.
         uint256 beneficiaryBalanceBefore = bic.balanceOf(beneficiaries[0]);
+        uint256 treasuryBalanceBefore = bic.balanceOf(collector);
 
         // Call collectAuctionPayout.
         handlesController.collectAuctionPayout(auctionId, payoutAmount, beneficiaries, collects, signature);
@@ -201,10 +202,17 @@ contract HandleControllerTest is Test {
 
         // Verify that the beneficiary received the correct amount.
         uint256 beneficiaryBalanceAfter = bic.balanceOf(beneficiaries[0]);
+        uint256 treasuryBalanceAfter = bic.balanceOf(collector);
+        
         assertEq(
             beneficiaryBalanceAfter - beneficiaryBalanceBefore,
             (payoutAmount * collects[0]) / 10000,
             "Beneficiary did not receive the correct payout amount"
+        );
+        assertEq(
+            treasuryBalanceAfter - treasuryBalanceBefore,
+            (payoutAmount * (10000 - collects[0])) / 10000,
+            "Treasury did not receive the correct payout amount"
         );
     }
 
