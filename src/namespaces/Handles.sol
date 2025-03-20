@@ -70,7 +70,6 @@ contract Handles is ERC721Upgradeable, ERC2981, IHandles {
     ) public initializer {
         __ERC721_init(name, symbol);
         _namespace = namespace;
-        _controllers.add(msg.sender);
         OPERATOR = operator;
     }
 

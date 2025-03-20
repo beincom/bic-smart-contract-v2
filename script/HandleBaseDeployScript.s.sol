@@ -15,9 +15,9 @@ contract HandleBaseDeployScript is Script {
         address deployOwner = vm.addr(deployerPrivateKey);
         address afterDeployOwner = vm.envAddress("AFTER_DEPLOY_OWNER");
         vm.startBroadcast(deployerPrivateKey);
-//        deployHandleUri(deployOwner, afterDeployOwner);
+        deployHandleUri(deployOwner, afterDeployOwner);
         deployHandle();
-//        deployHandleController(deployOwner, afterDeployOwner);
+        deployHandleController(deployOwner, afterDeployOwner);
         vm.stopBroadcast();
     }
 
