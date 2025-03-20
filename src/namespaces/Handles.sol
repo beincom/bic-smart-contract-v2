@@ -70,7 +70,6 @@ contract Handles is ERC721Upgradeable, ERC2981, IHandles {
     ) public initializer {
         __ERC721_init(name, symbol);
         _namespace = namespace;
-        _controllers.add(msg.sender);
         OPERATOR = operator;
     }
 
@@ -231,7 +230,8 @@ contract Handles is ERC721Upgradeable, ERC2981, IHandles {
     ) public view virtual override(ERC721Upgradeable, ERC2981, IERC165) returns (bool) {
         return (
             interfaceId == type(IHandles).interfaceId ||
-            super.supportsInterface(interfaceId) || ERC2981.supportsInterface(interfaceId)
+            ERC2981.supportsInterface(interfaceId) ||
+            ERC721Upgradeable.supportsInterface(interfaceId)
         );
     }
 
