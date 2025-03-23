@@ -10,7 +10,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
 
-import {IEnglishAuctions} from "../interfaces/IMarketplace.sol";
+import {IEnglishAuctions, IPlatformFee} from "../interfaces/IMarketplace.sol";
 import {IHandles} from "../interfaces/IHandles.sol";
 import {IBicForwarder} from "../interfaces/IBicForwarder.sol";
 
@@ -26,6 +26,13 @@ contract HandlesController is ReentrancyGuard, Ownable {
         DIRECT,
         COMMIT,
         AUCTION
+    }
+
+    enum AuctionErrorCode {
+        AUCTION_NOT_FOUND,
+        AUCTION_STILL_ALIVE,
+        NO_WINNER,
+        INSUFFICIENT_BALANCE_TO_SHARE
     }
 
     /**
@@ -147,8 +154,8 @@ contract HandlesController is ReentrancyGuard, Ownable {
     error InvalidCollectsDenominator(uint256 totalCollects, uint256 collectsDenominator);
     /// @dev Revert when auction duration is invalid
     error InvalidAuctionDuration();
-    /// @dev Revert when assetContract is zero
-    error ZeroAssetContract();
+    /// @dev Revert invalid auction
+    error InvalidAuction(AuctionErrorCode eType);
     /// @dev Revert when invalid bid buffer
     error InvalidBidBuffer();
     /// @dev Revert when invalid buyout
@@ -304,31 +311,7 @@ contract HandlesController is ReentrancyGuard, Ownable {
             }
         }
     }
-
-    /**
-     * @notice Collects the auction payouts after an auction concludes in the Thirdweb Marketplace. [LINK]: https://github.com/thirdweb-dev/contracts/tree/main/contracts/prebuilts/marketplace/english-auctions
-     * @dev This function is called after a successful auction on the Thirdweb Marketplace to distribute the auction proceeds.
-     *      The process involves two main steps:
-     *
-     *      1. The winning bidder claims the auction amount through the Thirdweb Marketplace contract, which transfers the funds to this HandleController contract.
-     *
-     *      2. This function is then called to distribute these funds among the predefined beneficiaries according to the specified shares.
-     *
-     *      This function ensures that only valid, unclaimed auctions can be processed and verifies the operation via signature.
-     *
-     *      It checks that the auction was marked as claimable, verifies the provided signature to ensure it comes from a valid source, and then performs the payout.
-     *
-     *      Once the payout is completed, it marks the auction as claimed to prevent re-claiming.
-     *
-     * @param auctionId The ID of the auction in the Thirdweb Marketplace contract.
-     * @param amount The total amount of Ether or tokens to be distributed to the beneficiaries.
-     * @param signature The signature from the authorized verifier to validate the claim operation.
-     *
-     * @notice The function will revert if:
-     *
-     *      - The auction associated with the handle is not marked as canClaim.
-     *      - The provided signature does not validate against the expected payload signed by the authorized signer.
-     */
+    
     function collectAuctionPayout(
         uint256 auctionId,
         uint256 amount,
@@ -349,10 +332,51 @@ contract HandlesController is ReentrancyGuard, Ownable {
 
         IEnglishAuctions.Auction memory auction = IEnglishAuctions(marketplace).getAuction(auctionId);
         if(auction.assetContract == address(0)) {
-            revert ZeroAssetContract();
+            revert InvalidAuction(AuctionErrorCode.AUCTION_NOT_FOUND);
         }
         _payout(amount, beneficiaries, collects, auction.tokenId, auction.assetContract);
         auctionCanClaim[auctionId] = false;
+    }
+
+    /**
+     * @notice Cron job to collect and share revenue from an auction.
+     * @dev Collects the auction payout and distributes the revenue to the beneficiaries.
+     * @param auctionId The ID of the auction in the Thirdweb Marketplace contract.
+     * @param amount The total amount of Ether or tokens to be distributed to the beneficiaries.
+     */
+    function collectAndShareRevenue(
+        uint256 auctionId,
+        uint256 amount,
+        address[] calldata beneficiaries,
+        uint256[] calldata collects
+    ) external nonReentrant {
+        _validateCollectAuctionPayout(auctionId, beneficiaries, collects);
+        if(!auctionCanClaim[auctionId]) {
+            revert AuctionNotClaimable(auctionId);
+        }
+        
+        IEnglishAuctions.Auction memory auction = IEnglishAuctions(marketplace).getAuction(auctionId);
+        if(auction.endTimestamp >= block.timestamp) {
+            revert InvalidAuction(AuctionErrorCode.AUCTION_STILL_ALIVE);
+        }
+        
+        (, address currency ,uint256 bidAmount) = IEnglishAuctions(marketplace).getWinningBid(auctionId);
+        if(currency != address(bic)) {
+            revert InvalidAuction(AuctionErrorCode.NO_WINNER);
+        }
+        if(bidAmount == 0) {
+            revert InvalidAuction(AuctionErrorCode.NO_WINNER);
+        }
+
+        IEnglishAuctions(marketplace).collectAuctionPayout(auctionId);
+        (,uint16 feeBps) = IPlatformFee(marketplace).getPlatformFeeInfo();
+        uint256 finalAmount = bidAmount * (10000 - feeBps) / 10000;
+        if (finalAmount < amount) {
+            revert InvalidAuction(AuctionErrorCode.INSUFFICIENT_BALANCE_TO_SHARE);
+        }
+        
+        auctionCanClaim[auctionId] = false;
+        _payout(amount, beneficiaries, collects, auction.tokenId, auction.assetContract);
     }
 
     /**
@@ -509,11 +533,8 @@ contract HandlesController is ReentrancyGuard, Ownable {
 
     function _validateHandleRequest(
         HandleRequest memory rq
-    ) internal {
-        if(rq.receiver == address(0)) {
-            revert ZeroAddress();
-        }
-        if(rq.handle == address(0)) {
+    ) view internal {
+        if(rq.receiver == address(0) || rq.handle == address(0)) {
             revert ZeroAddress();
         }
         if (rq.beneficiaries.length != rq.collects.length) {
@@ -545,7 +566,7 @@ contract HandlesController is ReentrancyGuard, Ownable {
         uint256 auctionId,
         address[] calldata beneficiaries,
         uint256[] calldata collects
-    ) internal {
+    ) view internal {
         if(!auctionCanClaim[auctionId]) {
             revert AuctionNotClaimable(auctionId);
         }
@@ -573,8 +594,14 @@ contract HandlesController is ReentrancyGuard, Ownable {
         address to,
         uint256 amount
     ) external onlyOwner {
-        IERC20(token).transfer(to, amount);
+        bool success;
+        if (token == address(0)) {
+            (success, ) = address(to).call{value: amount}("");
+        } else {
+            success = IERC20(token).transfer(to, amount);
+        }
         emit WithdrawToken(token, to, amount);
+
     }
 
     /**
