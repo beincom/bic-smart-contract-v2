@@ -66,28 +66,47 @@ contract HandlesControllerTest is Test {
         controller.setAuctionCanClaim(auctionId, true);
     }
 
+
     function testCollectAndShareRevenueSuccessful() public {
-        uint256 distributionAmount = bidAmount * (10000 - 600) / 10000;
-        address[] memory beneficiaries = new address[](2);
-        beneficiaries[0] = beneficiary1;
-        beneficiaries[1] = beneficiary2;
-        uint256[] memory collects = new uint256[](2);
-        collects[0] = 5000; // 50%
-        collects[1] = 4000; // 40%
+        // Collect and share revenue for a single auction.
 
         // Record balances before payout.
         uint256 balBeforeBen1 = bic.balanceOf(beneficiary1);
         uint256 balBeforeBen2 = bic.balanceOf(beneficiary2);
         uint256 balBeforeCollector = bic.balanceOf(collector);
 
-        controller.collectAndShareRevenue(auctionId, distributionAmount, beneficiaries, collects);
+       
+       
+        uint256[] memory collects = new uint256[](2);
+        collects[0] = 5000; // 50%
+        collects[1] = 4000; // 40%
+        
+        uint256[] memory auctionIds = new uint256[](1);
+        auctionIds[0] = auctionId;
+
+
+        uint256 distributionAmount = bidAmount * (10000 - 600) / 10000;
+        uint256[] memory amounts = new uint256[](1);
+        amounts[0] = distributionAmount;
+
+        address[][] memory beneficiariesList = new address[][](1);
+        address[] memory beneficiaries = new address[](2);
+        beneficiaries[0] = beneficiary1;
+        beneficiaries[1] = beneficiary2;
+        beneficiariesList[0] = beneficiaries;
+
+        uint256[][] memory collectsList = new uint256[][](1);
+        collectsList[0] = collects;
+
+        bool[] memory isAuctionsCollectedList = new bool[](1);
+        isAuctionsCollectedList[0] = true;
+
+        controller.collectAndShareRevenue(auctionIds, amounts, beneficiariesList, collectsList, isAuctionsCollectedList);
 
         // Verify auctionCanClaim has been updated.
         assertFalse(controller.auctionCanClaim(auctionId), "Auction should not be claimable after revenue collection");
 
         // Calculate and verify correct payouts.
-        // Beneficiary1 should receive 500 * 6000 / 10000 = 300 tokens.
-        // Beneficiary2 should receive 500 * 4000 / 10000 = 200 tokens.
         uint256 balAfterBen1 = bic.balanceOf(beneficiary1);
         uint256 balAfterBen2 = bic.balanceOf(beneficiary2);
         uint256 balAfterCollector = bic.balanceOf(collector);

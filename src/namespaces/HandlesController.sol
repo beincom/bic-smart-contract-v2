@@ -28,11 +28,12 @@ contract HandlesController is ReentrancyGuard, Ownable {
         AUCTION
     }
 
-    enum AuctionErrorCode {
+    enum ShareRevenueErrorCode {
         AUCTION_NOT_FOUND,
         AUCTION_STILL_ALIVE,
         NO_WINNER,
-        INSUFFICIENT_BALANCE_TO_SHARE
+        INSUFFICIENT_BALANCE_TO_SHARE,
+        INVALID_PARAMETERS_LENGTH
     }
 
     /**
@@ -155,7 +156,7 @@ contract HandlesController is ReentrancyGuard, Ownable {
     /// @dev Revert when auction duration is invalid
     error InvalidAuctionDuration();
     /// @dev Revert invalid auction
-    error InvalidAuction(AuctionErrorCode eType);
+    error InvalidShareRevenue(ShareRevenueErrorCode eType);
     /// @dev Revert when invalid bid buffer
     error InvalidBidBuffer();
     /// @dev Revert when invalid buyout
@@ -332,49 +333,85 @@ contract HandlesController is ReentrancyGuard, Ownable {
 
         IEnglishAuctions.Auction memory auction = IEnglishAuctions(marketplace).getAuction(auctionId);
         if(auction.assetContract == address(0)) {
-            revert InvalidAuction(AuctionErrorCode.AUCTION_NOT_FOUND);
+            revert InvalidShareRevenue(ShareRevenueErrorCode.AUCTION_NOT_FOUND);
         }
         _payout(amount, beneficiaries, collects, auction.tokenId, auction.assetContract);
         auctionCanClaim[auctionId] = false;
     }
 
     /**
-     * @notice Cron job to collect and share revenue from an auction.
+     * @notice Cron job to collect and share revenue from multiple auctions.
+     * @dev Collects the auction payouts and distributes the revenue to the beneficiaries.
+     * @param auctionIds The IDs of the auctions in the Thirdweb Marketplace contract.
+     * @param amounts The total amounts of Ether or tokens to be distributed to the beneficiaries for each auction.
+     * @param beneficiariesList The list of beneficiaries for each auction.
+     * @param collectsList The list of collects for each auction.
+     */
+    function collectAndShareRevenue(
+        uint256[] calldata auctionIds,
+        uint256[] calldata amounts,
+        address[][] calldata beneficiariesList,
+        uint256[][] calldata collectsList,
+        bool[] calldata isAuctionsCollectedList
+    ) external nonReentrant {
+        if (
+            auctionIds.length != amounts.length ||
+            auctionIds.length != beneficiariesList.length ||
+            auctionIds.length != collectsList.length ||
+            auctionIds.length != isAuctionsCollectedList.length
+        ) {
+            revert InvalidShareRevenue(ShareRevenueErrorCode.INVALID_PARAMETERS_LENGTH);
+        }
+
+        for (uint256 i = 0; i < auctionIds.length; i++) {
+            _collectAndShareRevenue(
+                auctionIds[i],
+                amounts[i],
+                beneficiariesList[i],
+                collectsList[i]
+            );
+        }
+    }
+
+    /**
+     * @notice Internal function to collect and share revenue for a single auction.
      * @dev Collects the auction payout and distributes the revenue to the beneficiaries.
      * @param auctionId The ID of the auction in the Thirdweb Marketplace contract.
      * @param amount The total amount of Ether or tokens to be distributed to the beneficiaries.
+     * @param beneficiaries The beneficiaries for the auction.
+     * @param collects The collects for the auction.
      */
-    function collectAndShareRevenue(
+    function _collectAndShareRevenue(
         uint256 auctionId,
         uint256 amount,
         address[] calldata beneficiaries,
         uint256[] calldata collects
-    ) external nonReentrant {
+    ) internal {
         _validateCollectAuctionPayout(auctionId, beneficiaries, collects);
-        if(!auctionCanClaim[auctionId]) {
+        if (!auctionCanClaim[auctionId]) {
             revert AuctionNotClaimable(auctionId);
         }
-        
+
         IEnglishAuctions.Auction memory auction = IEnglishAuctions(marketplace).getAuction(auctionId);
-        if(auction.endTimestamp >= block.timestamp) {
-            revert InvalidAuction(AuctionErrorCode.AUCTION_STILL_ALIVE);
+        if (auction.endTimestamp >= block.timestamp) {
+            revert InvalidShareRevenue(ShareRevenueErrorCode.AUCTION_STILL_ALIVE);
         }
-        
-        (, address currency ,uint256 bidAmount) = IEnglishAuctions(marketplace).getWinningBid(auctionId);
-        if(currency != address(bic)) {
-            revert InvalidAuction(AuctionErrorCode.NO_WINNER);
+
+        (, address currency, uint256 bidAmount) = IEnglishAuctions(marketplace).getWinningBid(auctionId);
+        if (currency != address(bic)) {
+            revert InvalidShareRevenue(ShareRevenueErrorCode.NO_WINNER);
         }
-        if(bidAmount == 0) {
-            revert InvalidAuction(AuctionErrorCode.NO_WINNER);
+        if (bidAmount == 0) {
+            revert InvalidShareRevenue(ShareRevenueErrorCode.NO_WINNER);
         }
 
         IEnglishAuctions(marketplace).collectAuctionPayout(auctionId);
-        (,uint16 feeBps) = IPlatformFee(marketplace).getPlatformFeeInfo();
-        uint256 finalAmount = bidAmount * (10000 - feeBps) / 10000;
+        (, uint16 feeBps) = IPlatformFee(marketplace).getPlatformFeeInfo();
+        uint256 finalAmount = (bidAmount * (10000 - feeBps)) / 10000;
         if (finalAmount < amount) {
-            revert InvalidAuction(AuctionErrorCode.INSUFFICIENT_BALANCE_TO_SHARE);
+            revert InvalidShareRevenue(ShareRevenueErrorCode.INSUFFICIENT_BALANCE_TO_SHARE);
         }
-        
+
         auctionCanClaim[auctionId] = false;
         _payout(amount, beneficiaries, collects, auction.tokenId, auction.assetContract);
     }
@@ -569,6 +606,9 @@ contract HandlesController is ReentrancyGuard, Ownable {
     ) view internal {
         if(!auctionCanClaim[auctionId]) {
             revert AuctionNotClaimable(auctionId);
+        }
+        if(beneficiaries.length != collects.length) {
+            revert BeneficiariesAndCollectsLengthNotMatch();
         }
         uint256 totalCollects = 0;
         for (uint256 i = 0; i < collects.length; i++) {
