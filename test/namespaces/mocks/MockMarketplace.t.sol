@@ -6,6 +6,12 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract MockMarketplace {
     IEnglishAuctions.Auction public auction;
+    struct Winner {
+        address bidder;
+        uint256 bidAmount;
+    }
+    mapping(uint256 => IEnglishAuctions.Auction) public auctions;
+    mapping(uint256 => Winner) public winningBids;
     uint256 public auctionId;
     address public winningBidder;
     uint256 public bidAmount;
@@ -24,7 +30,7 @@ contract MockMarketplace {
         uint64 _endTimestamp
     ) external {
         auctionId = _auctionId;
-        auction = IEnglishAuctions.Auction({
+        auctions[auctionId] = IEnglishAuctions.Auction({
             auctionId: _auctionId,
             tokenId: _tokenId,
             quantity: 1,
@@ -42,27 +48,30 @@ contract MockMarketplace {
         });
     }
     
-    function setWinningBid(uint256, address _bidder, uint256 _bidAmount) external {
+    function setWinningBid(uint256 auctionId, address _bidder, uint256 _bidAmount) external {
         // For simplicity we ignore _auctionId.
-        winningBidder = _bidder;
-        bidAmount = _bidAmount;
+        winningBids[auctionId] = Winner(_bidder, _bidAmount);
     }
     
     function createAuction(IEnglishAuctions.AuctionParameters memory) external pure returns (uint256) {
         return 0;
     }
     
-    function getAuction(uint256) external view returns (IEnglishAuctions.Auction memory) {
-        return auction;
+    function getAuction(uint256 auctionId) external view returns (IEnglishAuctions.Auction memory) {
+        return auctions[auctionId];
     }
     
-    function getWinningBid(uint256) external view returns (address, address, uint256) {
-        return (winningBidder, auction.currency, bidAmount);
+    function getWinningBid(uint256 auctionId) external view returns (address, address, uint256) {
+        IEnglishAuctions.Auction memory auction = auctions[auctionId];
+        Winner memory winner = winningBids[auctionId];
+        return (winner.bidder, auction.currency, winner.bidAmount);
     }
     
-    function collectAuctionPayout(uint256) external {
+    function collectAuctionPayout(uint256 auctionId) external {
         // No-operation for testing.
-        ERC20(auction.currency).transfer(auction.auctionCreator, bidAmount * (10000 - feeBps) / 10000);
+        IEnglishAuctions.Auction memory auction = auctions[auctionId];
+        Winner memory winner = winningBids[auctionId];
+        ERC20(auction.currency).transfer(auction.auctionCreator, winner.bidAmount * (10000 - feeBps) / 10000);
         
     }
     

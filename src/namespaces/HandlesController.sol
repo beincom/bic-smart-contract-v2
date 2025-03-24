@@ -4,6 +4,7 @@ pragma solidity ^0.8.23;
 
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -21,6 +22,7 @@ import {IBicForwarder} from "../interfaces/IBicForwarder.sol";
  */
 contract HandlesController is ReentrancyGuard, Ownable {
     using ECDSA for bytes32;
+    using EnumerableSet for EnumerableSet.AddressSet;
 
     enum MintType {
         DIRECT,
@@ -68,9 +70,8 @@ contract HandlesController is ReentrancyGuard, Ownable {
     }
 
 
-
-    /// @dev The address of the verifier authorized to validate signatures.
-    address public verifier;
+    /// @notice Address of the controllers with administrative privileges.
+    EnumerableSet.AddressSet private _controllers;
     /// @dev The BIC token contract address.
     IERC20 public bic;
     /// @dev Mapping of commitments to their respective expiration timestamps. Used to manage the timing of commitments and auctions.
@@ -114,8 +115,6 @@ contract HandlesController is ReentrancyGuard, Ownable {
     );
     /// @dev Emitted when the bic address is updated.
     event SetBic(address indexed bic);
-    /// @dev Emitted when the verifier address is updated.
-    event SetVerifier(address indexed verifier);
     /// @dev Emitted when the forwarder address is updated.
     event SetForwarder(address indexed forwarder);
     /// @dev Emitted when the marketplace address is updated.
@@ -133,6 +132,8 @@ contract HandlesController is ReentrancyGuard, Ownable {
         uint256 tokenId
     );
     event WithdrawToken(address indexed token, address indexed to, uint256 amount);
+    event RemoveController(address indexed controller);
+    event SetController(address indexed controller);
 
 
     /// @dev Revert when invalid request handle signature
@@ -161,12 +162,31 @@ contract HandlesController is ReentrancyGuard, Ownable {
     error InvalidBidBuffer();
     /// @dev Revert when invalid buyout
     error InvalidBuyout();
+    
+    error NotController();
+    error AlreadyController();
+
+
+    /// @notice Ensures that the function is called only by the controller.
+    modifier onlyController() {
+        if (!_controllers.contains(_msgSender())) {
+            revert NotController();
+        }
+        _;
+    }
 
     /**
      * @notice Initializes the HandlesController contract with the given BIC token address.
      */
     constructor(IERC20 _bic, address _owner) Ownable(_owner) {
         bic = _bic;
+    }
+
+    /// @notice Retrieves the controllers address.
+    /// @dev Retrieves the controllers address.
+    /// @return The controllers address.
+    function getControllers() external view returns (address[] memory) {
+        return _controllers.values();
     }
 
     /**
@@ -179,14 +199,26 @@ contract HandlesController is ReentrancyGuard, Ownable {
         emit SetBic(_bic);
     }
 
-    /**
-     * @notice Sets a new verifier address authorized to validate signatures.
-     * @dev Can only be set by an operator. Emits a SetVerifier event upon success.
-     * @param _verifier The new verifier address.
-     */
-    function setVerifier(address _verifier) external onlyOwner {
-        verifier = _verifier;
-        emit SetVerifier(_verifier);
+    /// @notice Sets a new controller address.
+    /// @dev Sets a new controller address for the contract with restricted privileges.
+    /// @param controller The address of the new controller.
+    function setController(address controller) external onlyOwner {
+        if(_controllers.contains(controller)) {
+            revert AlreadyController();
+        }
+        _controllers.add(controller);
+        emit SetController(controller);
+    }
+
+    /// @notice Removes a controller address.
+    /// @dev Removes a controller address for the contract with restricted privileges.
+    /// @param controller The address of the controller to remove.
+    function removeController(address controller) external onlyOwner {
+        if(!_controllers.contains(controller)) {
+            revert NotController();
+        }
+        _controllers.remove(controller);
+        emit RemoveController(controller);
     }
 
     /**
@@ -234,7 +266,7 @@ contract HandlesController is ReentrancyGuard, Ownable {
 
     /**
      * @notice Processes handle requests, supports direct minting or auctions.
-     * @dev Validates the request verifier's signature, mints handles, or initializes auctions.
+     * @dev Validates the request controller's signature, mints handles, or initializes auctions.
      * Handles are minted directly or auctioned based on the request parameters.
      * @param rq The handle request details including receiver, price, and auction settings.
      * @param validUntil The timestamp until when the request is valid.
@@ -353,7 +385,7 @@ contract HandlesController is ReentrancyGuard, Ownable {
         address[][] calldata beneficiariesList,
         uint256[][] calldata collectsList,
         bool[] calldata isAuctionsCollectedList
-    ) external nonReentrant {
+    ) external onlyController nonReentrant {
         if (
             auctionIds.length != amounts.length ||
             auctionIds.length != beneficiariesList.length ||
@@ -368,7 +400,8 @@ contract HandlesController is ReentrancyGuard, Ownable {
                 auctionIds[i],
                 amounts[i],
                 beneficiariesList[i],
-                collectsList[i]
+                collectsList[i],
+                isAuctionsCollectedList[i]
             );
         }
     }
@@ -380,12 +413,14 @@ contract HandlesController is ReentrancyGuard, Ownable {
      * @param amount The total amount of Ether or tokens to be distributed to the beneficiaries.
      * @param beneficiaries The beneficiaries for the auction.
      * @param collects The collects for the auction.
+     * @param isAuctionCollected The status of the auction payout.
      */
     function _collectAndShareRevenue(
         uint256 auctionId,
         uint256 amount,
         address[] calldata beneficiaries,
-        uint256[] calldata collects
+        uint256[] calldata collects,
+        bool isAuctionCollected
     ) internal {
         _validateCollectAuctionPayout(auctionId, beneficiaries, collects);
         if (!auctionCanClaim[auctionId]) {
@@ -404,14 +439,14 @@ contract HandlesController is ReentrancyGuard, Ownable {
         if (bidAmount == 0) {
             revert InvalidShareRevenue(ShareRevenueErrorCode.NO_WINNER);
         }
-
-        IEnglishAuctions(marketplace).collectAuctionPayout(auctionId);
-        (, uint16 feeBps) = IPlatformFee(marketplace).getPlatformFeeInfo();
-        uint256 finalAmount = (bidAmount * (10000 - feeBps)) / 10000;
-        if (finalAmount < amount) {
-            revert InvalidShareRevenue(ShareRevenueErrorCode.INSUFFICIENT_BALANCE_TO_SHARE);
+        if(!isAuctionCollected) {
+            IEnglishAuctions(marketplace).collectAuctionPayout(auctionId);
+            (, uint16 feeBps) = IPlatformFee(marketplace).getPlatformFeeInfo();
+            uint256 finalAmount = (bidAmount * (10000 - feeBps)) / 10000;
+            if (finalAmount < amount) {
+                revert InvalidShareRevenue(ShareRevenueErrorCode.INSUFFICIENT_BALANCE_TO_SHARE);
+            }
         }
-
         auctionCanClaim[auctionId] = false;
         _payout(amount, beneficiaries, collects, auction.tokenId, auction.assetContract);
     }
@@ -426,7 +461,7 @@ contract HandlesController is ReentrancyGuard, Ownable {
     ) private view returns (bool) {
         bytes32 dataHashSign = MessageHashUtils.toEthSignedMessageHash(dataHash);
         address signer = dataHashSign.recover(signature);
-        return signer == verifier;
+        return _controllers.contains(signer);
     }
 
     /**
