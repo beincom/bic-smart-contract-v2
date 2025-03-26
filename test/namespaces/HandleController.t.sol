@@ -49,12 +49,12 @@ contract HandlesControllerTest is Test {
         controller = new HandlesControllerImpl(bic, owner);
         controller.setMarketplace(address(mockMarketplace));
         controller.setCollector(collector);
-        controller.setController(controllerAddress);
+        controller.setOperator(controllerAddress);
 
 
         mockHandles = new Handles();
         mockHandles.initialize("upNFT", "UO", "NFT", owner);
-        mockHandles.setController(address(controller));
+        mockHandles.setOperator(address(controller));
 
         
     }
@@ -122,7 +122,7 @@ contract HandlesControllerTest is Test {
         isAuctionsCollectedList[1] = false;
 
         vm.startPrank(controllerAddress);
-        controller.collectAndShareRevenue(auctionIds, amounts, beneficiariesList, collectsList, isAuctionsCollectedList);
+        controller.batchCollectAndShareRevenue(auctionIds, amounts, beneficiariesList, collectsList, isAuctionsCollectedList);(auctionIds, amounts, beneficiariesList, collectsList, isAuctionsCollectedList);
 
         // Verify auctionCanClaim has been updated.
         assertFalse(controller.auctionCanClaim(auctionId0), "Auction should not be claimable after revenue collection");
@@ -197,7 +197,7 @@ contract HandlesControllerTest is Test {
         isAuctionsCollectedList[1] = true;
 
         vm.startPrank(controllerAddress);
-        controller.collectAndShareRevenue(auctionIds, amounts, beneficiariesList, collectsList, isAuctionsCollectedList);
+        controller.batchCollectAndShareRevenue(auctionIds, amounts, beneficiariesList, collectsList, isAuctionsCollectedList);
 
         // Verify auctionCanClaim has been updated.
         assertFalse(controller.auctionCanClaim(auctionId0), "Auction should not be claimable after revenue collection");
@@ -244,8 +244,8 @@ contract HandlesControllerTest is Test {
 
         address nonControllerAddress = address(0x1234);
         vm.startPrank(nonControllerAddress);
-        vm.expectRevert(HandlesController.NotController.selector);
-        controller.collectAndShareRevenue(auctionIds, amounts, beneficiariesList, collectsList, isAuctionsCollectedList);
+        vm.expectRevert(HandlesController.NotOperator.selector);
+        controller.batchCollectAndShareRevenue(auctionIds, amounts, beneficiariesList, collectsList, isAuctionsCollectedList);
         vm.stopPrank();
     }
 

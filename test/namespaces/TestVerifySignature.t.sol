@@ -41,12 +41,12 @@ contract HandlesControllerTest is Test {
         controller = new HandlesControllerImpl(bic, owner);
         controller.setMarketplace(address(mockMarketplace));
         controller.setCollector(address(bic));
-        controller.setController(controllerAddress);
+        controller.setOperator(controllerAddress);
 
 
         mockHandles = new Handles();
         mockHandles.initialize("upNFT", "UO", "NFT", owner);
-        mockHandles.setController(address(controller));
+        mockHandles.setOperator(address(controller));
     }
 
     function testRequestHandleSignatureVerification() public {

@@ -42,7 +42,7 @@ contract HandleBaseDeployScript is Script {
         handleController.setForwarder(forwarder);
         handleController.setCollector(treasury);
         handleController.setMarketplace(marketPlace);
-        handleController.setController(verifier); // replace name verifier -> controller
+        handleController.setOperator(verifier); // replace name verifier -> controller
         console.log("HandleController deployed at:", address(handleController));
         handleController.transferOwnership(afterDeployOwner);
 

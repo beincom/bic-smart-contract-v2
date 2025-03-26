@@ -70,8 +70,8 @@ contract HandlesController is ReentrancyGuard, Ownable {
     }
 
 
-    /// @notice Address of the controllers with administrative privileges.
-    EnumerableSet.AddressSet private _controllers;
+    /// @notice Address of trusted operators who can sign handle requests and manage revenue distribution.
+    EnumerableSet.AddressSet private _operators;
     /// @dev The BIC token contract address.
     IERC20 public bic;
     /// @dev Mapping of commitments to their respective expiration timestamps. Used to manage the timing of commitments and auctions.
@@ -132,8 +132,8 @@ contract HandlesController is ReentrancyGuard, Ownable {
         uint256 tokenId
     );
     event WithdrawToken(address indexed token, address indexed to, uint256 amount);
-    event RemoveController(address indexed controller);
-    event SetController(address indexed controller);
+    event RemoveOperator(address indexed operator);
+    event SetOperator(address indexed operator);
 
 
     /// @dev Revert when invalid request handle signature
@@ -163,14 +163,14 @@ contract HandlesController is ReentrancyGuard, Ownable {
     /// @dev Revert when invalid buyout
     error InvalidBuyout();
     
-    error NotController();
-    error AlreadyController();
+    error NotOperator();
+    error AlreadyOperator();
 
 
-    /// @notice Ensures that the function is called only by the controller.
-    modifier onlyController() {
-        if (!_controllers.contains(_msgSender())) {
-            revert NotController();
+    /// @notice Ensures that the function is called only by an operator.
+    modifier onlyOperator() {
+        if (!_operators.contains(_msgSender())) {
+            revert NotOperator();
         }
         _;
     }
@@ -182,11 +182,11 @@ contract HandlesController is ReentrancyGuard, Ownable {
         bic = _bic;
     }
 
-    /// @notice Retrieves the controllers address.
-    /// @dev Retrieves the controllers address.
-    /// @return The controllers address.
-    function getControllers() external view returns (address[] memory) {
-        return _controllers.values();
+    /// @notice Retrieves the operators address.
+    /// @dev Retrieves the operators address.
+    /// @return The operators address.
+    function getOperators() external view returns (address[] memory) {
+        return _operators.values();
     }
 
     /**
@@ -199,26 +199,26 @@ contract HandlesController is ReentrancyGuard, Ownable {
         emit SetBic(_bic);
     }
 
-    /// @notice Sets a new controller address.
-    /// @dev Sets a new controller address for the contract with restricted privileges.
-    /// @param controller The address of the new controller.
-    function setController(address controller) external onlyOwner {
-        if(_controllers.contains(controller)) {
-            revert AlreadyController();
+    /// @notice Sets a new operator address.
+    /// @dev Sets a new operator address for the contract with restricted privileges.
+    /// @param operator The address of the new operator.
+    function setOperator(address operator) external onlyOwner {
+        if(_operators.contains(operator)) {
+            revert AlreadyOperator();
         }
-        _controllers.add(controller);
-        emit SetController(controller);
+        _operators.add(operator);
+        emit SetOperator(operator);
     }
 
-    /// @notice Removes a controller address.
-    /// @dev Removes a controller address for the contract with restricted privileges.
-    /// @param controller The address of the controller to remove.
-    function removeController(address controller) external onlyOwner {
-        if(!_controllers.contains(controller)) {
-            revert NotController();
+    /// @notice Removes an operator address.
+    /// @dev Removes an operator address for the contract with restricted privileges.
+    /// @param operator The address of the operator to remove.
+    function removeOperator(address operator) external onlyOwner {
+        if(!_operators.contains(operator)) {
+            revert NotOperator();
         }
-        _controllers.remove(controller);
-        emit RemoveController(controller);
+        _operators.remove(operator);
+        emit RemoveOperator(operator);
     }
 
     /**
@@ -344,32 +344,6 @@ contract HandlesController is ReentrancyGuard, Ownable {
             }
         }
     }
-    
-    function collectAuctionPayout(
-        uint256 auctionId,
-        uint256 amount,
-        address[] calldata beneficiaries,
-        uint256[] calldata collects,
-        bytes calldata signature
-    ) external nonReentrant {
-        _validateCollectAuctionPayout(auctionId, beneficiaries, collects);
-        bytes32 dataHash = getCollectAuctionPayoutOp(
-            auctionId,
-            amount,
-            beneficiaries,
-            collects
-        );
-        if(!_verifySignature(dataHash, signature)) {
-            revert InvalidCollectAuctionSignature();
-        }
-
-        IEnglishAuctions.Auction memory auction = IEnglishAuctions(marketplace).getAuction(auctionId);
-        if(auction.assetContract == address(0)) {
-            revert InvalidShareRevenue(ShareRevenueErrorCode.AUCTION_NOT_FOUND);
-        }
-        _payout(amount, beneficiaries, collects, auction.tokenId, auction.assetContract);
-        auctionCanClaim[auctionId] = false;
-    }
 
     /**
      * @notice Cron job to collect and share revenue from multiple auctions.
@@ -379,13 +353,13 @@ contract HandlesController is ReentrancyGuard, Ownable {
      * @param beneficiariesList The list of beneficiaries for each auction.
      * @param collectsList The list of collects for each auction.
      */
-    function collectAndShareRevenue(
+    function batchCollectAndShareRevenue(
         uint256[] calldata auctionIds,
         uint256[] calldata amounts,
         address[][] calldata beneficiariesList,
         uint256[][] calldata collectsList,
         bool[] calldata isAuctionsCollectedList
-    ) external onlyController nonReentrant {
+    ) external onlyOperator nonReentrant {
         if (
             auctionIds.length != amounts.length ||
             auctionIds.length != beneficiariesList.length ||
@@ -461,7 +435,7 @@ contract HandlesController is ReentrancyGuard, Ownable {
     ) private view returns (bool) {
         bytes32 dataHashSign = MessageHashUtils.toEthSignedMessageHash(dataHash);
         address signer = dataHashSign.recover(signature);
-        return _controllers.contains(signer);
+        return _operators.contains(signer);
     }
 
     /**
@@ -735,28 +709,6 @@ contract HandlesController is ReentrancyGuard, Ownable {
     }
 
     /**
-     * @notice Generates a unique hash for a collect auction payout operation.
-     * @dev Generates a unique hash for a collect auction payout operation.
-     */
-    function getCollectAuctionPayoutOp(
-        uint256 auctionId,
-        uint256 amount,
-        address[] calldata beneficiaries,
-        uint256[] calldata collects
-    ) public view returns (bytes32) {
-        return
-            keccak256(
-                abi.encode(
-                    auctionId,
-                    amount,
-                    block.chainid,
-                    beneficiaries,
-                    collects
-                )
-            );
-    }
-
-    /**
      * @notice Allows the operator to burn a handle that was minted when case the auction failed (none bid).
      * @param handle The address of the handle contract.
      * @param name The name of the handle.
@@ -764,7 +716,7 @@ contract HandlesController is ReentrancyGuard, Ownable {
     function burnHandleMintedButAuctionFailed(
         address handle,
         string calldata name
-    ) external onlyOwner {
+    ) external onlyOperator {
         uint256 tokenId = IHandles(handle).getTokenId(name);
         IHandles(handle).burn(tokenId);
         emit BurnHandleMintedButAuctionFailed(handle, name, tokenId);
