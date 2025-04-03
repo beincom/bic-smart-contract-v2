@@ -160,7 +160,11 @@ contract UserPaymentFacet is Initializable {
         UserPaymentStorage storage s = getStorage();
         uint256 surcharge = amount * s.surchargeFee / 10_000;
         IERC20(token).safeTransferFrom(msg.sender, to, amount - surcharge);
-        IERC20(token).safeTransferFrom(msg.sender, s.userTreasury, surcharge);
+        
+        if (surcharge > 0) {
+            IERC20(token).safeTransferFrom(msg.sender, s.userTreasury, surcharge);
+        }
+
         emit AccountBought(token, msg.sender, to, amount, surcharge, orderId);
     }
 
@@ -193,13 +197,18 @@ contract UserPaymentFacet is Initializable {
             revert ZeroPayment();
         }
         UserPaymentStorage storage s = getStorage();
+        uint256 surcharge = amount * s.surchargeFee / 10_000;
+        IERC20(token).safeTransferFrom(from, to, amount - surcharge);
+
+        if (surcharge > 0) {
+            IERC20(token).safeTransferFrom(from, s.userTreasury, surcharge);
+        }
+        
         uint256 gasPrice = getUserOpGasPrice(maxFeePerGas, maxPriorityFeePerGas);
         uint256 actualGas = preGas - gasleft() + s.bufferPostOp;
         uint256 actualGasCost = actualGas * gasPrice;
         uint256 actualPaymentCost = actualGasCost * paymentPrice / DENOMINATOR;
-        uint256 surcharge = amount * s.surchargeFee / 10_000;
-        IERC20(token).safeTransferFrom(from, to, amount - surcharge);
-        IERC20(token).safeTransferFrom(from, s.userTreasury, surcharge);
+        
         IERC20(s.paymentToken).safeTransferFrom(from, s.userTreasury, actualPaymentCost);
         emit CallBuyAccount(
             msg.sender,

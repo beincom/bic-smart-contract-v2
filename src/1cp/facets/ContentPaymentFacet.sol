@@ -160,7 +160,11 @@ contract ContentPaymentFacet is Initializable {
         ContentPaymentStorage storage s = getStorage();
         uint256 surcharge = amount * s.surchargeFee / 10_000;
         IERC20(token).safeTransferFrom(msg.sender, to, amount - surcharge);
-        IERC20(token).safeTransferFrom(msg.sender, s.contentTreasury, surcharge);
+        
+        if (surcharge > 0) {
+            IERC20(token).safeTransferFrom(msg.sender, s.contentTreasury, surcharge);
+        }
+
         emit ContentBought(token, msg.sender, to, amount, surcharge, orderId);
     }
 
@@ -193,13 +197,18 @@ contract ContentPaymentFacet is Initializable {
             revert ZeroPayment();
         }
         ContentPaymentStorage storage s = getStorage();
+        uint256 surcharge = amount * s.surchargeFee / 10_000;
+        IERC20(token).safeTransferFrom(from, to, amount - surcharge);
+
+        if (surcharge > 0) {
+            IERC20(token).safeTransferFrom(from, s.contentTreasury, surcharge);
+        }
+        
         uint256 gasPrice = getUserOpGasPrice(maxFeePerGas, maxPriorityFeePerGas);
         uint256 actualGas = preGas - gasleft() + s.bufferPostOp;
         uint256 actualGasCost = actualGas * gasPrice;
         uint256 actualPaymentCost = actualGasCost * paymentPrice / DENOMINATOR;
-        uint256 surcharge = amount * s.surchargeFee / 10_000;
-        IERC20(token).safeTransferFrom(from, to, amount - surcharge);
-        IERC20(token).safeTransferFrom(from, s.contentTreasury, surcharge);
+        
         IERC20(s.paymentToken).safeTransferFrom(from, s.contentTreasury, actualPaymentCost);
         emit CallBuyContent(
             msg.sender,
