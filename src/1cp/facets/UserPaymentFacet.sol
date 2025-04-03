@@ -12,7 +12,6 @@ contract UserPaymentFacet is Initializable {
     using SafeERC20 for IERC20;
     // Struct
     struct UserPaymentStorage {
-        uint256 surchargeFee;
         uint256 bufferPostOp;
         address userTreasury;
         address paymentToken;
@@ -21,7 +20,6 @@ contract UserPaymentFacet is Initializable {
     /// Errors
     error ZeroPayment();
     error ZeroAddress();
-    error InvalidSurchargeFee(uint256 surchargeFee);
 
     /// Storage
     uint256 internal constant DENOMINATOR = 1e10;
@@ -31,19 +29,16 @@ contract UserPaymentFacet is Initializable {
     event InitializedUserPaymentConfig(
         address treasury,
         address paymentToken,
-        uint256 surchargeFee,
         uint256 bufferPostOp
     );
     event UserTreasuryUpdated(address updater, address newTreasury);
     event PaymentTokenUpdated(address updater, address newPaymentToken);
-    event SurchargeFeeUpdated(address updater, uint256 surchargeFee);
     event BufferPostOpUpdated(address updater, uint256 bufferPostOp);
     event AccountBought(
         address token,
         address from,
         address to,
         uint256 amount,
-        uint256 surcharge,
         string orderId
     );
     event CallBuyAccount(
@@ -52,48 +47,41 @@ contract UserPaymentFacet is Initializable {
         address from,
         address to,
         uint256 amount,
-        uint256 surcharge,
         uint256 fee,
         string orderId
     );
 
     /// @notice Get user config storage
     function getUserPaymentStorage() external pure returns (
-        uint256 surchargeFee,
         uint256 bufferPostOp,
         address userTreasury,
         address paymentToken
     ) {
         UserPaymentStorage memory s = getStorage();
-        return (s.surchargeFee, s.bufferPostOp, s.userTreasury, s.paymentToken);
+        return (s.bufferPostOp, s.userTreasury, s.paymentToken);
     }
 
     /**
      * @notice Initialize user payment config
      * @param treasury the user treasury address
      * @param paymentToken The payment token address used for reimbursing gas fee via callBuyAccount
-     * @param surchargeFee The surcharge fee used for deducting upfront fee of the specific services
      * @param bufferPostOp The additional gas used for additional execution via callBuyAccount
      */
     function initializeUserPaymentConfig(
         address treasury,
         address paymentToken,
-        uint256 surchargeFee,
         uint256 bufferPostOp
     ) external initializer {
         LibDiamond.enforceIsContractOwner();
         if (treasury == address(0) || paymentToken == address(0)) {
             revert ZeroAddress();
         }
-        if (surchargeFee > 10_000) {
-            revert InvalidSurchargeFee(surchargeFee);
-        }
+        
         UserPaymentStorage storage s = getStorage();
         s.userTreasury = treasury;
         s.paymentToken = paymentToken;
-        s.surchargeFee = surchargeFee;
         s.bufferPostOp = bufferPostOp;
-        emit InitializedUserPaymentConfig(treasury, paymentToken, surchargeFee, bufferPostOp);
+        emit InitializedUserPaymentConfig(treasury, paymentToken, bufferPostOp);
     }
 
     /// @notice Update user treasury address
@@ -118,18 +106,6 @@ contract UserPaymentFacet is Initializable {
         UserPaymentStorage storage s = getStorage();
         s.paymentToken = paymentToken;
         emit PaymentTokenUpdated(msg.sender, paymentToken);
-    }
-
-    /// @notice Update surcharge fee
-    /// @param surchargeFee The surcharge fee used for deducting upfront fee of the specific services
-    function updateUserSurchargeFee(uint256 surchargeFee) external {
-        LibDiamond.enforceIsContractOwner();
-        if (surchargeFee > 10_000) {
-            revert InvalidSurchargeFee(surchargeFee);
-        }
-        UserPaymentStorage storage s = getStorage();
-        s.surchargeFee = surchargeFee;
-        emit SurchargeFeeUpdated(msg.sender, surchargeFee);
     }
 
     /// @notice Update buffer gas for post ops
@@ -158,14 +134,9 @@ contract UserPaymentFacet is Initializable {
             revert ZeroPayment();
         }
         UserPaymentStorage storage s = getStorage();
-        uint256 surcharge = amount * s.surchargeFee / 10_000;
-        IERC20(token).safeTransferFrom(msg.sender, to, amount - surcharge);
-        
-        if (surcharge > 0) {
-            IERC20(token).safeTransferFrom(msg.sender, s.userTreasury, surcharge);
-        }
+        IERC20(token).safeTransferFrom(msg.sender, s.userTreasury, amount);
 
-        emit AccountBought(token, msg.sender, to, amount, surcharge, orderId);
+        emit AccountBought(token, msg.sender, s.userTreasury, amount, orderId);
     }
 
     /**
@@ -197,12 +168,7 @@ contract UserPaymentFacet is Initializable {
             revert ZeroPayment();
         }
         UserPaymentStorage storage s = getStorage();
-        uint256 surcharge = amount * s.surchargeFee / 10_000;
-        IERC20(token).safeTransferFrom(from, to, amount - surcharge);
-
-        if (surcharge > 0) {
-            IERC20(token).safeTransferFrom(from, s.userTreasury, surcharge);
-        }
+        IERC20(token).safeTransferFrom(from, s.userTreasury, amount);
         
         uint256 gasPrice = getUserOpGasPrice(maxFeePerGas, maxPriorityFeePerGas);
         uint256 actualGas = preGas - gasleft() + s.bufferPostOp;
@@ -214,9 +180,8 @@ contract UserPaymentFacet is Initializable {
             msg.sender,
             token,
             from,
-            to,
+            s.userTreasury,
             amount,
-            surcharge,
             actualPaymentCost,
             orderId
         );

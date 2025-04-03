@@ -17,7 +17,6 @@ contract UserPaymentFacetDeployScript is Script {
         address userPaymentToken = vm.envAddress("USER_PAYMENT_TOKEN");
         address userTreasury = vm.envAddress("USER_TREASURY");
         address userCaller = vm.envAddress("USER_CALLER");
-        uint256 surchargeFee = 1000;
         uint256 bufferPostOp = 21000;
 
         vm.startBroadcast(deployerPrivateKey);
@@ -29,7 +28,6 @@ contract UserPaymentFacetDeployScript is Script {
         UserPaymentFacet(oneCP).initializeUserPaymentConfig(
             userTreasury,
             userPaymentToken,
-            surchargeFee,
             bufferPostOp
         );
         
@@ -43,15 +41,14 @@ contract UserPaymentFacetDeployScript is Script {
         UserPaymentFacet userPaymentFacet = new UserPaymentFacet();
 
         // prepare function selectors
-        bytes4[] memory functionSelectors = new bytes4[](8);
+        bytes4[] memory functionSelectors = new bytes4[](7);
         functionSelectors[0] = userPaymentFacet.updateUserTreasury.selector;
         functionSelectors[1] = userPaymentFacet.updateUserPaymentToken.selector;
-        functionSelectors[2] = userPaymentFacet.updateUserSurchargeFee.selector;
-        functionSelectors[3] = userPaymentFacet.updateUserBufferPostOp.selector;
-        functionSelectors[4] = userPaymentFacet.buyAccount.selector;
-        functionSelectors[5] = userPaymentFacet.callBuyAccount.selector;
-        functionSelectors[6] = userPaymentFacet.getUserPaymentStorage.selector;
-        functionSelectors[7] = userPaymentFacet.initializeUserPaymentConfig.selector;
+        functionSelectors[2] = userPaymentFacet.updateUserBufferPostOp.selector;
+        functionSelectors[3] = userPaymentFacet.buyAccount.selector;
+        functionSelectors[4] = userPaymentFacet.callBuyAccount.selector;
+        functionSelectors[5] = userPaymentFacet.getUserPaymentStorage.selector;
+        functionSelectors[6] = userPaymentFacet.initializeUserPaymentConfig.selector;
 
         // prepare diamondCut
         LibDiamond.FacetCut[] memory cuts = new LibDiamond.FacetCut[](1);
