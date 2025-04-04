@@ -21,8 +21,7 @@ contract Handles is ERC721Upgradeable, ERC2981, IHandles {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     /// @notice Address of the controllers with administrative privileges.
-    EnumerableSet.AddressSet private _controllers
-    ;
+    EnumerableSet.AddressSet private _controllers;
     /// @notice Address of the operator who can perform certain restricted operations.
     address public OPERATOR;
     /// @notice The namespace under which all handles are created.
