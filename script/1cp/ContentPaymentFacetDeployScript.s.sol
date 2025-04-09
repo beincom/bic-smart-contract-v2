@@ -4,11 +4,11 @@ pragma solidity ^0.8.23;
 
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
-import {OneCPDiamond} from "../src/1cp/1CPDiamond.sol";
-import {DiamondCutFacet} from "../src/1cp/facets/DiamondCutFacet.sol";
-import {ContentPaymentFacet} from "../src/1cp/facets/ContentPaymentFacet.sol";
-import {AccessManagerFacet} from "../src/1cp/facets/AccessManagerFacet.sol";
-import {LibDiamond} from "../src/1cp/libraries/LibDiamond.sol";
+import {OneCPDiamond} from "../../src/1cp/1CPDiamond.sol";
+import {DiamondCutFacet} from "../../src/1cp/facets/DiamondCutFacet.sol";
+import {ContentPaymentFacet} from "../../src/1cp/facets/ContentPaymentFacet.sol";
+import {AccessManagerFacet} from "../../src/1cp/facets/AccessManagerFacet.sol";
+import {LibDiamond} from "../../src/1cp/libraries/LibDiamond.sol";
 
 contract ContentPaymentFacetDeployScript is Script {
     function run() external {

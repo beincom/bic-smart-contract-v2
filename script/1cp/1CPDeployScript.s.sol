@@ -4,13 +4,13 @@ pragma solidity ^0.8.23;
 
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
-import {OneCPDiamond} from "../src/1cp/1CPDiamond.sol";
-import {DiamondCutFacet} from "../src/1cp/facets/DiamondCutFacet.sol";
-import {DiamondLoupeFacet} from "../src/1cp/facets/DiamondLoupeFacet.sol";
-import {OwnershipFacet} from "../src/1cp/facets/OwnershipFacet.sol";
-import {AccessManagerFacet} from "../src/1cp/facets/AccessManagerFacet.sol";
-import {EmergencyPauseFacet} from "../src/1cp/facets/EmergencyPauseFacet.sol";
-import {LibDiamond} from "../src/1cp/libraries/LibDiamond.sol";
+import {OneCPDiamond} from "../../src/1cp/1CPDiamond.sol";
+import {DiamondCutFacet} from "../../src/1cp/facets/DiamondCutFacet.sol";
+import {DiamondLoupeFacet} from "../../src/1cp/facets/DiamondLoupeFacet.sol";
+import {OwnershipFacet} from "../../src/1cp/facets/OwnershipFacet.sol";
+import {AccessManagerFacet} from "../../src/1cp/facets/AccessManagerFacet.sol";
+import {EmergencyPauseFacet} from "../../src/1cp/facets/EmergencyPauseFacet.sol";
+import {LibDiamond} from "../../src/1cp/libraries/LibDiamond.sol";
 
 contract OneCPDeployScript is Script {
     function run() external {
