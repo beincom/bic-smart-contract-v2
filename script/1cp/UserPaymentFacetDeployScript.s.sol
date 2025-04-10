@@ -17,7 +17,7 @@ contract UserPaymentFacetDeployScript is Script {
         address userPaymentToken = vm.envAddress("USER_PAYMENT_TOKEN");
         address userTreasury = vm.envAddress("USER_TREASURY");
         address userCaller = vm.envAddress("USER_CALLER");
-        uint256 bufferPostOp = 21000;
+        uint256 bufferPostOp = vm.envUint("USER_BUFFER_POSTOP");
 
         vm.startBroadcast(deployerPrivateKey);
 

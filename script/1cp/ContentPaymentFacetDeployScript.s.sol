@@ -17,8 +17,8 @@ contract ContentPaymentFacetDeployScript is Script {
         address contentPaymentToken = vm.envAddress("CONTENT_PAYMENT_TOKEN");
         address contentTreasury = vm.envAddress("CONTENT_TREASURY");
         address contentCaller = vm.envAddress("CONTENT_CALLER");
-        uint256 surchargeFee = 1000;
-        uint256 bufferPostOp = 21000;
+        uint256 surchargeFee = vm.envUint("CONTENT_SURCHARGE_FEE");
+        uint256 bufferPostOp = vm.envUint("CONTENT_BUFFER_POSTOP");
 
         vm.startBroadcast(deployerPrivateKey);
 

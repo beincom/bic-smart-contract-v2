@@ -14,16 +14,16 @@ contract ContentPaymentFacetUpdateConfigScript is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address oneCP = vm.envAddress("ONE_CP");
-        address paymentToken = 0x03c36763E271211961e9E42DC6D600F9cF0Ea417;
-        address caller = 0xe450584F78be9DdeA56A535125Aa400F67BAbA36;
+        address contentPaymentToken = vm.envAddress("CONTENT_PAYMENT_TOKEN");
+        address contentCaller = vm.envAddress("CONTENT_CALLER");
 
         vm.startBroadcast(deployerPrivateKey);
 
         // update content payment config
-        ContentPaymentFacet(oneCP).updateContentPaymentToken(paymentToken);
+        ContentPaymentFacet(oneCP).updateContentPaymentToken(contentPaymentToken);
 
         // grant caller access to callBuyContent
-        setAccessToSelector(oneCP, ContentPaymentFacet.callBuyContent.selector, caller, true);
+        setAccessToSelector(oneCP, ContentPaymentFacet.callBuyContent.selector, contentCaller, true);
 
         vm.stopBroadcast();
     }

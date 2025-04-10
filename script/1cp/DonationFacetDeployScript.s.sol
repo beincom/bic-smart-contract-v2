@@ -17,8 +17,8 @@ contract DonationFacetDeployScript is Script {
         address donationPaymentToken = vm.envAddress("DONATION_PAYMENT_TOKEN");
         address donationTreasury = vm.envAddress("DONATION_TREASURY");
         address donationCaller = vm.envAddress("DONATION_CALLER");
-        uint256 surchargeFee = 1000;
-        uint256 bufferPostOp = 21000;
+        uint256 surchargeFee = vm.envUint("DONATION_SURCHARGE_FEE");
+        uint256 bufferPostOp = vm.envUint("DONATION_BUFFER_POSTOP");
 
         vm.startBroadcast(deployerPrivateKey);
 
