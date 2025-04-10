@@ -6,14 +6,14 @@ import {console} from "forge-std/console.sol";
 import {BicTokenPaymaster} from "../src/BicTokenPaymaster.sol";
 
 contract BicDeployScript is Script {
-    address entrypoint = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
-    address superController = 0xeaBcd21B75349c59a4177E10ed17FBf2955fE697;
-    address[] signers = [0xeaBcd21B75349c59a4177E10ed17FBf2955fE697];
-
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+        address entrypoint = vm.envAddress("SMART_ACCOUNT_ENTRY_POINT");
+        address superController = vm.envAddress("BIC_SUPPER_CONTROLLER");
+        address[] memory offchainVerifiers = new address[](1);
+        offchainVerifiers[0] = vm.envAddress("BIC_OFF_CHAIN_VERIFIER");
         vm.startBroadcast(deployerPrivateKey);
-        BicTokenPaymaster bic = new BicTokenPaymaster(entrypoint, superController, signers);
+        BicTokenPaymaster bic = new BicTokenPaymaster(entrypoint, superController, offchainVerifiers);
         console.log("Bic Token Paymaster deployed contract:", address (bic));
 
         vm.stopBroadcast();
