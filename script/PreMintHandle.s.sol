@@ -3,7 +3,7 @@ pragma solidity ^0.8.23;
 
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
-import {HandlesController} from "../../src/namespaces/HandlesController.sol";
+import {HandlesController} from "../src/namespaces/HandlesController.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
@@ -63,11 +63,11 @@ contract PremintNFTScript is Script {
 
     function setUp() public {
         // Update addresses
-        handlesController = 0xc26c0b7DF79aAf4F6a8fc9458BD1F8BE2447b8Fd;
-        uoNFTHandle = 0x28F5452907408199c3b8683D2752414B5d7B9cEA;
-        poNFTHandle = 0x2A63b11501f40c4af3d134eEa4bA6C18444ce562;
-        coNFTHandle = 0xC3316F0C98939ba6dea7B8Dd204d7Ce632d546Ae;
-        receiver = 0xe450584F78be9DdeA56A535125Aa400F67BAbA36;
+        handlesController = 0x110aAF832634A8889E30190256d82DaDad7bAA9B;
+        uoNFTHandle = 0x08e39687442D122F915b8d944896A8dcd33dDC62;
+        poNFTHandle = 0x2959E2CE1980602f9c9D0CFB12B160Dfa36Dba4F;
+        coNFTHandle = 0xbE99dd369BE5c484752970478F27d53d882db072;
+        receiver = 0xcB9685a5453a30818F80E2E214A7F2651B22BF70;
         multicall = 0xcA11bde05977b3631167028862bE2a173976CA11;
         signerPrivateKey = vm.envUint("NFT_VERIFIER_PRIVATE_KEY");
     }
@@ -166,7 +166,6 @@ contract PremintNFTScript is Script {
         coHandles[1] = HandleRequestData("Beincom Global", coNFTHandle);
         coHandles[2] = HandleRequestData("Beincom's EchoSphere", coNFTHandle);
         coHandles[3] = HandleRequestData("Beincom", coNFTHandle);
-        coHandles[4] = HandleRequestData("Beincom Admin", coNFTHandle);
 
         // Combine all handles
         HandleRequestData[] memory allHandles = new HandleRequestData[](
