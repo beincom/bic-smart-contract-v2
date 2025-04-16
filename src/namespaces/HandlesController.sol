@@ -4,13 +4,14 @@ pragma solidity ^0.8.23;
 
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
 
-import {IEnglishAuctions} from "../interfaces/IMarketplace.sol";
+import {IEnglishAuctions, IPlatformFee} from "../interfaces/IMarketplace.sol";
 import {IHandles} from "../interfaces/IHandles.sol";
 import {IBicForwarder} from "../interfaces/IBicForwarder.sol";
 
@@ -21,11 +22,20 @@ import {IBicForwarder} from "../interfaces/IBicForwarder.sol";
  */
 contract HandlesController is ReentrancyGuard, Ownable {
     using ECDSA for bytes32;
+    using EnumerableSet for EnumerableSet.AddressSet;
 
     enum MintType {
         DIRECT,
         COMMIT,
         AUCTION
+    }
+
+    enum ShareRevenueErrorCode {
+        AUCTION_NOT_FOUND,
+        AUCTION_STILL_ALIVE,
+        NO_WINNER,
+        INSUFFICIENT_BALANCE_TO_SHARE,
+        INVALID_PARAMETERS_LENGTH
     }
 
     /**
@@ -60,9 +70,8 @@ contract HandlesController is ReentrancyGuard, Ownable {
     }
 
 
-
-    /// @dev The address of the verifier authorized to validate signatures.
-    address public verifier;
+    /// @notice Address of trusted operators who can sign handle requests and manage revenue distribution.
+    EnumerableSet.AddressSet private _operators;
     /// @dev The BIC token contract address.
     IERC20 public bic;
     /// @dev Mapping of commitments to their respective expiration timestamps. Used to manage the timing of commitments and auctions.
@@ -106,8 +115,6 @@ contract HandlesController is ReentrancyGuard, Ownable {
     );
     /// @dev Emitted when the bic address is updated.
     event SetBic(address indexed bic);
-    /// @dev Emitted when the verifier address is updated.
-    event SetVerifier(address indexed verifier);
     /// @dev Emitted when the forwarder address is updated.
     event SetForwarder(address indexed forwarder);
     /// @dev Emitted when the marketplace address is updated.
@@ -125,6 +132,8 @@ contract HandlesController is ReentrancyGuard, Ownable {
         uint256 tokenId
     );
     event WithdrawToken(address indexed token, address indexed to, uint256 amount);
+    event RemoveOperator(address indexed operator);
+    event SetOperator(address indexed operator);
 
 
     /// @dev Revert when invalid request handle signature
@@ -147,18 +156,37 @@ contract HandlesController is ReentrancyGuard, Ownable {
     error InvalidCollectsDenominator(uint256 totalCollects, uint256 collectsDenominator);
     /// @dev Revert when auction duration is invalid
     error InvalidAuctionDuration();
-    /// @dev Revert when assetContract is zero
-    error ZeroAssetContract();
+    /// @dev Revert invalid auction
+    error InvalidShareRevenue(ShareRevenueErrorCode eType);
     /// @dev Revert when invalid bid buffer
     error InvalidBidBuffer();
     /// @dev Revert when invalid buyout
     error InvalidBuyout();
+    
+    error NotOperator();
+    error AlreadyOperator();
+
+
+    /// @notice Ensures that the function is called only by an operator.
+    modifier onlyOperator() {
+        if (!_operators.contains(_msgSender())) {
+            revert NotOperator();
+        }
+        _;
+    }
 
     /**
      * @notice Initializes the HandlesController contract with the given BIC token address.
      */
     constructor(IERC20 _bic, address _owner) Ownable(_owner) {
         bic = _bic;
+    }
+
+    /// @notice Retrieves the operators address.
+    /// @dev Retrieves the operators address.
+    /// @return The operators address.
+    function getOperators() external view returns (address[] memory) {
+        return _operators.values();
     }
 
     /**
@@ -171,14 +199,26 @@ contract HandlesController is ReentrancyGuard, Ownable {
         emit SetBic(_bic);
     }
 
-    /**
-     * @notice Sets a new verifier address authorized to validate signatures.
-     * @dev Can only be set by an operator. Emits a SetVerifier event upon success.
-     * @param _verifier The new verifier address.
-     */
-    function setVerifier(address _verifier) external onlyOwner {
-        verifier = _verifier;
-        emit SetVerifier(_verifier);
+    /// @notice Sets a new operator address.
+    /// @dev Sets a new operator address for the contract with restricted privileges.
+    /// @param operator The address of the new operator.
+    function setOperator(address operator) external onlyOwner {
+        if(_operators.contains(operator)) {
+            revert AlreadyOperator();
+        }
+        _operators.add(operator);
+        emit SetOperator(operator);
+    }
+
+    /// @notice Removes an operator address.
+    /// @dev Removes an operator address for the contract with restricted privileges.
+    /// @param operator The address of the operator to remove.
+    function removeOperator(address operator) external onlyOwner {
+        if(!_operators.contains(operator)) {
+            revert NotOperator();
+        }
+        _operators.remove(operator);
+        emit RemoveOperator(operator);
     }
 
     /**
@@ -226,7 +266,7 @@ contract HandlesController is ReentrancyGuard, Ownable {
 
     /**
      * @notice Processes handle requests, supports direct minting or auctions.
-     * @dev Validates the request verifier's signature, mints handles, or initializes auctions.
+     * @dev Validates the request controller's signature, mints handles, or initializes auctions.
      * Handles are minted directly or auctioned based on the request parameters.
      * @param rq The handle request details including receiver, price, and auction settings.
      * @param validUntil The timestamp until when the request is valid.
@@ -306,53 +346,83 @@ contract HandlesController is ReentrancyGuard, Ownable {
     }
 
     /**
-     * @notice Collects the auction payouts after an auction concludes in the Thirdweb Marketplace. [LINK]: https://github.com/thirdweb-dev/contracts/tree/main/contracts/prebuilts/marketplace/english-auctions
-     * @dev This function is called after a successful auction on the Thirdweb Marketplace to distribute the auction proceeds.
-     *      The process involves two main steps:
-     *
-     *      1. The winning bidder claims the auction amount through the Thirdweb Marketplace contract, which transfers the funds to this HandleController contract.
-     *
-     *      2. This function is then called to distribute these funds among the predefined beneficiaries according to the specified shares.
-     *
-     *      This function ensures that only valid, unclaimed auctions can be processed and verifies the operation via signature.
-     *
-     *      It checks that the auction was marked as claimable, verifies the provided signature to ensure it comes from a valid source, and then performs the payout.
-     *
-     *      Once the payout is completed, it marks the auction as claimed to prevent re-claiming.
-     *
+     * @notice Cron job to collect and share revenue from multiple auctions.
+     * @dev Collects the auction payouts and distributes the revenue to the beneficiaries.
+     * @param auctionIds The IDs of the auctions in the Thirdweb Marketplace contract.
+     * @param amounts The total amounts of Ether or tokens to be distributed to the beneficiaries for each auction.
+     * @param beneficiariesList The list of beneficiaries for each auction.
+     * @param collectsList The list of collects for each auction.
+     */
+    function batchCollectAndShareRevenue(
+        uint256[] calldata auctionIds,
+        uint256[] calldata amounts,
+        address[][] calldata beneficiariesList,
+        uint256[][] calldata collectsList,
+        bool[] calldata isAuctionsCollectedList
+    ) external onlyOperator nonReentrant {
+        if (
+            auctionIds.length != amounts.length ||
+            auctionIds.length != beneficiariesList.length ||
+            auctionIds.length != collectsList.length ||
+            auctionIds.length != isAuctionsCollectedList.length
+        ) {
+            revert InvalidShareRevenue(ShareRevenueErrorCode.INVALID_PARAMETERS_LENGTH);
+        }
+
+        for (uint256 i = 0; i < auctionIds.length; i++) {
+            _collectAndShareRevenue(
+                auctionIds[i],
+                amounts[i],
+                beneficiariesList[i],
+                collectsList[i],
+                isAuctionsCollectedList[i]
+            );
+        }
+    }
+
+    /**
+     * @notice Internal function to collect and share revenue for a single auction.
+     * @dev Collects the auction payout and distributes the revenue to the beneficiaries.
      * @param auctionId The ID of the auction in the Thirdweb Marketplace contract.
      * @param amount The total amount of Ether or tokens to be distributed to the beneficiaries.
-     * @param signature The signature from the authorized verifier to validate the claim operation.
-     *
-     * @notice The function will revert if:
-     *
-     *      - The auction associated with the handle is not marked as canClaim.
-     *      - The provided signature does not validate against the expected payload signed by the authorized signer.
+     * @param beneficiaries The beneficiaries for the auction.
+     * @param collects The collects for the auction.
+     * @param isAuctionCollected The status of the auction payout.
      */
-    function collectAuctionPayout(
+    function _collectAndShareRevenue(
         uint256 auctionId,
         uint256 amount,
         address[] calldata beneficiaries,
         uint256[] calldata collects,
-        bytes calldata signature
-    ) external nonReentrant {
+        bool isAuctionCollected
+    ) internal {
         _validateCollectAuctionPayout(auctionId, beneficiaries, collects);
-        bytes32 dataHash = getCollectAuctionPayoutOp(
-            auctionId,
-            amount,
-            beneficiaries,
-            collects
-        );
-        if(!_verifySignature(dataHash, signature)) {
-            revert InvalidCollectAuctionSignature();
+        if (!auctionCanClaim[auctionId]) {
+            revert AuctionNotClaimable(auctionId);
         }
 
         IEnglishAuctions.Auction memory auction = IEnglishAuctions(marketplace).getAuction(auctionId);
-        if(auction.assetContract == address(0)) {
-            revert ZeroAssetContract();
+        if (auction.endTimestamp >= block.timestamp) {
+            revert InvalidShareRevenue(ShareRevenueErrorCode.AUCTION_STILL_ALIVE);
         }
-        _payout(amount, beneficiaries, collects, auction.tokenId, auction.assetContract);
+
+        (, address currency, uint256 bidAmount) = IEnglishAuctions(marketplace).getWinningBid(auctionId);
+        if (currency != address(bic)) {
+            revert InvalidShareRevenue(ShareRevenueErrorCode.NO_WINNER);
+        }
+        if (bidAmount == 0) {
+            revert InvalidShareRevenue(ShareRevenueErrorCode.NO_WINNER);
+        }
+        if(!isAuctionCollected) {
+            IEnglishAuctions(marketplace).collectAuctionPayout(auctionId);
+            (, uint16 feeBps) = IPlatformFee(marketplace).getPlatformFeeInfo();
+            uint256 finalAmount = (bidAmount * (10000 - feeBps)) / 10000;
+            if (finalAmount < amount) {
+                revert InvalidShareRevenue(ShareRevenueErrorCode.INSUFFICIENT_BALANCE_TO_SHARE);
+            }
+        }
         auctionCanClaim[auctionId] = false;
+        _payout(amount, beneficiaries, collects, auction.tokenId, auction.assetContract);
     }
 
     /**
@@ -365,7 +435,7 @@ contract HandlesController is ReentrancyGuard, Ownable {
     ) private view returns (bool) {
         bytes32 dataHashSign = MessageHashUtils.toEthSignedMessageHash(dataHash);
         address signer = dataHashSign.recover(signature);
-        return signer == verifier;
+        return _operators.contains(signer);
     }
 
     /**
@@ -509,11 +579,8 @@ contract HandlesController is ReentrancyGuard, Ownable {
 
     function _validateHandleRequest(
         HandleRequest memory rq
-    ) internal {
-        if(rq.receiver == address(0)) {
-            revert ZeroAddress();
-        }
-        if(rq.handle == address(0)) {
+    ) view internal {
+        if(rq.receiver == address(0) || rq.handle == address(0)) {
             revert ZeroAddress();
         }
         if (rq.beneficiaries.length != rq.collects.length) {
@@ -545,9 +612,12 @@ contract HandlesController is ReentrancyGuard, Ownable {
         uint256 auctionId,
         address[] calldata beneficiaries,
         uint256[] calldata collects
-    ) internal {
+    ) view internal {
         if(!auctionCanClaim[auctionId]) {
             revert AuctionNotClaimable(auctionId);
+        }
+        if(beneficiaries.length != collects.length) {
+            revert BeneficiariesAndCollectsLengthNotMatch();
         }
         uint256 totalCollects = 0;
         for (uint256 i = 0; i < collects.length; i++) {
@@ -573,8 +643,14 @@ contract HandlesController is ReentrancyGuard, Ownable {
         address to,
         uint256 amount
     ) external onlyOwner {
-        IERC20(token).transfer(to, amount);
+        bool success;
+        if (token == address(0)) {
+            (success, ) = address(to).call{value: amount}("");
+        } else {
+            success = IERC20(token).transfer(to, amount);
+        }
         emit WithdrawToken(token, to, amount);
+
     }
 
     /**
@@ -633,28 +709,6 @@ contract HandlesController is ReentrancyGuard, Ownable {
     }
 
     /**
-     * @notice Generates a unique hash for a collect auction payout operation.
-     * @dev Generates a unique hash for a collect auction payout operation.
-     */
-    function getCollectAuctionPayoutOp(
-        uint256 auctionId,
-        uint256 amount,
-        address[] calldata beneficiaries,
-        uint256[] calldata collects
-    ) public view returns (bytes32) {
-        return
-            keccak256(
-                abi.encode(
-                    auctionId,
-                    amount,
-                    block.chainid,
-                    beneficiaries,
-                    collects
-                )
-            );
-    }
-
-    /**
      * @notice Allows the operator to burn a handle that was minted when case the auction failed (none bid).
      * @param handle The address of the handle contract.
      * @param name The name of the handle.
@@ -662,7 +716,7 @@ contract HandlesController is ReentrancyGuard, Ownable {
     function burnHandleMintedButAuctionFailed(
         address handle,
         string calldata name
-    ) external onlyOwner {
+    ) external onlyOperator {
         uint256 tokenId = IHandles(handle).getTokenId(name);
         IHandles(handle).burn(tokenId);
         emit BurnHandleMintedButAuctionFailed(handle, name, tokenId);
