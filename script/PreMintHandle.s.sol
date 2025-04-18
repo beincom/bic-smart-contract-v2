@@ -63,11 +63,11 @@ contract PremintNFTScript is Script {
 
     function setUp() public {
         // Update addresses
-        handlesController = 0x110aAF832634A8889E30190256d82DaDad7bAA9B;
+        handlesController = 0x12B080bc45c4e26D5cb71F8b054893c0d245f111;
         uoNFTHandle = 0x08e39687442D122F915b8d944896A8dcd33dDC62;
         poNFTHandle = 0x2959E2CE1980602f9c9D0CFB12B160Dfa36Dba4F;
         coNFTHandle = 0xbE99dd369BE5c484752970478F27d53d882db072;
-        receiver = 0xcB9685a5453a30818F80E2E214A7F2651B22BF70;
+        receiver = 0x379C1632753B1D0628071C1d138D6C513a2fDB8b;
         multicall = 0xcA11bde05977b3631167028862bE2a173976CA11;
         signerPrivateKey = vm.envUint("NFT_VERIFIER_PRIVATE_KEY");
     }
@@ -161,7 +161,7 @@ contract PremintNFTScript is Script {
         poHandles[8] = HandleRequestData("Beincom Admin", poNFTHandle);
 
         // Community Name Ownership NFTs (coNFT)
-        HandleRequestData[] memory coHandles = new HandleRequestData[](5);
+        HandleRequestData[] memory coHandles = new HandleRequestData[](4);
         coHandles[0] = HandleRequestData("Beincom Viet Nam", coNFTHandle);
         coHandles[1] = HandleRequestData("Beincom Global", coNFTHandle);
         coHandles[2] = HandleRequestData("Beincom's EchoSphere", coNFTHandle);
