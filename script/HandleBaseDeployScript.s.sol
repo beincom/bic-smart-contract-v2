@@ -24,7 +24,6 @@ contract HandleBaseDeployScript is Script {
     function deployHandleUri(address deployOwner, address afterDeployOwner) internal {
         HandleTokenURI handleTokenURI = new HandleTokenURI(deployOwner);
         console.log("HandleTokenURI deployed at:", address(handleTokenURI));
-        handleTokenURI.transferOwnership(afterDeployOwner);
     }
 
     function deployHandle() internal {
