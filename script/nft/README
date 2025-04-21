@@ -1,11 +1,11 @@
 # Deploy full of NFT
 
 ## Deploy Base contract
-- forge script ./script/nft/DeployBaseScript.s.sol:DeployBaseScript  --rpc-url $network --broadcast -vvvv
+- forge script ./script/nft/DeployBaseScript.s.sol:DeployBaseScript  --rpc-url $network --broadcast -vvvv --verify
 
 
 ## Deploy NFT Handler
-- forge script ./script/nft/DeployAndSetupNFTScript.s.sol:DeployAndSetupNFTScript  --rpc-url $network --broadcast -vvvv
+- forge script ./script/nft/DeployAndSetupNFTScript.s.sol:DeployAndSetupNFTScript  --rpc-url $network --broadcast -vvvv --verify
 
 ## Setup HandleController
 - forge script ./script/nft/SetupHandlesController.s.sol:SetupHandlesControllerAndForwarderScript  --rpc-url $network --broadcast -vvvv
