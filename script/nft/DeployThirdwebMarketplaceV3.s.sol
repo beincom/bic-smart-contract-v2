@@ -3,6 +3,8 @@ pragma solidity ^0.8.23;
 
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
+import {IPermissions} from "../../src/interfaces/IMarketplace.sol";
+
 
 
 contract SampleBicFactory {
@@ -14,20 +16,6 @@ contract SampleBicFactory {
         // Deploy the proxy
     }
 }
-
-interface IRoyaltyPaymentsLogic  {
-    function getRoyalty(
-        address tokenAddress,
-        uint256 tokenId,
-        uint256 value
-    ) external returns (address payable[] memory recipients, uint256[] memory amounts);
-
-    function setRoyaltyEngine(address _royaltyEngineAddress) external;
-
-    function getRoyaltyEngineAddress() external view returns (address royaltyEngineAddress);
-    
-}
-
 contract SampleThirdwebMarketplaceV3 {
     function initialize(
         address _defaultAdmin,
@@ -43,9 +31,12 @@ contract SampleThirdwebMarketplaceV3 {
 
 
 contract DeployThirdwebMarketplaceV3 is Script {
+    bytes32 DEFAULT_ADMIN_ROLE = 0x00;
+
     // Same in multi chain
     address bicFactory = vm.envAddress("BIC_FACTORY_ADDRESS");
     address implementation = vm.envAddress("THIRD_WEB_MARKETPLACE_IMPLEMENTATION");
+    address bicOwnerAddress = vm.envAddress("BIC_OWNER_ADDRESS");
 
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
@@ -55,7 +46,7 @@ contract DeployThirdwebMarketplaceV3 is Script {
         trustedForwarders[0] = forwarder;
         vm.startBroadcast(deployerPrivateKey);
         SampleBicFactory factory = SampleBicFactory(bicFactory);
-        address marketplace_address = factory.deployProxyByImplementation(
+        address marketplaceAddress = factory.deployProxyByImplementation(
             implementation,
             abi.encodeWithSelector(
                 SampleThirdwebMarketplaceV3.initialize.selector,
@@ -65,12 +56,18 @@ contract DeployThirdwebMarketplaceV3 is Script {
                 treasury,
                 600
             ),
-            0x0000000000000000000000000000000000000000000000000000000000000003
+            0x0000000000000000000000000000000000000000000000000000000000000005
         );
-        console.log("ThirdwebMarketplaceV3 deployed at:", marketplace_address);
-        IRoyaltyPaymentsLogic marketplace = IRoyaltyPaymentsLogic(marketplace_address);
-        marketplace.setRoyaltyEngine(address(0));
+        console.log("ThirdwebMarketplaceV3 deployed at:", marketplaceAddress);    
+
+        IPermissions marketplace = IPermissions(marketplaceAddress);
+        marketplace.grantRole(DEFAULT_ADMIN_ROLE, bicOwnerAddress);
         
         vm.stopBroadcast();
+    }
+
+    function _postValidate(address marketplaceAddress) internal {
+        IPermissions marketplace = IPermissions(marketplaceAddress);
+        require(marketplace.hasRole(DEFAULT_ADMIN_ROLE, bicOwnerAddress), "BIC_OWNER_ADDRESS does not have DEFAULT_ADMIN_ROLE");
     }
 }
