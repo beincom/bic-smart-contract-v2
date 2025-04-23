@@ -1,0 +1,25 @@
+# Deploy full of NFT
+
+## Deploy Base contract (includes Handles logic, BicForwarder, HandleTokenURI, HandlesController)
+- forge script ./script/nft/DeployBaseScript.s.sol:DeployBaseScript  --rpc-url $network --broadcast -vvvv --verify
+
+
+## Deploy NFT Handles
+- forge script ./script/nft/DeployAndSetupNFTScript.s.sol:DeployAndSetupNFTScript  --rpc-url $network --broadcast -vvvv --verify
+
+## Setup HandleController
+- forge script ./script/nft/SetupHandlesController.s.sol:SetupHandlesControllerAndForwarderScript  --rpc-url $network --broadcast -vvvv
+
+## Post setup(transfer ownership)
+- forge script ./script/nft/PostSetup.s.sol:PostSetupNFTScript  --rpc-url $network --broadcast -vvvv
+- forge script ./script/nft/PostSetup.s.sol:PostSetupForwarderScript  --rpc-url $network --broadcast -vvvv
+- forge script ./script/nft/PostSetup.s.sol:PostSetupHandleControllerScript  --rpc-url $network --broadcast -vvvv
+- forge script ./script/nft/PostSetup.s.sol:PostSetupMarketplaceScript  --rpc-url $network --broadcast -vvvv
+
+
+
+## Verify contract
+forge verify-contract --etherscan-api-key $api-key  $contract_address --constructor-args $(cast abi-encode "constructor(address)" 0xe450584F78be9DdeA56A535125Aa400F67BAbA36)  --rpc-url arbitrum_sepolia --watch
+## Transfer Owner
+
+##
