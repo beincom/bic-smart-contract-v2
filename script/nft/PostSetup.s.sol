@@ -87,8 +87,8 @@ contract PostSetupHandleControllerScript is Script {
 
         // #region HandlesController
         HandlesController handlesController = HandlesController(controllerAddress);
-        handlesController.transferOwnership(bicOwnerAddress);
         handlesController.removeOperator(deployOwner); // Remove deployer as operator(for PreMint)
+        handlesController.transferOwnership(bicOwnerAddress);
 
         require(handlesController.owner() == bicOwnerAddress, "HandlesController owner is not BIC_OWNER_ADDRESS");
         address[] memory operators = handlesController.getOperators();

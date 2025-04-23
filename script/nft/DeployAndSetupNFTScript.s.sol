@@ -49,7 +49,7 @@ contract DeployAndSetupNFTScript is Script {
             name: "Profile Ownership NFT",
             symbol: "poNFT",
             imageDescription: "Beincom - Profile Ownership NFT@",
-            imageUri: "https://media.beincom.com/v1/image/uri/opnft"
+            imageUri: "https://media.beincom.com/image/uri/opnft"
         }),
         NFTData({
             namespace: "ubNFT",
