@@ -7,8 +7,14 @@
 ## Deploy NFT Handles
 - forge script ./script/nft/DeployAndSetupNFTScript.s.sol:DeployAndSetupNFTScript  --rpc-url $network --broadcast -vvvv --verify
 
+## Deploy Thirdweb Marketplace
+- forge script ./script/nft/DeployThirdwebMarketplaceScript.s.sol:DeployThirdwebMarketplaceScript  --rpc-url $network --broadcast -vvvv
+
+
 ## Setup HandleController
 - forge script ./script/nft/SetupHandlesController.s.sol:SetupHandlesControllerAndForwarderScript  --rpc-url $network --broadcast -vvvv
+- forge script ./script/nft/SetupAssetRolesThirdwebMarketplaceV3.s.sol:SetupAssetRolesThirdwebMarketplaceV3  --rpc-url $network -vvvv --broadcast
+
 
 ## Post setup(transfer ownership)
 - forge script ./script/nft/PostSetup.s.sol:PostSetupNFTScript  --rpc-url $network --broadcast -vvvv
