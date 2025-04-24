@@ -56,7 +56,7 @@ contract DeployThirdwebMarketplaceV3 is Script {
                 treasury,
                 600
             ),
-            0x0000000000000000000000000000000000000000000000000000000000000005
+            0x0000000000000000000000000000000000000000000000000000000000000000
         );
         console.log("ThirdwebMarketplaceV3 deployed at:", marketplaceAddress);    
 
