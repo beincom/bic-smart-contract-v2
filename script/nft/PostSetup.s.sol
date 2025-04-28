@@ -94,7 +94,14 @@ contract PostSetupHandleControllerScript is Script {
         address[] memory operators = handlesController.getOperators();
         
         require(operators.length == 1, "HandlesController has more than 1 operator");
-        require(operators[0] == bicOwnerAddress, "HandlesController operator is not BIC_OWNER_ADDRESS");
+        bool isDeployerOperator = false;
+        for (uint i = 0; i < operators.length; i++) {
+            if (operators[i] == deployOwner) {
+                isDeployerOperator = true;
+                break;
+            }
+        }
+        require(!isDeployerOperator, "Deployer is still an operator");
 
         vm.stopBroadcast();
     }

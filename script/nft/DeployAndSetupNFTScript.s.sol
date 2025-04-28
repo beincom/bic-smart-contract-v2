@@ -100,7 +100,7 @@ contract DeployAndSetupNFTScript is Script {
             );
 
             bytes32 salt = keccak256(
-                abi.encodePacked("Handles", nft.namespace, uint256(0))
+                abi.encodePacked("Handles", nft.namespace, uint256(1))
             );
 
             console.log("Deploying proxy for namespace: ", nft.namespace);
@@ -116,7 +116,7 @@ contract DeployAndSetupNFTScript is Script {
             Handles clone = Handles(cloneAddress);
             clone.setHandleTokenURIContract(address(handleTokenURI));
             clone.setController(controllerAddress);
-            handleTokenURI.setNameElement(nft.namespace, nft.imageDescription, nft.imageUri);
+            // handleTokenURI.setNameElement(nft.namespace, nft.imageDescription, nft.imageUri);
         }
 
         vm.stopBroadcast();
