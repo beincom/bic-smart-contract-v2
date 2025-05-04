@@ -30,11 +30,24 @@ contract MockERC721WithRoyalty is ERC721 {
     }
 }
 
+// Mock ERC721 without royalty implementation
+contract MockERC721WithoutRoyalty is ERC721 {
+    constructor() ERC721("MockNFTNoRoyalty", "MNFTNR") {}
+
+    function mint(address to, uint256 tokenId) external {
+        _mint(to, tokenId);
+    }
+
+    // Does not implement royaltyInfo
+    // Does not override supportsInterface for 0x2a55205a
+}
+
 contract RoyaltyEngineV1Test is Test {
     RoyaltyEngineV1 public royaltyEngine;
     MockMarketplace public marketplace;
     TestBIC public bicToken;
-    MockERC721WithRoyalty public nft;
+    MockERC721WithRoyalty public nftWithRoyalty;
+    MockERC721WithoutRoyalty public nftWithoutRoyalty;
 
     address public seller;
     address public buyer;
@@ -54,10 +67,12 @@ contract RoyaltyEngineV1Test is Test {
         royaltyEngine = new RoyaltyEngineV1();
         marketplace = new MockMarketplace();
         bicToken = new TestBIC();
-        nft = new MockERC721WithRoyalty(royaltyRecipient, ROYALTY_BPS);
+        nftWithRoyalty = new MockERC721WithRoyalty(royaltyRecipient, ROYALTY_BPS);
+        nftWithoutRoyalty = new MockERC721WithoutRoyalty();
 
         // Mint NFT to seller
-        nft.mint(seller, TOKEN_ID);
+        nftWithRoyalty.mint(seller, TOKEN_ID);
+        nftWithoutRoyalty.mint(seller, TOKEN_ID);
 
         // Mint BIC tokens to buyer
         bicToken.mint(buyer, BID_AMOUNT * 2);
@@ -80,7 +95,7 @@ contract RoyaltyEngineV1Test is Test {
         uint256 expectedRoyaltyAmount = (BID_AMOUNT * ROYALTY_BPS) / 10000; // 10% of bid amount
 
         (address payable[] memory recipients, uint256[] memory amounts) = royaltyEngine.getRoyalty(
-            address(nft),
+            address(nftWithRoyalty),
             TOKEN_ID,
             BID_AMOUNT
         );
@@ -95,7 +110,7 @@ contract RoyaltyEngineV1Test is Test {
         uint256 expectedRoyaltyAmount = (BID_AMOUNT * ROYALTY_BPS) / 10000; // 10% of bid amount
 
         (address payable[] memory recipients, uint256[] memory amounts) = royaltyEngine.getRoyaltyView(
-            address(nft),
+            address(nftWithRoyalty),
             TOKEN_ID,
             BID_AMOUNT
         );
@@ -113,7 +128,7 @@ contract RoyaltyEngineV1Test is Test {
         
         marketplace.setAuction(
             auctionId,
-            address(nft),
+            address(nftWithRoyalty),
             address(bicToken),
             seller,
             TOKEN_ID,
@@ -177,5 +192,62 @@ contract RoyaltyEngineV1Test is Test {
 
         assertEq(recipients.length, 0, "Should have no royalty recipients for non-ERC2981 token");
         assertEq(amounts.length, 0, "Should have no royalty amounts for non-ERC2981 token");
+    }
+
+    function testNFTWithoutRoyalty() public {
+        // Get royalty for NFT without royalty implementation
+        (address payable[] memory recipients, uint256[] memory amounts) = royaltyEngine.getRoyalty(
+            address(nftWithoutRoyalty),
+            TOKEN_ID,
+            BID_AMOUNT
+        );
+
+        // Should return empty arrays since the NFT doesn't support ERC2981
+        assertEq(recipients.length, 0, "Should have no royalty recipients for NFT without royalty");
+        assertEq(amounts.length, 0, "Should have no royalty amounts for NFT without royalty");
+    }
+
+    function testMarketplaceWithNFTWithoutRoyalty() public {
+        // Set up auction
+        uint256 auctionId = 2;
+        uint64 endTimestamp = uint64(block.timestamp + 1 days);
+        
+        marketplace.setAuction(
+            auctionId,
+            address(nftWithoutRoyalty),
+            address(bicToken),
+            seller,
+            TOKEN_ID,
+            endTimestamp
+        );
+        
+        // Set winning bid
+        marketplace.setWinningBid(auctionId, buyer, BID_AMOUNT);
+        
+        // Check seller's balance before collection
+        uint256 sellerBalanceBefore = bicToken.balanceOf(seller);
+        uint256 royaltyRecipientBalanceBefore = bicToken.balanceOf(royaltyRecipient);
+        
+        // Collect payout
+        marketplace.collectAuctionPayout(auctionId);
+        
+        // Calculate expected seller amount (only platform fee should be deducted, no royalty)
+        uint256 expectedSellerAmount = BID_AMOUNT * (10000 - 600) / 10000; // Only platform fee 6%
+        
+        // Check balances after collection
+        uint256 sellerBalanceAfter = bicToken.balanceOf(seller);
+        uint256 royaltyRecipientBalanceAfter = bicToken.balanceOf(royaltyRecipient);
+        
+        assertEq(
+            sellerBalanceAfter - sellerBalanceBefore,
+            expectedSellerAmount,
+            "Seller should receive full amount after platform fee"
+        );
+        
+        assertEq(
+            royaltyRecipientBalanceAfter,
+            royaltyRecipientBalanceBefore,
+            "Royalty recipient should not receive anything"
+        );
     }
 }
