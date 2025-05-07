@@ -7,13 +7,13 @@ import { LibDiamond } from "../libraries/LibDiamond.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-contract ContentPaymentFacet {
+contract LuckyWheelFacet {
     using SafeERC20 for IERC20;
     // Struct
-    struct ContentPaymentStorage {
-        uint8 initialized;
+    struct LuckyWheelStorage {
+        uint8 initialLuckyWheelConfig;
         uint256 bufferPostOp;
-        address contentTreasury;
+        address luckyWheelTreasury;
         address paymentToken;
     }
 
@@ -24,25 +24,25 @@ contract ContentPaymentFacet {
 
     /// Storage
     uint256 internal constant DENOMINATOR = 1e10;
-    bytes32 internal constant CONTENT_CONFIG_STORAGE_POSITION = keccak256("1CP.content.config.storage");
+    bytes32 internal constant LUCKY_WHEEL_CONFIG_STORAGE_POSITION = keccak256("1CP.lucky.wheel.config.storage");
 
     /// Events
-    event InitializedContentPaymentConfig(
+    event InitializedLuckyWheelConfig(
         address treasury,
         address paymentToken,
         uint256 bufferPostOp
     );
-    event ContentTreasuryUpdated(address updater, address newTreasury);
+    event LuckyWheelTreasuryUpdated(address updater, address newTreasury);
     event PaymentTokenUpdated(address updater, address newPaymentToken);
     event BufferPostOpUpdated(address updater, uint256 bufferPostOp);
-    event ContentBought(
+    event LuckyWheelBought(
         address token,
         address from,
         address to,
         uint256 amount,
         string orderId
     );
-    event CallBuyContent(
+    event CallBuyLuckyWheel(
         address caller,
         address token,
         address from,
@@ -53,31 +53,31 @@ contract ContentPaymentFacet {
     );
 
     modifier initializer() {
-        ContentPaymentStorage storage s = getStorage();
-        if (s.initialized != 0) {
+        LuckyWheelStorage storage s = getStorage();
+        if (s.initialLuckyWheelConfig != 0) {
             revert AlreadyInitialized();
         }
-        s.initialized = 1;
+        s.initialLuckyWheelConfig = 1;
         _;
     }
 
-    /// @notice Get content config storage
-    function getContentPaymentStorage() external pure returns (
+    /// @notice Get lucky wheel storage
+    function getLuckyWheelStorage() external pure returns (
         uint256 bufferPostOp,
-        address contentTreasury,
+        address luckyWheelTreasury,
         address paymentToken
     ) {
-        ContentPaymentStorage memory s = getStorage();
-        return (s.bufferPostOp, s.contentTreasury, s.paymentToken);
+        LuckyWheelStorage memory s = getStorage();
+        return (s.bufferPostOp, s.luckyWheelTreasury, s.paymentToken);
     }
 
     /**
-     * @notice Initialize content payment config
-     * @param treasury the content treasury address
-     * @param paymentToken The payment token address used for reimbursing gas fee via callBuyContent
-     * @param bufferPostOp The additional gas used for additional execution via callBuyContent
+     * @notice Initialize lucky wheel config
+     * @param treasury the lucky wheel treasury address
+     * @param paymentToken The payment token address used for reimbursing gas fee via callBuyLuckyWheel
+     * @param bufferPostOp The additional gas used for additional execution via callBuyLuckyWheel
      */
-    function initializeContentPaymentConfig(
+    function initializeLuckyWheelConfig(
         address treasury,
         address paymentToken,
         uint256 bufferPostOp
@@ -87,54 +87,54 @@ contract ContentPaymentFacet {
             revert ZeroAddress();
         }
 
-        ContentPaymentStorage storage s = getStorage();
-        s.contentTreasury = treasury;
+        LuckyWheelStorage storage s = getStorage();
+        s.luckyWheelTreasury = treasury;
         s.paymentToken = paymentToken;
         s.bufferPostOp = bufferPostOp;
-        emit InitializedContentPaymentConfig(treasury, paymentToken, bufferPostOp);
+        emit InitializedLuckyWheelConfig(treasury, paymentToken, bufferPostOp);
     }
 
-    /// @notice Update content treasury address
-    /// @param newTreasury The new content treasury address
-    function updateContentTreasury(address newTreasury) external {
+    /// @notice Update lucky wheel treasury address
+    /// @param newTreasury The new lucky wheel treasury address
+    function updateLuckyWheelTreasury(address newTreasury) external {
         LibDiamond.enforceIsContractOwner();
         if (newTreasury == address(0)) {
             revert ZeroAddress();
         }
-        ContentPaymentStorage storage s = getStorage();
-        s.contentTreasury = newTreasury;
-        emit ContentTreasuryUpdated(msg.sender, newTreasury);
+        LuckyWheelStorage storage s = getStorage();
+        s.luckyWheelTreasury = newTreasury;
+        emit LuckyWheelTreasuryUpdated(msg.sender, newTreasury);
     }
 
     /// @notice Update content payment token address
-    /// @param paymentToken The payment token address used for reimbursing gas fee via callBuyContent
-    function updateContentPaymentToken(address paymentToken) external {
+    /// @param paymentToken The payment token address used for reimbursing gas fee via callBuyLuckyWheel
+    function updateLuckyWheelPaymentToken(address paymentToken) external {
         LibDiamond.enforceIsContractOwner();
         if (paymentToken == address(0)) {
             revert ZeroAddress();
         }
-        ContentPaymentStorage storage s = getStorage();
+        LuckyWheelStorage storage s = getStorage();
         s.paymentToken = paymentToken;
         emit PaymentTokenUpdated(msg.sender, paymentToken);
     }
 
     /// @notice Update buffer gas for post ops
-    /// @param bufferPostOp The additional gas used for additional execution via callBuyContent
-    function updateContentBufferPostOp(uint256 bufferPostOp) external {
+    /// @param bufferPostOp The additional gas used for additional execution via callBuyLuckyWheel
+    function updateLuckyWheelBufferPostOp(uint256 bufferPostOp) external {
         LibDiamond.enforceIsContractOwner();
-        ContentPaymentStorage storage s = getStorage();
+        LuckyWheelStorage storage s = getStorage();
         s.bufferPostOp = bufferPostOp;
         emit BufferPostOpUpdated(msg.sender, bufferPostOp);
     }
 
     /**
-     * @notice Buy a specific content
+     * @notice Buy a specific lucky wheel
      * @param token The payment token
      * @param to The seller adderss
      * @param amount The selling amount
      * @param orderId The off-chain orderId based on services
      */
-    function buyContent(
+    function buyLuckyWheel(
         address token,
         address to,
         uint256 amount,
@@ -143,14 +143,14 @@ contract ContentPaymentFacet {
         if (amount == 0) {
             revert ZeroPayment();
         }
-        ContentPaymentStorage storage s = getStorage();
-        IERC20(token).safeTransferFrom(msg.sender, s.contentTreasury, amount);
+        LuckyWheelStorage storage s = getStorage();
+        IERC20(token).safeTransferFrom(msg.sender, s.luckyWheelTreasury, amount);
 
-        emit ContentBought(token, msg.sender, s.contentTreasury, amount, orderId);
+        emit LuckyWheelBought(token, msg.sender, s.luckyWheelTreasury, amount, orderId);
     }
 
     /**
-     * @notice Buy a specific content via callers
+     * @notice Buy a specific lucky wheel via callers
      * @param token The payment token
      * @param from The buyer address
      * @param to The seller address
@@ -162,7 +162,7 @@ contract ContentPaymentFacet {
      * @return The actual gas cost
      * @return The actual payment cost
      */
-    function callBuyContent(
+    function callBuyLuckyWheel(
         address token,
         address from,
         address to,
@@ -177,16 +177,16 @@ contract ContentPaymentFacet {
         if (amount == 0) {
             revert ZeroPayment();
         }
-        ContentPaymentStorage storage s = getStorage();
-        IERC20(token).safeTransferFrom(from, s.contentTreasury, amount);
+        LuckyWheelStorage storage s = getStorage();
+        IERC20(token).safeTransferFrom(from, s.luckyWheelTreasury, amount);
         
         uint256 gasPrice = getUserOpGasPrice(maxFeePerGas, maxPriorityFeePerGas);
         uint256 actualGas = preGas - gasleft() + s.bufferPostOp;
         uint256 actualGasCost = actualGas * gasPrice;
         uint256 actualPaymentCost = actualGasCost * paymentPrice / DENOMINATOR;
         
-        IERC20(s.paymentToken).safeTransferFrom(from, s.contentTreasury, actualPaymentCost);
-        emit CallBuyContent(
+        IERC20(s.paymentToken).safeTransferFrom(from, s.luckyWheelTreasury, actualPaymentCost);
+        emit CallBuyLuckyWheel(
             msg.sender,
             token,
             from,
@@ -198,9 +198,9 @@ contract ContentPaymentFacet {
         return (actualGasCost, actualPaymentCost);
     }
 
-    /// @notice Get storage position of content configuration
-    function getStorage() internal pure returns (ContentPaymentStorage storage dc) {
-        bytes32 position = CONTENT_CONFIG_STORAGE_POSITION;
+    /// @notice Get storage position of lucky wheel configuration
+    function getStorage() internal pure returns (LuckyWheelStorage storage dc) {
+        bytes32 position = LUCKY_WHEEL_CONFIG_STORAGE_POSITION;
         // solhint-disable-next-line no-inline-assembly
         assembly {
             dc.slot := position
