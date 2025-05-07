@@ -24,7 +24,6 @@ contract ContentPaymentFacetTest is OneCPTestBase {
     address public creator;
     address public caller;
     address public contentTreasury;
-    uint256 public surchargeFee;
     uint256 public bufferPostOp;
     uint256 public denominator = 1e10;
     string public orderId = '123dda';
@@ -36,21 +35,19 @@ contract ContentPaymentFacetTest is OneCPTestBase {
         creator = address(12345678);
         caller = address(12345666);
         contentTreasury = address(1222);
-        surchargeFee = 1000;
         bufferPostOp = 21000;
         tBIC = new TestERC20();
         ContentPaymentFacet contentPaymentFacet = new ContentPaymentFacet();
 
         // prepare function selectors
-        bytes4[] memory functionSelectors = new bytes4[](8);
+        bytes4[] memory functionSelectors = new bytes4[](7);
         functionSelectors[0] = contentPaymentFacet.updateContentTreasury.selector;
         functionSelectors[1] = contentPaymentFacet.updateContentPaymentToken.selector;
-        functionSelectors[2] = contentPaymentFacet.updateContentSurchargeFee.selector;
-        functionSelectors[3] = contentPaymentFacet.updateContentBufferPostOp.selector;
-        functionSelectors[4] = contentPaymentFacet.buyContent.selector;
-        functionSelectors[5] = contentPaymentFacet.callBuyContent.selector;
-        functionSelectors[6] = contentPaymentFacet.getContentPaymentStorage.selector;
-        functionSelectors[7] = contentPaymentFacet.initializeContentPaymentConfig.selector;
+        functionSelectors[2] = contentPaymentFacet.updateContentBufferPostOp.selector;
+        functionSelectors[3] = contentPaymentFacet.buyContent.selector;
+        functionSelectors[4] = contentPaymentFacet.callBuyContent.selector;
+        functionSelectors[5] = contentPaymentFacet.getContentPaymentStorage.selector;
+        functionSelectors[6] = contentPaymentFacet.initializeContentPaymentConfig.selector;
 
         // prepare diamondCut
         LibDiamond.FacetCut[] memory cuts = new LibDiamond.FacetCut[](1);
@@ -67,7 +64,6 @@ contract ContentPaymentFacetTest is OneCPTestBase {
         ContentPaymentFacet(address(oneCP)).initializeContentPaymentConfig(
             contentTreasury,
             address(tBIC),
-            surchargeFee,
             bufferPostOp    
         );
 
@@ -81,17 +77,14 @@ contract ContentPaymentFacetTest is OneCPTestBase {
         ContentPaymentFacet(address(oneCP)).initializeContentPaymentConfig(
             contentTreasury,
             address(tBIC),
-            surchargeFee,
             bufferPostOp    
         );
         (
-            uint256 surchargeConfig,
             uint256 postOpConfig,
             address treasury,
             address payment
             
         ) = ContentPaymentFacet(address(oneCP)).getContentPaymentStorage();
-        assertEq(surchargeConfig, surchargeFee);
         assertEq(postOpConfig, bufferPostOp);
         assertEq(treasury, contentTreasury);
         assertEq(payment, address(tBIC));
@@ -108,8 +101,7 @@ contract ContentPaymentFacetTest is OneCPTestBase {
             buyAmount,
             orderId
         );
-        assertEq(buyAmount * surchargeFee / 10_000, tBIC.balanceOf(contentTreasury), "Surcharge fee mismatch");
-        assertEq(buyAmount - (buyAmount * surchargeFee / 10_000), tBIC.balanceOf(creator), "Received amount fee mismatch");
+        assertEq(buyAmount, tBIC.balanceOf(contentTreasury), "Surcharge fee mismatch");
     }
 
     function test_callBuyContent() public {
@@ -132,8 +124,7 @@ contract ContentPaymentFacetTest is OneCPTestBase {
             paymentPrice
         );
         assertEq(actualGasCost * paymentPrice / denominator, actualPayment, "Gas Payment mismatch");
-        assertEq((buyAmount * surchargeFee / 10_000) + actualPayment, tBIC.balanceOf(contentTreasury), "Surcharge fee mismatch");
-        assertEq(buyAmount - (buyAmount * surchargeFee / 10_000), tBIC.balanceOf(creator), "Received amount fee mismatch");
+        assertEq(buyAmount + actualPayment, tBIC.balanceOf(contentTreasury), "buyAmount mismatch");
     }
 
     function test_failed_callBuyContent() public {
@@ -251,7 +242,6 @@ contract ContentPaymentFacetTest is OneCPTestBase {
             paymentPrice
         );
         assertEq(actualGasCost * paymentPrice / denominator, actualPayment, "Gas Payment mismatch");
-        assertEq((buyAmount * surchargeFee / 10_000) + actualPayment, tBIC.balanceOf(contentTreasury), "Surcharge fee mismatch");
-        assertEq(buyAmount - (buyAmount * surchargeFee / 10_000), tBIC.balanceOf(creator), "Received amount fee mismatch");
+        assertEq(buyAmount + actualPayment, tBIC.balanceOf(contentTreasury), "buyAmount mismatch");
     }
 }

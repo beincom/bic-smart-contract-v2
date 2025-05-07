@@ -17,7 +17,6 @@ contract ContentPaymentFacetDeployScript is Script {
         address contentPaymentToken = vm.envAddress("CONTENT_PAYMENT_TOKEN");
         address contentTreasury = vm.envAddress("CONTENT_TREASURY");
         address contentCaller = vm.envAddress("CONTENT_CALLER");
-        uint256 surchargeFee = vm.envUint("CONTENT_SURCHARGE_FEE");
         uint256 bufferPostOp = vm.envUint("CONTENT_BUFFER_POSTOP");
 
         vm.startBroadcast(deployerPrivateKey);
@@ -29,7 +28,6 @@ contract ContentPaymentFacetDeployScript is Script {
         ContentPaymentFacet(oneCP).initializeContentPaymentConfig(
             contentTreasury,
             contentPaymentToken,
-            surchargeFee,
             bufferPostOp    
         );
 
@@ -43,15 +41,14 @@ contract ContentPaymentFacetDeployScript is Script {
         ContentPaymentFacet contentPaymentFacet = new ContentPaymentFacet();
 
         // prepare function selectors
-        bytes4[] memory functionSelectors = new bytes4[](8);
+        bytes4[] memory functionSelectors = new bytes4[](7);
         functionSelectors[0] = contentPaymentFacet.updateContentTreasury.selector;
         functionSelectors[1] = contentPaymentFacet.updateContentPaymentToken.selector;
-        functionSelectors[2] = contentPaymentFacet.updateContentSurchargeFee.selector;
-        functionSelectors[3] = contentPaymentFacet.updateContentBufferPostOp.selector;
-        functionSelectors[4] = contentPaymentFacet.buyContent.selector;
-        functionSelectors[5] = contentPaymentFacet.callBuyContent.selector;
-        functionSelectors[6] = contentPaymentFacet.getContentPaymentStorage.selector;
-        functionSelectors[7] = contentPaymentFacet.initializeContentPaymentConfig.selector;
+        functionSelectors[2] = contentPaymentFacet.updateContentBufferPostOp.selector;
+        functionSelectors[3] = contentPaymentFacet.buyContent.selector;
+        functionSelectors[4] = contentPaymentFacet.callBuyContent.selector;
+        functionSelectors[5] = contentPaymentFacet.getContentPaymentStorage.selector;
+        functionSelectors[6] = contentPaymentFacet.initializeContentPaymentConfig.selector;
 
         // prepare diamondCut
         LibDiamond.FacetCut[] memory cuts = new LibDiamond.FacetCut[](1);

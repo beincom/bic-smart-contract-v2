@@ -12,7 +12,6 @@ contract ContentPaymentFacet is Initializable {
     using SafeERC20 for IERC20;
     // Struct
     struct ContentPaymentStorage {
-        uint256 surchargeFee;
         uint256 bufferPostOp;
         address contentTreasury;
         address paymentToken;
@@ -21,7 +20,6 @@ contract ContentPaymentFacet is Initializable {
     /// Errors
     error ZeroPayment();
     error ZeroAddress();
-    error InvalidSurchargeFee(uint256 surchargeFee);
 
     /// Storage
     uint256 internal constant DENOMINATOR = 1e10;
@@ -31,19 +29,16 @@ contract ContentPaymentFacet is Initializable {
     event InitializedContentPaymentConfig(
         address treasury,
         address paymentToken,
-        uint256 surchargeFee,
         uint256 bufferPostOp
     );
     event ContentTreasuryUpdated(address updater, address newTreasury);
     event PaymentTokenUpdated(address updater, address newPaymentToken);
-    event SurchargeFeeUpdated(address updater, uint256 surchargeFee);
     event BufferPostOpUpdated(address updater, uint256 bufferPostOp);
     event ContentBought(
         address token,
         address from,
         address to,
         uint256 amount,
-        uint256 surcharge,
         string orderId
     );
     event CallBuyContent(
@@ -52,48 +47,41 @@ contract ContentPaymentFacet is Initializable {
         address from,
         address to,
         uint256 amount,
-        uint256 surcharge,
         uint256 fee,
         string orderId
     );
 
     /// @notice Get content config storage
     function getContentPaymentStorage() external pure returns (
-        uint256 surchargeFee,
         uint256 bufferPostOp,
         address contentTreasury,
         address paymentToken
     ) {
         ContentPaymentStorage memory s = getStorage();
-        return (s.surchargeFee, s.bufferPostOp, s.contentTreasury, s.paymentToken);
+        return (s.bufferPostOp, s.contentTreasury, s.paymentToken);
     }
 
     /**
      * @notice Initialize content payment config
      * @param treasury the content treasury address
      * @param paymentToken The payment token address used for reimbursing gas fee via callBuyContent
-     * @param surchargeFee The surcharge fee used for deducting upfront fee of the specific services
      * @param bufferPostOp The additional gas used for additional execution via callBuyContent
      */
     function initializeContentPaymentConfig(
         address treasury,
         address paymentToken,
-        uint256 surchargeFee,
         uint256 bufferPostOp
     ) external initializer {
         LibDiamond.enforceIsContractOwner();
         if (treasury == address(0) || paymentToken == address(0)) {
             revert ZeroAddress();
         }
-        if (surchargeFee > 10_000) {
-            revert InvalidSurchargeFee(surchargeFee);
-        }
+
         ContentPaymentStorage storage s = getStorage();
         s.contentTreasury = treasury;
         s.paymentToken = paymentToken;
-        s.surchargeFee = surchargeFee;
         s.bufferPostOp = bufferPostOp;
-        emit InitializedContentPaymentConfig(treasury, paymentToken, surchargeFee, bufferPostOp);
+        emit InitializedContentPaymentConfig(treasury, paymentToken, bufferPostOp);
     }
 
     /// @notice Update content treasury address
@@ -118,18 +106,6 @@ contract ContentPaymentFacet is Initializable {
         ContentPaymentStorage storage s = getStorage();
         s.paymentToken = paymentToken;
         emit PaymentTokenUpdated(msg.sender, paymentToken);
-    }
-
-    /// @notice Update surcharge fee
-    /// @param surchargeFee The surcharge fee used for deducting upfront fee of the specific services
-    function updateContentSurchargeFee(uint256 surchargeFee) external {
-        LibDiamond.enforceIsContractOwner();
-        if (surchargeFee > 10_000) {
-            revert InvalidSurchargeFee(surchargeFee);
-        }
-        ContentPaymentStorage storage s = getStorage();
-        s.surchargeFee = surchargeFee;
-        emit SurchargeFeeUpdated(msg.sender, surchargeFee);
     }
 
     /// @notice Update buffer gas for post ops
@@ -158,14 +134,9 @@ contract ContentPaymentFacet is Initializable {
             revert ZeroPayment();
         }
         ContentPaymentStorage storage s = getStorage();
-        uint256 surcharge = amount * s.surchargeFee / 10_000;
-        IERC20(token).safeTransferFrom(msg.sender, to, amount - surcharge);
-        
-        if (surcharge > 0) {
-            IERC20(token).safeTransferFrom(msg.sender, s.contentTreasury, surcharge);
-        }
+        IERC20(token).safeTransferFrom(msg.sender, s.contentTreasury, amount);
 
-        emit ContentBought(token, msg.sender, to, amount, surcharge, orderId);
+        emit ContentBought(token, msg.sender, s.contentTreasury, amount, orderId);
     }
 
     /**
@@ -197,12 +168,7 @@ contract ContentPaymentFacet is Initializable {
             revert ZeroPayment();
         }
         ContentPaymentStorage storage s = getStorage();
-        uint256 surcharge = amount * s.surchargeFee / 10_000;
-        IERC20(token).safeTransferFrom(from, to, amount - surcharge);
-
-        if (surcharge > 0) {
-            IERC20(token).safeTransferFrom(from, s.contentTreasury, surcharge);
-        }
+        IERC20(token).safeTransferFrom(from, s.contentTreasury, amount);
         
         uint256 gasPrice = getUserOpGasPrice(maxFeePerGas, maxPriorityFeePerGas);
         uint256 actualGas = preGas - gasleft() + s.bufferPostOp;
@@ -216,7 +182,6 @@ contract ContentPaymentFacet is Initializable {
             from,
             to,
             amount,
-            surcharge,
             actualPaymentCost,
             orderId
         );
