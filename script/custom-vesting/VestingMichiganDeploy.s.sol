@@ -25,10 +25,10 @@ contract VestingMichiganDeployScript  is Script {
 
 
         uint256 totalAmount = 20_000 * 1e18;
-        address[] memory beneficiaries = new address[](2);
+        address[] memory beneficiaries = new address[](1);
         beneficiaries[0] = 0xfE81Db5C18541c4f117A67215D05Ba0F44768d2E;
 
-        uint16[] memory allocations = new uint16[](2);
+        uint16[] memory allocations = new uint16[](1);
         allocations[0] = 10_000;
         uint64 startTime = 1747785600; // Wednesday, May 21, 2025 12:00:00 AM GMT+00:00 DST
         uint64 durationSeconds = 30 days;
