@@ -7,6 +7,7 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {ERC721Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol';
 
+import {TokenIdentifiers} from "../utils/TokenIdentifiers.sol";
 import {IDupHandles} from "../interfaces/IDupHandles.sol";
 import {IHandleTokenURI} from '../interfaces/IHandleTokenURI.sol';
 
@@ -34,7 +35,7 @@ contract DupHandles is ERC721Upgradeable, ERC2981, IDupHandles {
     /// @dev Mapping from token ID to the local name of the handle.
     mapping(uint256 tokenId => string localName) internal _localNames;
 
-    mapping(string localName => uint16 index) internal _localNameIndex;
+    mapping(string localName => uint16 supply) internal _localNameSupply;
 
     /// @dev Address of the contract responsible for generating token URIs.
     address internal _handleTokenURIContract;
@@ -102,8 +103,6 @@ contract DupHandles is ERC721Upgradeable, ERC2981, IDupHandles {
         _controllers.remove(controller);
         emit RemoveController(controller);
     }
-
-
 
     /// @notice Sets a new operator address.
     /// @dev Sets a new operator address for the contract with restricted privileges.
@@ -191,7 +190,7 @@ contract DupHandles is ERC721Upgradeable, ERC2981, IDupHandles {
     /// @notice Returns the hash of the namespace string.
     /// @dev Returns the hash of the namespace string.
     /// @return The hash of the namespace string.
-    function getNamespaceHash() external view returns (bytes32) {
+    function getNamespaceHash() external view override returns (bytes32) {
         return keccak256(bytes(_namespace));
     }
 
@@ -199,7 +198,7 @@ contract DupHandles is ERC721Upgradeable, ERC2981, IDupHandles {
     /// @dev Retrieves the local name of a handle by its token ID.
     /// @param tokenId The ID of the handle.
     /// @return The local name of the handle.
-    function getLocalName(uint256 tokenId) public view returns (string memory) {
+    function getLocalName(uint256 tokenId) public view override returns (string memory) {
         string memory localName = _localNames[tokenId];
         if (bytes(localName).length == 0) {
             revert DoesNotExist();
@@ -211,7 +210,7 @@ contract DupHandles is ERC721Upgradeable, ERC2981, IDupHandles {
     /// @dev Constructs the complete handle from a token ID.
     /// @param tokenId The ID of the handle.
     /// @return The handle with the namespace and local name.
-    function getHandle(uint256 tokenId) public view returns (string memory) {
+    function getHandle(uint256 tokenId) public view override returns (string memory) {
         string memory localName = getLocalName(tokenId);
         return string.concat(_namespace, '/@', localName);
     }
@@ -220,18 +219,36 @@ contract DupHandles is ERC721Upgradeable, ERC2981, IDupHandles {
     /// @dev Generates a token ID based on a given local name.
     /// @param localName The local name of the handle.
     /// @return The token ID of the handle.
-    function getTokenId(string memory localName, uint16 index) public pure returns (uint256) {
-        uint256 hashValue = uint256(keccak256(bytes(localName)));
-        
-        // Clear the first 16 bits (first 2 bytes) of the hash
-        uint256 mask = type(uint256).max >> 16; // All 1s except first 16 bits
-        uint256 clearedHash = hashValue & mask;
+    function getTokenId(string memory localName) public view override returns (uint256) {
+        return TokenIdentifiers.getTokenId(localName, _localNameSupply[localName]);
+    }
 
-        // Shift index to the leftmost 16 bits and combine
-        uint256 shiftedIndex = uint256(index) << 240;
-        uint256 tokenId = clearedHash | shiftedIndex;
-        
-        return tokenId;
+    /// @notice Generates a token ID based on a given local name.
+    /// @dev Generates a token ID based on a given local name.
+    /// @param localName The local name of the handle.
+    /// @param index The index supply of the handle.
+    /// @return The token ID of the handle.
+    function getTokenIdByIndex(string memory localName, uint16 index) public pure override returns (uint256) {
+        return TokenIdentifiers.getTokenId(localName, index);
+    }
+
+    /// @notice Get the index supply of a token ID.
+    /// @param tokenId The ID of the handle.
+    /// @return The supply index of the token Id.
+    function getSupplyIndex(uint256 tokenId) public pure override returns (uint256) {
+        return TokenIdentifiers.tokenIndex(tokenId);
+    }
+
+    /// @notice Get all owners of a given local name.
+    /// @param localName The local name of the handle.
+    function getAllOwnersOfLocalName(string memory localName) public view returns (address[] memory) {
+        uint16 supply = _localNameSupply[localName];
+        address[] memory owners = new address[](supply);
+        for (uint16 index = 0; index < supply; index++) {
+            address ownerOfIndex = ownerOf(getTokenIdByIndex((localName), index));
+            owners[index] = ownerOfIndex;
+        }
+        return owners;
     }
 
     /// @notice Returns true if this contract implements the interface defined by `interfaceId`.
@@ -256,12 +273,12 @@ contract DupHandles is ERC721Upgradeable, ERC2981, IDupHandles {
     /// @param localName The local part of the handle to be minted.
     /// @return tokenId The unique token ID of the minted handle.
     function _mintHandle(address to, string calldata localName) internal returns (uint256) {
-        uint16 index = _localNameIndex[localName];
-        uint256 tokenId = getTokenId(localName, index);
+        uint16 index = _localNameSupply[localName];
+        uint256 tokenId = TokenIdentifiers.getTokenId(localName, index);
         ++_totalSupply;
         _mint(to, tokenId);
         _localNames[tokenId] = localName;
-        _localNameIndex[localName] = index + 1;
+        _localNameSupply[localName] = index + 1;
         emit HandleMinted(localName, _namespace, tokenId, to, block.timestamp);
         return tokenId;
     }
