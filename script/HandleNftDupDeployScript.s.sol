@@ -25,7 +25,6 @@ contract HandleNftDupDeployScript is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address deployOwner = vm.addr(deployerPrivateKey);
-        address afterDeployOwner = vm.envAddress("AFTER_DEPLOY_OWNER");
         address handleTokenURIAddress = vm.envAddress("HANDLE_TOKEN_URI_ADDRESS");
         address controllerAddress = vm.envAddress("CONTROLLER_ADDRESS");
         vm.startBroadcast(deployerPrivateKey);
@@ -41,7 +40,6 @@ contract HandleNftDupDeployScript is Script {
         vm.stopBroadcast();
         console.log("DupHandles deployed at", address(dupHandles));
         console.log("Deployer", deployOwner);
-        console.log("After deploy owner", afterDeployOwner);
     }
 }
 

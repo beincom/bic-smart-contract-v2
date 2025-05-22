@@ -223,6 +223,13 @@ contract DupHandles is ERC721Upgradeable, ERC2981, IDupHandles {
         return TokenIdentifiers.getTokenId(localName, _localNameSupply[localName]);
     }
 
+    /// @notice Get supply of a given local name.
+    /// @param localName The local name of the handle.
+    /// @return The supply of a given local name.
+    function getSupplyOfLocalName(string memory localName) public view override returns (uint256) {
+        return _localNameSupply[localName];
+    }
+
     /// @notice Generates a token ID based on a given local name.
     /// @dev Generates a token ID based on a given local name.
     /// @param localName The local name of the handle.

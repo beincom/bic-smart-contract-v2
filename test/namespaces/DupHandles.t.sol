@@ -14,6 +14,10 @@ contract DupHandlesTest is Test {
 
     function test_getAndMintDuplicateHandle() public {
         string memory localName = "test";
+
+        uint256 supply = dupHandles.getSupplyOfLocalName(localName);
+        assertEq(supply, 0);
+
         uint256 tokenId = dupHandles.getTokenIdByIndex(localName, 0);
         console.log("tokenId", tokenId);
         console.logBytes32(bytes32(tokenId));
@@ -31,9 +35,12 @@ contract DupHandlesTest is Test {
         dupHandles.mintHandle(address(this), localName);
         dupHandles.mintHandle(address(this), localName);
 
+        supply = dupHandles.getSupplyOfLocalName(localName);
+
         assertEq(dupHandles.ownerOf(tokenId), address(this));
         assertEq(dupHandles.ownerOf(tokenId2), address(this));
         assertEq(dupHandles.ownerOf(tokenId3), address(this));
+        assertEq(supply, 3);
     }
 
     function test_getAllOwners() public {

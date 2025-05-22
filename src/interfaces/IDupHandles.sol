@@ -35,6 +35,8 @@ interface IDupHandles is IERC721 {
     function getHandle(uint256 tokenId) external view returns (string memory);
 
     function getTokenId(string memory localName) external view returns (uint256);
+
+    function getSupplyOfLocalName(string memory localName) external view returns (uint256);
     
     function getTokenIdByIndex(string memory localName, uint16 index) external view returns (uint256);
 
