@@ -49,7 +49,8 @@ contract ContentPaymentFacet {
         address to,
         uint256 amount,
         uint256 fee,
-        string orderId
+        string orderId,
+        uint256 paymentPrice
     );
 
     modifier initializer() {
@@ -193,7 +194,8 @@ contract ContentPaymentFacet {
             to,
             amount,
             actualPaymentCost,
-            orderId
+            orderId,
+            paymentPrice
         );
         return (actualGasCost, actualPaymentCost);
     }
