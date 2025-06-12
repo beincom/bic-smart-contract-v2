@@ -66,13 +66,10 @@ contract DupHandlesController is ReentrancyGuard, Ownable {
         MintType mintType; //
     }
 
-
     /// @notice Address of trusted operators who can sign handle requests and manage revenue distribution.
     EnumerableSet.AddressSet private _operators;
     /// @dev The BIC token contract address.
     IERC20 public bic;
-    /// @dev Mapping of commitments to their respective expiration timestamps. Used to manage the timing of commitments and auctions.
-    mapping(bytes32 => uint256) public commitments;
     /// @dev The marketplace contract used for handling auctions.
     address public marketplace;
     /// @dev The forwarder contract used for handling interactions with the BIC token.
@@ -88,18 +85,9 @@ contract DupHandlesController is ReentrancyGuard, Ownable {
         address indexed handle,
         address indexed to,
         string name,
+        uint256 tokenId,
         uint256 price,
         MintType mintType
-    );
-    /// @dev Emitted when a commitment is made, providing details of the commitment and its expiration timestamp.
-    event Commitment(
-        bytes32 indexed commitment,
-        address from,
-        address collection,
-        string name,
-        uint256 price,
-        uint256 endTimestamp,
-        bool isClaimed
     );
     /// @dev Emitted when a handle is minted, providing details of the transaction including the handle address, recipient, name, and price.
     event ShareRevenue(
@@ -323,18 +311,6 @@ contract DupHandlesController is ReentrancyGuard, Ownable {
                 uint256 auctionId = IEnglishAuctions(marketplace).createAuction(auctionParams);
                 auctionCanClaim[auctionId] = true;
                 emit CreateAuction(auctionId);
-
-                _createBiddingIfNeeded(auctionId, msg.sender, rq.price, 0);
-            } else {
-                // commit
-                bool isCommitted = _isCommitted(dataHash, rq);
-                if (!isCommitted) {
-                    params.mintType = MintType.COMMIT;
-                    _mintHandle(
-                        params
-                    );
-                    _emitCommitment(rq, dataHash, 0, true);
-                }
             }
         }
     }
@@ -433,57 +409,6 @@ contract DupHandlesController is ReentrancyGuard, Ownable {
     }
 
     /**
-     * @notice Handles commitments for minting handles with a delay.
-     * @dev Internal function to handle commitments for minting handles with a delay.
-     * @param commitment The hash of the commitment.
-     * @param rq The handle request details including receiver, price, and auction settings.
-     */
-    function _isCommitted(
-        bytes32 commitment,
-        HandleRequest calldata rq
-    ) private returns (bool) {
-        if (commitments[commitment] != 0) {
-            if (commitments[commitment] < block.timestamp) {
-                return false;
-            }
-        } else {
-            // User commited
-            commitments[commitment] = block.timestamp + rq.commitDuration;
-            // Emit event for once time user commited
-            _emitCommitment(rq, commitment, commitments[commitment], false);
-        }
-        return true;
-    }
-
-    /**
-     * @notice Handles commitments for minting handles with a delay.
-     * @dev Internal function to handle commitments for minting handles with a delay.
-     * @dev Three cases, decision to mint handle is based on user's request and BIC back-end logic:
-        *      1. User want a NFT and can mint directly buy using BIC
-        *      2. User want a NFT but cannot mint directly, so user commit to mint NFT
-        *      3. User want a NFT but cannot mint directly, and nether can commit it. So controller mint NFT and put it in auction
-     * @param rq The handle request details including receiver, price, and auction settings.
-     * @param _dataHash The hash committment
-     * @param _isClaimed The status of claim
-     */
-    function _emitCommitment(
-        HandleRequest memory rq,
-        bytes32 _dataHash,
-        uint256 endTime,
-        bool _isClaimed
-    ) internal {
-        emit Commitment(
-            _dataHash,
-            msg.sender,
-            rq.handle,
-            rq.name,
-            rq.price,
-            endTime,
-            _isClaimed
-        );
-    }
-
-    /**
      * @notice Mints handles directly or assigns them to the contract for auction.
      * @dev Internal function to mint handles directly or assign to the contract for auction.
      * @param params The mint handle parameters including the receiver, price, and auction settings.
@@ -505,7 +430,7 @@ contract DupHandlesController is ReentrancyGuard, Ownable {
             _payout(price, beneficiaries, collects, tokenId, handle);
         }
         
-        emit MintHandle(handle, to, name, price, mintType);
+        emit MintHandle(handle, to, name, tokenId, price, mintType);
         return tokenId;
     }
 
@@ -533,41 +458,6 @@ contract DupHandlesController is ReentrancyGuard, Ownable {
         if (totalCollects < amount) {
             IERC20(bic).transfer(collector, amount - totalCollects);
         }
-    }
-
-
-    /**
-     * @notice Creates a bid in an auction on behalf of a bidder.
-     * @dev Internal function to create a bid in an auction on behalf of a bidder.
-     * @param auctionId The ID of the auction.
-     * @param bidder The address of the bidder.
-     * @param bidAmount The amount of the bid.
-     * NOTE bidder must approve the marketplace contract to spend the bidAmount before calling this function.
-     */
-    function _createBiddingIfNeeded(
-        uint256 auctionId,
-        address bidder,
-        uint256 bidAmount,
-        uint256 ethValue
-    ) private {
-        if (bidder == address(0)) {
-            revert ZeroBidderAddress();
-        }
-        // if forwarder is not set, skip
-        if (address(forwarder) == address(0)) {
-            return;
-        }
-
-        IBicForwarder.RequestData memory requestData;
-        requestData.from = bidder;
-        requestData.to = address(marketplace);
-        requestData.data = abi.encodeWithSelector(
-            IEnglishAuctions.bidInAuction.selector,
-            auctionId,
-            bidAmount
-        );
-        requestData.value = ethValue;
-        forwarder.forwardRequest(requestData);
     }
 
     function _validateHandleRequest(
@@ -671,20 +561,7 @@ contract DupHandlesController is ReentrancyGuard, Ownable {
                 revert BeneficiariesAndCollectsLengthNotMatch();
             }
         }
-        if (rq.commitDuration > 0 && !rq.isAuction) {
-            return
-                keccak256(
-                    abi.encode(
-                        rq.receiver,
-                        rq.handle,
-                        rq.name,
-                        rq.price,
-                        rq.commitDuration,
-                        rq.isAuction,
-                        block.chainid
-                    )
-                );
-        }
+
         return
             keccak256(
                 abi.encode(
