@@ -700,35 +700,4 @@ contract DupHandlesController is ReentrancyGuard, Ownable {
                 )
             );
     }
-
-    /**
-     * @notice Allows the operator to burn a handle that was minted when case the auction failed (none bid).
-     * @param handle The address of the handle contract.
-     * @param name The name of the handle.
-     * @param index The index supply of the given name.
-     */
-    function burnHandleMintedButAuctionFailed(
-        address handle,
-        string calldata name,
-        uint16 index
-    ) external onlyOperator {
-        uint256 tokenId = IDupHandles(handle).getTokenIdByIndex(name, index);
-        IDupHandles(handle).burn(tokenId);
-        emit BurnHandleMintedButAuctionFailed(handle, name, tokenId);
-    }
-
-    /**
-     * @notice Allows the operator to burn a handle that was minted when case the auction failed (none bid).
-     * @param handle The address of the handle contract.
-     * @param name The name of the handle.
-     * @param tokenId The token id of the handle.
-     */
-    function burnHandleMintedButAuctionFailed(
-        address handle,
-        string calldata name,
-        uint256 tokenId
-    ) external onlyOperator {
-        IDupHandles(handle).burn(tokenId);
-        emit BurnHandleMintedButAuctionFailed(handle, name, tokenId);
-    }
 }
