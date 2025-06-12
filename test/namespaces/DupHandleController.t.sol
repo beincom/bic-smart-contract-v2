@@ -5,20 +5,20 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 import {MockMarketplace} from "./mocks/MockMarketplace.t.sol";
 import {TestBIC} from "./mocks/TestBIC.t.sol";
-import {HandlesController} from "../../src/namespaces/HandlesController.sol";
+import {DupHandlesController} from "../../src/namespaces/DupHandlesController.sol";
 import {DupHandles} from "../../src/namespaces/DupHandles.sol";
 
 
-contract HandlesControllerImpl is HandlesController {
+contract HandlesControllerImpl is DupHandlesController {
     // This setter is for testing to simulate the auctionCanClaim mapping.
-    constructor(ERC20 bic, address owner) HandlesController(bic, owner) {}
+    constructor(ERC20 bic, address owner) DupHandlesController(bic, owner) {}
     function setAuctionCanClaim(uint256 auctionId, bool canClaim) external onlyOwner {
         auctionCanClaim[auctionId] = canClaim;
     }
 }
 
 // ------------------ TEST CONTRACT ------------------
-contract HandlesControllerTest is Test {
+contract DupHandlesControllerTest is Test {
     uint256 owner_private_key = 0xb1c;
     address owner = vm.addr(owner_private_key);
 
@@ -45,7 +45,7 @@ contract HandlesControllerTest is Test {
 
         mockMarketplace = new MockMarketplace();
 
-        // Deploy HandlesController implementation.
+        // Deploy DupHandlesController implementation.
         controller = new HandlesControllerImpl(bic, owner);
         controller.setMarketplace(address(mockMarketplace));
         controller.setCollector(collector);
@@ -244,7 +244,7 @@ contract HandlesControllerTest is Test {
 
         address nonControllerAddress = address(0x1234);
         vm.startPrank(nonControllerAddress);
-        vm.expectRevert(HandlesController.NotOperator.selector);
+        vm.expectRevert(DupHandlesController.NotOperator.selector);
         controller.batchCollectAndShareRevenue(auctionIds, amounts, beneficiariesList, collectsList, isAuctionsCollectedList);
         vm.stopPrank();
     }
