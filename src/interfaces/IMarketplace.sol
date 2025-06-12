@@ -543,3 +543,15 @@ interface IPlatformFee {
     /// @dev Emitted when the platform fee type is updated.
     event PlatformFeeTypeUpdated(PlatformFeeType feeType);
 }
+
+
+interface IPermissions {
+    function hasRole(bytes32 role, address account) external view returns (bool);
+    function getRoleAdmin(bytes32 role) external view returns (bytes32);
+    function grantRole(bytes32 role, address account) external;
+    function revokeRole(bytes32 role, address account) external;
+    function renounceRole(bytes32 role, address account) external;
+
+    function getRoleMember(bytes32 role, uint256 index) external view returns (address);
+    function getRoleMemberCount(bytes32 role) external view returns (uint256);
+}
