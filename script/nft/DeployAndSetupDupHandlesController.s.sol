@@ -17,11 +17,12 @@ contract DeployAndSetupDupHandlesController is Script {
         address operator = vm.envAddress("HANDLE_CONTROLLER_OPERATOR_ADDRESS");
         address bic = vm.envAddress("BIC_ADDRESS");
         address dupHandlesControllerOwner = vm.envAddress("DUPHANDLE_CONTROLLER_OWNER"); 
+
+        vm.startBroadcast(deployerPrivateKey);
+
         DupHandlesController dupHandlesController = new DupHandlesController(IERC20(bic), dupHandlesControllerOwner);
        
         console.log("HandleController deployed at:", address(dupHandlesController));
-
-        vm.startBroadcast(deployerPrivateKey);
 
         dupHandlesController.setMarketplace(marketplaceAddress);
         dupHandlesController.setForwarder(forwarder);
