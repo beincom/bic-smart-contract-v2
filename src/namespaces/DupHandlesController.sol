@@ -311,6 +311,8 @@ contract DupHandlesController is ReentrancyGuard, Ownable {
                 uint256 auctionId = IEnglishAuctions(marketplace).createAuction(auctionParams);
                 auctionCanClaim[auctionId] = true;
                 emit CreateAuction(auctionId);
+
+                _createBiddingIfNeeded(auctionId, msg.sender, rq.price, 0);
             }
         }
     }
@@ -489,6 +491,40 @@ contract DupHandlesController is ReentrancyGuard, Ownable {
         if(rq.bidBufferBps > 10000) {
             revert InvalidBidBuffer();
         }
+    }
+
+    /**
+     * @notice Creates a bid in an auction on behalf of a bidder.
+     * @dev Internal function to create a bid in an auction on behalf of a bidder.
+     * @param auctionId The ID of the auction.
+     * @param bidder The address of the bidder.
+     * @param bidAmount The amount of the bid.
+     * NOTE bidder must approve the marketplace contract to spend the bidAmount before calling this function.
+     */
+    function _createBiddingIfNeeded(
+        uint256 auctionId,
+        address bidder,
+        uint256 bidAmount,
+        uint256 ethValue
+    ) private {
+        if (bidder == address(0)) {
+            revert ZeroBidderAddress();
+        }
+        // if forwarder is not set, skip
+        if (address(forwarder) == address(0)) {
+            return;
+        }
+
+        IBicForwarder.RequestData memory requestData;
+        requestData.from = bidder;
+        requestData.to = address(marketplace);
+        requestData.data = abi.encodeWithSelector(
+            IEnglishAuctions.bidInAuction.selector,
+            auctionId,
+            bidAmount
+        );
+        requestData.value = ethValue;
+        forwarder.forwardRequest(requestData);
     }
 
     function _validateCollectAuctionPayout(
