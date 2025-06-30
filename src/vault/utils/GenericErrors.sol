@@ -9,3 +9,4 @@ error NoTransferToNullAddress();
 error NullAddrIsNotAValidSpender();
 error NullAddrIsNotAnERC20Token();
 error InsufficientBalance(uint256 required, uint256 balance);
+error ExceedSpendingLimit(uint256 spendingLimit);

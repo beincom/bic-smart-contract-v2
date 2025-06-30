@@ -7,6 +7,7 @@ import { LibAccess } from "../libraries/LibAccess.sol";
 import { LibBeneficiary } from "../libraries/LibBeneficiary.sol";
 import { LibAsset } from "../libraries/LibAsset.sol";
 import { LibDiamond } from "../libraries/LibDiamond.sol";
+import { ExceedSpendingLimit } from "../utils/GenericErrors.sol";
 
 contract GasActionsFacet {
     /// Errors
@@ -14,9 +15,16 @@ contract GasActionsFacet {
 
     /// Events
     event UpdateGasBeneficiary(
-        address indexed caller,
-        address beneficiary,
+        address caller,
+        address indexed beneficiary,
         bool status
+    );
+    event UpdateGasBeneficiarySpendingLimit(
+        address caller,
+        address indexed beneficiary,
+        address assetAddress,
+        uint256 spendingLimit,
+        uint256 period
     );
     event DepositToPaymaster(
         address indexed caller,
@@ -30,6 +38,28 @@ contract GasActionsFacet {
         address indexed to,
         uint256 amount
     );
+
+    /**
+     * @notice Check spending limit of a beneficiary.
+     * @param beneficiary beneficiary address.
+     * @param assetAddress asset address
+     */
+    function getSpendingLimit(
+        address beneficiary,
+        address assetAddress
+    ) external view returns (
+        uint256 period,
+        uint256 maxSpendingPerPeriod,
+        uint256 currentUsage,
+        uint256 lastSpendingTimestamp
+    ) {
+        (
+            period,
+            maxSpendingPerPeriod,
+            currentUsage,
+            lastSpendingTimestamp
+        ) = LibBeneficiary.getSpendingLimit(beneficiary, assetAddress);
+    }
 
     /**
      * @notice Set gas beneficiary.
@@ -48,6 +78,24 @@ contract GasActionsFacet {
         }
         emit UpdateGasBeneficiary(msg.sender, beneficiary, status);
     }
+
+    /**
+     * @notice Set spending limit of a beneficiary.
+     * @param beneficiary beneficiary address.
+     * @param assetAddress asset address
+     * @param spendingLimit spending limit amount
+     * @param period period of spending limit
+     */
+    function setBeneficiarySpendingLimit(
+        address beneficiary,
+        address assetAddress,
+        uint256 spendingLimit,
+        uint256 period
+    ) external {
+        LibDiamond.enforceIsContractOwner();
+        LibBeneficiary.updateSpendingLimit(beneficiary, assetAddress, spendingLimit, period);
+        emit UpdateGasBeneficiarySpendingLimit(msg.sender, beneficiary, assetAddress, spendingLimit, period);
+    }
     
     /**
      * @notice Deposit to Paymaster.
@@ -65,8 +113,11 @@ contract GasActionsFacet {
         if (!LibBeneficiary.isBeneficiary(paymaster)) {
             revert NotGasBeneficiary(paymaster);
         }
-        IEntryPoint(entrypoint).depositTo{value: amount}(paymaster);
-        emit DepositToPaymaster(msg.sender, entrypoint, paymaster, amount);
+
+        uint256 spendingAmount = LibBeneficiary.updateSpending(paymaster, address(0), amount);
+
+        IEntryPoint(entrypoint).depositTo{value: spendingAmount}(paymaster);
+        emit DepositToPaymaster(msg.sender, entrypoint, paymaster, spendingAmount);
     }
 
     /**
@@ -86,7 +137,9 @@ contract GasActionsFacet {
             revert NotGasBeneficiary(to);
         }
 
-        LibAsset.transferAsset(assetAddress, payable(to), amount);
-        emit FundGas(msg.sender, assetAddress, to, amount);
+        uint256 spendingAmount = LibBeneficiary.updateSpending(to, assetAddress, amount);
+
+        LibAsset.transferAsset(assetAddress, payable(to), spendingAmount);
+        emit FundGas(msg.sender, assetAddress, to, spendingAmount);
     }
 }
