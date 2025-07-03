@@ -30,8 +30,8 @@ contract DeployAndSetupDupHandlesController is Script {
 
         dupHandlesController.setOperator(operator);
 
-        BicForwarder bicForwarder = BicForwarder(forwarder);
-        bicForwarder.addController(address(dupHandlesController));
+        // BicForwarder bicForwarder = BicForwarder(forwarder);
+        // bicForwarder.addController(address(dupHandlesController));
         
         vm.stopBroadcast();
     }
