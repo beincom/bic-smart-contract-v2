@@ -15,11 +15,11 @@ contract DupHandlesDeployScript is Script {
     }
     
     NFTData nftData = NFTData({
-        namespace: "poNFT",
+        namespace: "dpoNFT",
         name: "Profile Ownership NFT",
         symbol: "poNFT",
         imageDescription: "Beincom - Profile Ownership NFT@",
-        imageUri: "https://api.beincom.io/v1/wallet/uri/opnft"
+        imageUri: "https://media.beincom.com/image/uri/opdnft"
     });
 
     function run() external {
@@ -34,8 +34,8 @@ contract DupHandlesDeployScript is Script {
         dupHandles.setHandleTokenURIContract(handleTokenURIAddress);
         dupHandles.setController(dupHandlesController);
 
-        HandleTokenURI handleTokenURI = HandleTokenURI(handleTokenURIAddress);
-        handleTokenURI.setNameElement(nftData.namespace, nftData.imageDescription, nftData.imageUri);
+        // HandleTokenURI handleTokenURI = HandleTokenURI(handleTokenURIAddress);
+        // handleTokenURI.setNameElement(nftData.namespace, nftData.imageDescription, nftData.imageUri);
 
         vm.stopBroadcast();
         console.log("DupHandles deployed at", address(dupHandles));
