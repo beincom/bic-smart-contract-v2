@@ -41,13 +41,6 @@ contract HandleNftDeployScript is Script {
             imageUri: "https://media.beincom.app/image/uri/ocnft"
         }),
         NFTData({
-            namespace: "poNFT",
-            name: "Profile Ownership NFT",
-            symbol: "poNFT",
-            imageDescription: "Beincom - Profile Ownership NFT@",
-            imageUri: "https://api.beincom.io/v1/wallet/uri/opnft"
-        }),
-        NFTData({
             namespace: "ubNFT",
             name: "Username Base NFT",
             symbol: "ubNFT",
