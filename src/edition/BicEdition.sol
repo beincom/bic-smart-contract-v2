@@ -12,6 +12,12 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 contract BicEdition is ERC1155Supply, Ownable, LazyMint, Drop1155 {
     using SafeERC20 for IERC20;
 
+    // Token name
+    string public name;
+
+    // Token symbol
+    string public symbol;
+
     /// @notice Mapping from token ID to max total supply
     mapping(uint256 => uint256) public maxTotalSupply;
     
@@ -26,10 +32,14 @@ contract BicEdition is ERC1155Supply, Ownable, LazyMint, Drop1155 {
     error DropTransferFailed();
 
     constructor(
+        string memory name_,
+        string memory symbol_,
         string memory uri_,
         address owner_,
         address primarySaleRecipient_
     ) ERC1155(uri_) Ownable(owner_) {
+        name = name_;
+        symbol = symbol_;
         primarySaleRecipient = primarySaleRecipient_;    
     }
 

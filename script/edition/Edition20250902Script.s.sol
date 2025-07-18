@@ -15,6 +15,8 @@ contract Edition20250902Script is Script {
         vm.startBroadcast(deployerPrivateKey);
 
         BicEdition bicEdition = new BicEdition(
+            unicode"Hào Khí Việt",
+            "BCVN",
             editionUri,
             editionOwner,
             editionTreasury
