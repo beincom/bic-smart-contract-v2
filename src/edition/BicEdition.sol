@@ -12,9 +12,6 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 contract BicEdition is ERC1155Supply, Ownable, LazyMint, Drop1155 {
     using SafeERC20 for IERC20;
 
-    /// @notice Mapping from token ID to token URI
-    mapping(uint256 => string) private _tokenURIs;
-
     /// @notice Mapping from token ID to max total supply
     mapping(uint256 => uint256) public maxTotalSupply;
     
@@ -61,7 +58,7 @@ contract BicEdition is ERC1155Supply, Ownable, LazyMint, Drop1155 {
      * @return The URI for the token metadata
      */
     function tokenURI(uint256 tokenId) external view returns (string memory) {
-        string memory _tokenURI = _tokenURIs[tokenId];
+        string memory _tokenURI = _getBaseURI(tokenId);
 
         // If no specific URI is set, return the base URI with token ID
         if (bytes(_tokenURI).length == 0) {
@@ -77,7 +74,7 @@ contract BicEdition is ERC1155Supply, Ownable, LazyMint, Drop1155 {
      * @return The URI for the token metadata
      */
     function uri(uint256 tokenId) public view override returns (string memory) {
-        string memory _tokenURI = _tokenURIs[tokenId];
+        string memory _tokenURI = _getBaseURI(tokenId);
 
         // If no specific URI is set, return the base URI
         if (bytes(_tokenURI).length == 0) {
