@@ -52,7 +52,7 @@ contract BicEditionTest is Test {
 
     function setUp() public {
         erc20 = new MockERC20();
-        edition = new BicEdition("https://base.uri/", owner, recipient);
+        edition = new BicEdition("BicEdition","E-BIC","https://base.uri/", owner, recipient);
         vm.prank(owner);
         edition.setMaxTotalSupply(1, 100);
     }
@@ -165,5 +165,7 @@ contract BicEditionTest is Test {
         assertEq(edition.totalSupply(2), 0); // No tokens minted ye
     }
 
-
+    function testBaseUri() public {
+        assertEq(edition.contractURI(), "https://base.uri/");
+    }
 } 

@@ -3,13 +3,14 @@ pragma solidity ^0.8.23;
 
 import {ERC1155} from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import {ERC1155Supply} from "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {LazyMint} from "../extension/LazyMint.sol";
 import {Drop1155} from "../extension/Drop1155.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {ContractMetadata}  from "../extension/ContractMetadata.sol";
 
-contract BicEdition is ERC1155Supply, Ownable, LazyMint, Drop1155 {
+contract BicEdition is ERC1155Supply, Ownable, ContractMetadata, LazyMint, Drop1155 {
     using SafeERC20 for IERC20;
 
     // Token name
@@ -38,6 +39,7 @@ contract BicEdition is ERC1155Supply, Ownable, LazyMint, Drop1155 {
         address owner_,
         address primarySaleRecipient_
     ) ERC1155(uri_) Ownable(owner_) {
+        _setupContractURI(uri_);
         name = name_;
         symbol = symbol_;
         primarySaleRecipient = primarySaleRecipient_;    
@@ -113,8 +115,8 @@ contract BicEdition is ERC1155Supply, Ownable, LazyMint, Drop1155 {
 
     /// @dev Collects and distributes the primary sale value of NFTs being claimed.
     function collectPriceOnClaim(
-        uint256 _tokenId,
-        address _primarySaleRecipient,
+        uint256 /* _tokenId */,
+        address /* _primarySaleRecipient */,
         uint256 _quantityToClaim,
         address _currency,
         uint256 _pricePerToken
@@ -186,6 +188,10 @@ contract BicEdition is ERC1155Supply, Ownable, LazyMint, Drop1155 {
     }
 
     function _canSetClaimConditions() internal view virtual override returns (bool) {
+        return msg.sender == owner();
+    }
+
+    function _canSetContractURI() internal view override returns (bool) {
         return msg.sender == owner();
     }
 
