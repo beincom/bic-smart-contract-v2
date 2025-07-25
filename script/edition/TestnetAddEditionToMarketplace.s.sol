@@ -43,15 +43,15 @@ contract TestnetAddEditionToMarketplace is Script {
         // Create an auction for the edition tokenId 3
         SampleMarketplace.AuctionParameters memory paramsForId3 = SampleMarketplace.AuctionParameters({
             assetContract: editionAddress,
-            tokenId: 3, // Assuming tokenId 0 for the first lazy minted NFT
+            tokenId: 3,
             quantity: 75,
             currency: currency,
             minimumBidAmount: 10000 ether, // Example minimum bid amount
             buyoutBidAmount: 0,
             timeBufferInSeconds: 3600, // 1 hour buffer
             bidBufferBps: 100, // 1% buffer
-            startTimestamp: block.timestamp, // Start in 1 day
-            endTimestamp: block.timestamp + 14 days // End in 2 days
+            startTimestamp: block.timestamp, // Start immediately
+            endTimestamp: block.timestamp + 14 days // End in 2 weeks
         });
         uint256 auctionIdForId3 = marketplace.createAuction(paramsForId3);
         console.log("Auction created for tokenId 3 with ID:", auctionIdForId3);
@@ -59,15 +59,15 @@ contract TestnetAddEditionToMarketplace is Script {
         // Create an auction for the edition tokenId 4
         SampleMarketplace.AuctionParameters memory paramsForId4 = SampleMarketplace.AuctionParameters({
             assetContract: editionAddress,
-            tokenId: 4, // Assuming tokenId 1 for the second lazy minted NFT
+            tokenId: 4,
             quantity: 5,
             currency: currency,
             minimumBidAmount: 80000 ether, // Example minimum bid amount
             buyoutBidAmount: 0,
             timeBufferInSeconds: 3600, // 1 hour buffer
             bidBufferBps: 100, // 1% buffer
-            startTimestamp: block.timestamp + 86400, // Start in 1 day
-            endTimestamp: block.timestamp + 14 days + 86400 // End in 2 days
+            startTimestamp: block.timestamp, // Start immediately
+            endTimestamp: block.timestamp + 14 days // End in 2 weeks
         });
         uint256 auctionIdForId4 = marketplace.createAuction(paramsForId4);
         console.log("Auction created for tokenId 4 with ID:", auctionIdForId4);
