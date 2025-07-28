@@ -155,17 +155,17 @@ contract BicEditionTest is Test {
 
     function testLazyMint() public {
         vm.startPrank(owner);
-        edition.lazyMint(1, "https://example.com/metadata/1", "0x");
-        assertEq(edition.tokenURI(0), "https://example.com/metadata/1");
-        edition.lazyMint(2, "https://example.com/metadata/2", "0x");
+        edition.lazyMint(1, "https://example.com/lazy/metadata/1", "0x");
+        assertEq(edition.tokenURI(0), "https://example.com/lazy/metadata/1");
+        edition.lazyMint(2, "https://example.com/lazy/metadata/1", "0x");
         vm.stopPrank();
-        assertEq(edition.tokenURI(1), "https://example.com/metadata/2");
+        assertEq(edition.tokenURI(1), "https://example.com/lazy/metadata/1");
         assertEq(edition.totalSupply(1), 0); // No tokens minted yet
-        assertEq(edition.tokenURI(2), "https://example.com/metadata/2");
-        assertEq(edition.totalSupply(2), 0); // No tokens minted ye
+        assertEq(edition.tokenURI(2), "https://example.com/lazy/metadata/1");
+        assertEq(edition.totalSupply(2), 0); // No tokens minted yet
+
+        // if not lazy mint then get uri https://base.uri/{TokenId}
+        assertEq(edition.uri(5), "https://base.uri/5");
     }
 
-    function testBaseUri() public {
-        assertEq(edition.contractURI(), "https://base.uri/");
-    }
 } 

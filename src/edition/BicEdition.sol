@@ -6,11 +6,11 @@ import {ERC1155Supply} from "@openzeppelin/contracts/token/ERC1155/extensions/ER
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {LazyMint} from "../extension/LazyMint.sol";
 import {Drop1155} from "../extension/Drop1155.sol";
-import {ContractMetadata}  from "../extension/ContractMetadata.sol";
 
-contract BicEdition is ERC1155Supply, Ownable, ContractMetadata, LazyMint, Drop1155 {
+contract BicEdition is ERC1155Supply, Ownable, LazyMint, Drop1155 {
     using SafeERC20 for IERC20;
 
     // Token name
@@ -39,7 +39,6 @@ contract BicEdition is ERC1155Supply, Ownable, ContractMetadata, LazyMint, Drop1
         address owner_,
         address primarySaleRecipient_
     ) ERC1155(uri_) Ownable(owner_) {
-        _setupContractURI(uri_);
         name = name_;
         symbol = symbol_;
         primarySaleRecipient = primarySaleRecipient_;    
@@ -62,6 +61,10 @@ contract BicEdition is ERC1155Supply, Ownable, ContractMetadata, LazyMint, Drop1
     function setMaxTotalSupply(uint256 _tokenId, uint256 _maxTotalSupply) external onlyOwner {
         maxTotalSupply[_tokenId] = _maxTotalSupply;
         emit MaxTotalSupplySet(_tokenId, _maxTotalSupply);
+    }
+
+    function baseURI() public view returns (string memory) {
+        return super.uri(0); // Return the base URI for the contract
     }
 
     /**
@@ -90,7 +93,7 @@ contract BicEdition is ERC1155Supply, Ownable, ContractMetadata, LazyMint, Drop1
 
         // If no specific URI is set, return the base URI
         if (bytes(_tokenURI).length == 0) {
-            return super.uri(tokenId);
+            return string(abi.encodePacked(baseURI(), Strings.toString(tokenId)));
         }
 
         return _tokenURI;
@@ -188,10 +191,6 @@ contract BicEdition is ERC1155Supply, Ownable, ContractMetadata, LazyMint, Drop1
     }
 
     function _canSetClaimConditions() internal view virtual override returns (bool) {
-        return msg.sender == owner();
-    }
-
-    function _canSetContractURI() internal view override returns (bool) {
         return msg.sender == owner();
     }
 

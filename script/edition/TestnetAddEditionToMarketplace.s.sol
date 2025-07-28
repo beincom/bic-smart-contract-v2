@@ -50,8 +50,8 @@ contract TestnetAddEditionToMarketplace is Script {
             buyoutBidAmount: 0,
             timeBufferInSeconds: 3600, // 1 hour buffer
             bidBufferBps: 100, // 1% buffer
-            startTimestamp: block.timestamp, // Start immediately
-            endTimestamp: block.timestamp + 14 days // End in 2 weeks
+            startTimestamp: uint64(block.timestamp), // Start immediately
+            endTimestamp: uint64(block.timestamp + 14 days) // End in 2 weeks
         });
         uint256 auctionIdForId3 = marketplace.createAuction(paramsForId3);
         console.log("Auction created for tokenId 3 with ID:", auctionIdForId3);
@@ -66,8 +66,8 @@ contract TestnetAddEditionToMarketplace is Script {
             buyoutBidAmount: 0,
             timeBufferInSeconds: 3600, // 1 hour buffer
             bidBufferBps: 100, // 1% buffer
-            startTimestamp: block.timestamp, // Start immediately
-            endTimestamp: block.timestamp + 14 days // End in 2 weeks
+            startTimestamp: uint64(block.timestamp), // Start immediately
+            endTimestamp: uint64(block.timestamp + 14 days) // End in 2 weeks
         });
         uint256 auctionIdForId4 = marketplace.createAuction(paramsForId4);
         console.log("Auction created for tokenId 4 with ID:", auctionIdForId4);
