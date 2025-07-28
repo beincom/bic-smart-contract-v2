@@ -35,7 +35,6 @@ contract TestnetAddEditionToMarketplace is Script {
         address marketplaceAddress = vm.envAddress("MARKETPLACE_ADDRESS_TESTNET");
         address currency = vm.envAddress("BIC_ADDRESS_TESTNET");
 
-        BicEdition bicEdition = BicEdition(editionAddress);
         SampleMarketplace marketplace = SampleMarketplace(marketplaceAddress);
 
         vm.startBroadcast(deployerPrivateKey);
