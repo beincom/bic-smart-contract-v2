@@ -35,9 +35,12 @@ contract TestnetAddEditionToMarketplace is Script {
         address marketplaceAddress = vm.envAddress("MARKETPLACE_ADDRESS_TESTNET");
         address currency = vm.envAddress("BIC_ADDRESS_TESTNET");
 
+        BicEdition edition = BicEdition(editionAddress);
         SampleMarketplace marketplace = SampleMarketplace(marketplaceAddress);
 
         vm.startBroadcast(deployerPrivateKey);
+
+        edition.setApprovalForAll(0xc8B727586901E1222f72c56804EC98a3F85C4dad, true);
 
         // Create an auction for the edition tokenId 3
         SampleMarketplace.AuctionParameters memory paramsForId3 = SampleMarketplace.AuctionParameters({
