@@ -10,7 +10,7 @@ import {IClaimCondition} from "../../src/extension/interface/IClaimCondition.sol
 contract Edition20250902Script is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY_TESTNET");
-        string memory editionUri = vm.envString("EDITION_URI");
+        string memory editionUri = string ("https://nft-metadata.beincom.app/collections/zXOD7foJq5mUeBEwilTeEQ/");
         address editionOwner = vm.envAddress("EDITION_OWNER_TESTNET");
         address editionTreasury = vm.envAddress("EDITION_TREASURY_TESTNET");
 
@@ -25,7 +25,7 @@ contract Edition20250902Script is Script {
         );
         console.log("BicEdition deployed at:", address(bicEdition));
 
-        lazyMintNft(bicEdition);
+//        lazyMintNft(bicEdition);
         createDropConditions(bicEdition);
         batchMint(bicEdition, editionOwner);
         bicEdition.transferOwnership(editionOwner);
