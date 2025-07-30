@@ -44,7 +44,7 @@ contract TestnetAddEditionToMarketplace is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        edition.setApprovalForAll(0xc8B727586901E1222f72c56804EC98a3F85C4dad, true);
+        edition.setApprovalForAll(marketplaceAddress, true);
 
         // Prepare multicall data for 75 auctions for tokenId 3 and 5 auctions for tokenId 4
         bytes[] memory multicallData = new bytes[](80);
@@ -57,10 +57,10 @@ contract TestnetAddEditionToMarketplace is Script {
             currency: currency,
             minimumBidAmount: 10000 ether, // Example minimum bid amount
             buyoutBidAmount: 0,
-            timeBufferInSeconds: 3600, // 1 hour buffer
-            bidBufferBps: 100, // 1% buffer
+            timeBufferInSeconds: 7200, // 2 hour buffer
+            bidBufferBps: 500, // 5% buffer
             startTimestamp: uint64(block.timestamp), // Start immediately
-            endTimestamp: uint64(block.timestamp + 14 days) // End in 2 weeks
+            endTimestamp: uint64(block.timestamp + 5 days) // End in 5 days
         });
 
         // Parameters for tokenId 4
@@ -71,10 +71,10 @@ contract TestnetAddEditionToMarketplace is Script {
             currency: currency,
             minimumBidAmount: 80000 ether, // Example minimum bid amount
             buyoutBidAmount: 0,
-            timeBufferInSeconds: 3600, // 1 hour buffer
-            bidBufferBps: 100, // 1% buffer
+            timeBufferInSeconds: 7200, // 2 hour buffer
+            bidBufferBps: 500, // 5% buffer
             startTimestamp: uint64(block.timestamp), // Start immediately
-            endTimestamp: uint64(block.timestamp + 14 days) // End in 2 weeks
+            endTimestamp: uint64(block.timestamp + 5 days) // End in 5 days
         });
 
         // Encode 75 createAuction calls for tokenId 3
