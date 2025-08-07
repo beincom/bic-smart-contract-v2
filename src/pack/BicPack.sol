@@ -9,7 +9,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {TokenStore} from "../extension/TokenStore.sol";
 
-contract Pack is ERC1155, Ownable, ReentrancyGuard, TokenStore {
+contract BicPack is ERC1155, Ownable, ReentrancyGuard, TokenStore {
     struct PackInfo {
         uint256[] perUnitAmounts;
         uint128 openStartTimestamp;
@@ -123,8 +123,6 @@ contract Pack is ERC1155, Ownable, ReentrancyGuard, TokenStore {
     /// @notice Lets a pack owner open packs and receive the packs' reward units.
     function openPack(uint256 _packId, uint256 _amountToOpen) external nonReentrant returns (Token[] memory) {
         address opener = _msgSender();
-
-        require(opener == tx.origin, "!EOA");
         require(balanceOf(opener, _packId) >= _amountToOpen, "!Bal");
 
         PackInfo memory pack = packInfo[_packId];

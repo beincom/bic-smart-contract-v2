@@ -7,9 +7,11 @@ import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {IERC1155} from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import {ERC721Holder} from "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 import {ERC1155Holder} from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { TokenBundle, ITokenBundle } from "./TokenBundle.sol";
 
 contract TokenStore is TokenBundle, ERC721Holder, ERC1155Holder {
+    using SafeERC20 for IERC20;
 
     /// @dev Store / escrow multiple ERC1155, ERC721, ERC20 tokens.
     function _storeTokens(
@@ -40,7 +42,11 @@ contract TokenStore is TokenBundle, ERC721Holder, ERC1155Holder {
     /// @dev Transfers an arbitrary ERC20 / ERC721 / ERC1155 token.
     function _transferToken(address _from, address _to, Token memory _token) internal {
         if (_token.tokenType == TokenType.ERC20) {
-            IERC20(_token.assetContract).transferFrom(_from, _to, _token.totalAmount);
+            if(_from == address(this)) {
+                IERC20(_token.assetContract).transfer(_to, _token.totalAmount);
+            } else {
+                IERC20(_token.assetContract).safeTransferFrom(_from, _to, _token.totalAmount);
+            }
         } else if (_token.tokenType == TokenType.ERC721) {
             IERC721(_token.assetContract).safeTransferFrom(_from, _to, _token.tokenId);
         } else if (_token.tokenType == TokenType.ERC1155) {
