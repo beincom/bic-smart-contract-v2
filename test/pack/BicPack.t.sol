@@ -68,7 +68,7 @@ contract BicPackTest is Test {
         erc20.mint(owner, 1000 * 10**18);
         erc721.mint(owner, 1);
         erc721.mint(owner, 2);
-        erc1155.mint(owner, 1, 100);
+        erc1155.mint(owner, 1, 150);
         erc1155.mint(owner, 2, 50);
         
         // Approve pack contract to spend tokens
@@ -157,6 +157,22 @@ contract BicPackTest is Test {
         assertEq(packId, 0);
         assertEq(packTotalSupply, 4); // 16 total reward units / 4 per open = 4 packs
         assertEq(pack.balanceOf(recipient, packId), 4);
+
+        ITokenBundle.Token[] memory newContents = new ITokenBundle.Token[](1);
+        newContents[0] = ITokenBundle.Token({
+            assetContract: address(erc1155),
+            tokenType: ITokenBundle.TokenType.ERC1155,
+            tokenId: 1,
+            totalAmount: 80
+        });
+        uint256[] memory newNumOfRewardUnits = new uint256[](1);
+        newNumOfRewardUnits[0] = 4;
+        vm.prank(owner);
+        (uint256 newPackTotalSupply, uint256 newSupplyAdded) = pack.addPackContents(packId, newContents,newNumOfRewardUnits, recipient);
+        assertEq(pack.canUpdatePack(packId), true); // Can still update pack after adding contents
+        assertEq(newPackTotalSupply, 5);
+        assertEq(pack.balanceOf(recipient, packId), 5);
+
     }
 
     function testCreatePackRevertsWhenNotOwner() public {
