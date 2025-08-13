@@ -54,7 +54,7 @@ contract Edition20250902Script is Script {
             supplyClaimed: 0,
             quantityLimitPerWallet: 99,
             merkleRoot: bytes32(0),
-            pricePerToken: 300 ether,
+            pricePerToken: 250 ether,
             currency: currency,
             metadata: ""
         });
@@ -66,7 +66,7 @@ contract Edition20250902Script is Script {
         IClaimCondition.ClaimCondition[] memory conditionsForId1 = new IClaimCondition.ClaimCondition[](1);
         conditionsForId1[0] = IClaimCondition.ClaimCondition({
             startTimestamp: block.timestamp,
-            maxClaimableSupply: 1500,
+            maxClaimableSupply: 1200,
             supplyClaimed: 0,
             quantityLimitPerWallet: 99,
             merkleRoot: bytes32(0),
@@ -86,7 +86,7 @@ contract Edition20250902Script is Script {
             supplyClaimed: 0,
             quantityLimitPerWallet: 99,
             merkleRoot: bytes32(0),
-            pricePerToken: 5000 ether,
+            pricePerToken: 3000 ether,
             currency: currency,
             metadata: ""
         });

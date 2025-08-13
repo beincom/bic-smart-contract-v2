@@ -55,7 +55,7 @@ contract TestnetAddEditionToMarketplace is Script {
             tokenId: 3,
             quantity: 1,
             currency: currency,
-            minimumBidAmount: 10000 ether, // Example minimum bid amount
+            minimumBidAmount: 8000 ether, // Example minimum bid amount
             buyoutBidAmount: 0,
             timeBufferInSeconds: 7200, // 2 hour buffer
             bidBufferBps: 500, // 5% buffer
@@ -69,7 +69,7 @@ contract TestnetAddEditionToMarketplace is Script {
             tokenId: 4,
             quantity: 1,
             currency: currency,
-            minimumBidAmount: 80000 ether, // Example minimum bid amount
+            minimumBidAmount: 20000 ether, // Example minimum bid amount
             buyoutBidAmount: 0,
             timeBufferInSeconds: 7200, // 2 hour buffer
             bidBufferBps: 500, // 5% buffer
