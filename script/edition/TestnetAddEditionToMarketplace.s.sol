@@ -38,6 +38,8 @@ contract TestnetAddEditionToMarketplace is Script {
         address editionAddress = vm.envAddress("EDITION_ADDRESS_TESTNET");
         address marketplaceAddress = vm.envAddress("MARKETPLACE_ADDRESS_TESTNET");
         address currency = vm.envAddress("BIC_ADDRESS_TESTNET");
+        uint256 numberOfTokensId3 = vm.envUint("EDITION_AUCTION_NUMBER_OF_TOKENS_ID_3");
+        uint256 numberOfTokensId4 = vm.envUint("EDITION_AUCTION_NUMBER_OF_TOKENS_ID_4");
 
         BicEdition edition = BicEdition(editionAddress);
         SampleMarketplace marketplace = SampleMarketplace(marketplaceAddress);
@@ -78,7 +80,7 @@ contract TestnetAddEditionToMarketplace is Script {
         });
 
         // Encode 75 createAuction calls for tokenId 3
-        for (uint256 i = 0; i < 75; i++) {
+        for (uint256 i = 0; i < numberOfTokensId3; i++) {
             multicallData[i] = abi.encodeWithSelector(
                 SampleMarketplace.createAuction.selector,
                 paramsForId3
@@ -86,8 +88,8 @@ contract TestnetAddEditionToMarketplace is Script {
         }
 
         // Encode 5 createAuction calls for tokenId 4
-        for (uint256 i = 0; i < 5; i++) {
-            multicallData[75 + i] = abi.encodeWithSelector(
+        for (uint256 i = 0; i < numberOfTokensId4; i++) {
+            multicallData[numberOfTokensId3 + i] = abi.encodeWithSelector(
                 SampleMarketplace.createAuction.selector,
                 paramsForId4
             );
@@ -97,11 +99,11 @@ contract TestnetAddEditionToMarketplace is Script {
         bytes[] memory results = marketplace.multicall(multicallData);
 
         // Log the auction creation
-        for (uint256 i = 0; i < 75; i++) {
+        for (uint256 i = 0; i < numberOfTokensId3; i++) {
             uint256 auctionId = abi.decode(results[i], (uint256));
             console.log("Auction created for tokenId 3 with ID:", auctionId);
         }
-        for (uint256 i = 75; i < 80; i++) {
+        for (uint256 i = numberOfTokensId3; i < numberOfTokensId3 + numberOfTokensId4; i++) {
             uint256 auctionId = abi.decode(results[i], (uint256));
             console.log("Auction created for tokenId 4 with ID:", auctionId);
         }
