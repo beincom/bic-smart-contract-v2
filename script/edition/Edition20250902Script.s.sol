@@ -9,10 +9,11 @@ import {IClaimCondition} from "../../src/extension/interface/IClaimCondition.sol
 
 contract Edition20250902Script is Script {
     function run() external {
-        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY_TESTNET");
-        string memory editionUri = string ("https://nft-metadata.beincom.app/collections/zXOD7foJq5mUeBEwilTeEQ/");
-        address editionOwner = vm.envAddress("EDITION_OWNER_TESTNET");
-        address editionTreasury = vm.envAddress("EDITION_TREASURY_TESTNET");
+        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+        string memory editionUri = vm.envString("EDITION_URI");
+        address editionOwner = vm.envAddress("EDITION_OWNER");
+        address auctionCreator = vm.envAddress("AUCTION_CREATOR");
+        address editionTreasury = vm.envAddress("EDITION_TREASURY");
 
         address deployOwner = vm.addr(deployerPrivateKey);
         vm.startBroadcast(deployerPrivateKey);
@@ -27,30 +28,25 @@ contract Edition20250902Script is Script {
 
 //        lazyMintNft(bicEdition);
         createDropConditions(bicEdition);
-        batchMint(bicEdition, editionOwner);
+        batchMint(bicEdition, auctionCreator);
         bicEdition.transferOwnership(editionOwner);
 
         vm.stopBroadcast();
     }
 
-    function lazyMintNft(BicEdition bicEdition) internal {
-        bicEdition.lazyMint(1,"https://nft-metadata.beincom.app/collections/zXOD7foJq5mUeBEwilTeEQ/0","");
-        bicEdition.lazyMint(1,"https://nft-metadata.beincom.app/collections/zXOD7foJq5mUeBEwilTeEQ/1","");
-        bicEdition.lazyMint(1,"https://nft-metadata.beincom.app/collections/zXOD7foJq5mUeBEwilTeEQ/2","");
-        bicEdition.lazyMint(1,"https://nft-metadata.beincom.app/collections/zXOD7foJq5mUeBEwilTeEQ/3","");
-        bicEdition.lazyMint(1,"https://nft-metadata.beincom.app/collections/zXOD7foJq5mUeBEwilTeEQ/4","");
-
-//        bicEdition.lazyMint(1,"https://raw.githubusercontent.com/viettu-bic/20250902-collection-metadata/refs/heads/main/0.json","");
-//        bicEdition.lazyMint(1,"https://raw.githubusercontent.com/viettu-bic/20250902-collection-metadata/refs/heads/main/1.json","");
-//        bicEdition.lazyMint(1,"https://raw.githubusercontent.com/viettu-bic/20250902-collection-metadata/refs/heads/main/2.json","");
-//        bicEdition.lazyMint(1,"https://raw.githubusercontent.com/viettu-bic/20250902-collection-metadata/refs/heads/main/3.json","");
-//        bicEdition.lazyMint(1,"https://raw.githubusercontent.com/viettu-bic/20250902-collection-metadata/refs/heads/main/4.json","");
-    }
+//    function lazyMintNft(BicEdition bicEdition) internal {
+//        bicEdition.lazyMint(1,"https://nft-metadata.beincom.app/collections/zXOD7foJq5mUeBEwilTeEQ/0","");
+//        bicEdition.lazyMint(1,"https://nft-metadata.beincom.app/collections/zXOD7foJq5mUeBEwilTeEQ/1","");
+//        bicEdition.lazyMint(1,"https://nft-metadata.beincom.app/collections/zXOD7foJq5mUeBEwilTeEQ/2","");
+//        bicEdition.lazyMint(1,"https://nft-metadata.beincom.app/collections/zXOD7foJq5mUeBEwilTeEQ/3","");
+//        bicEdition.lazyMint(1,"https://nft-metadata.beincom.app/collections/zXOD7foJq5mUeBEwilTeEQ/4","");
+//
+//    }
 
     function createDropConditions(
         BicEdition bicEdition
     ) internal {
-        address currency = vm.envAddress("BIC_ADDRESS_TESTNET");
+        address currency = vm.envAddress("BIC_ADDRESS");
         IClaimCondition.ClaimCondition[] memory conditionsForId0 = new IClaimCondition.ClaimCondition[](1);
         conditionsForId0[0] = IClaimCondition.ClaimCondition({
             startTimestamp: block.timestamp,
@@ -102,12 +98,14 @@ contract Edition20250902Script is Script {
     }
 
     function batchMint(BicEdition bicEdition, address receipt) internal {
+        uint256 numberOfTokensId3 = vm.envUint("EDITION_AUCTION_NUMBER_OF_TOKENS_ID_3");
+        uint256 numberOfTokensId4 = vm.envUint("EDITION_AUCTION_NUMBER_OF_TOKENS_ID_4");
         uint256[] memory ids = new uint256[](2);
         ids[0] = 3;
         ids[1] = 4;
         uint256[] memory amounts = new uint256[](2);
-        amounts[0] = 75;
-        amounts[1] = 5;
+        amounts[0] = numberOfTokensId3;
+        amounts[1] = numberOfTokensId4;
         bicEdition.ownerMintBatch(receipt, ids, amounts);
     }
 }
