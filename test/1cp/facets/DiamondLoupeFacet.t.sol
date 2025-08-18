@@ -3,9 +3,9 @@ pragma solidity ^0.8.23;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {OneCPTestBase} from "../1CPTestBase.t.sol";
-import {DiamondCutFacet} from "../../../src/1cp/facets/DiamondCutFacet.sol";
-import {DiamondLoupeFacet} from "../../../src/1cp/facets/DiamondLoupeFacet.sol";
-import {LibDiamond} from "../../../src/1cp/libraries/LibDiamond.sol";
+import {DiamondCutFacet} from "../../../src/diamond/facets/DiamondCutFacet.sol";
+import {DiamondLoupeFacet} from "../../../src/diamond/facets/DiamondLoupeFacet.sol";
+import {LibDiamond} from "../../../src/diamond/libraries/LibDiamond.sol";
 
 contract DiamondLoupeFacetTest is OneCPTestBase {
     function test_checkSelectorToFacet() public {

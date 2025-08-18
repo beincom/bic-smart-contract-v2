@@ -2,10 +2,10 @@
 
 pragma solidity ^0.8.23;
 
-import { LibDiamond } from "../libraries/LibDiamond.sol";
+import { LibDiamond } from "../../diamond/libraries/LibDiamond.sol";
 import { LibDiamondLoupe } from "../libraries/LibDiamondLoupe.sol";
-import { IDiamondLoupe } from "../interfaces/IDiamondLoupe.sol";
-import { DiamondCutFacet } from "./DiamondCutFacet.sol";
+import { IDiamondLoupe } from "../../diamond/interfaces/IDiamondLoupe.sol";
+import { DiamondCutFacet } from "../../diamond/facets/DiamondCutFacet.sol";
 
 contract EmergencyPauseFacet {
      /// Errors ///

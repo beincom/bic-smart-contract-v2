@@ -2,8 +2,8 @@
 
 pragma solidity ^0.8.23;
 
-import { LibAccess } from "../libraries/LibAccess.sol";
-import { LibDiamond } from "../libraries/LibDiamond.sol";
+import { LibAccess } from "../../diamond/libraries/LibAccess.sol";
+import { LibDiamond } from "../../diamond/libraries/LibDiamond.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 

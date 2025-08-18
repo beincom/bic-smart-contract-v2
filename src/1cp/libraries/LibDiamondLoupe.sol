@@ -2,8 +2,8 @@
 /// @custom:version 1.0.0
 pragma solidity ^0.8.17;
 
-import { LibDiamond } from "../libraries/LibDiamond.sol";
-import { IDiamondLoupe } from "../interfaces/IDiamondLoupe.sol";
+import { LibDiamond } from "../../diamond/libraries/LibDiamond.sol";
+import { IDiamondLoupe } from "../../diamond/interfaces/IDiamondLoupe.sol";
 
 /// Library for DiamondLoupe functions (to avoid using external calls when using DiamondLoupe)
 library LibDiamondLoupe {
