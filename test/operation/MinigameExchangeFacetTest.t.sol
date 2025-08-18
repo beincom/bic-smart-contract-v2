@@ -50,6 +50,7 @@ contract MinigameExchangeFacetTest is BackendOperationTestBase {
 
     function setUp() public override {
         super.setUp();
+        mockDrop = new MockDrop1155();
     }
 
     function test_claimERC1155_Success() public {

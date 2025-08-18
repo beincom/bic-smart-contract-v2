@@ -7,6 +7,7 @@ import {DiamondCutFacet} from "../../src/diamond/facets/DiamondCutFacet.sol";
 import {DiamondLoupeFacet} from "../../src/diamond/facets/DiamondLoupeFacet.sol";
 import {OwnershipFacet} from "../../src/diamond/facets/OwnershipFacet.sol";
 import {AccessManagerFacet} from "../../src/diamond/facets/AccessManagerFacet.sol";
+import {ERC1155ReceiverFacet} from "../../src/diamond/facets/ERC1155ReceiverFacet.sol";
 import {MinigameExchangeFacet} from "../../src/operation/facets/MinigameExchangeFacet.sol";
 import {LibDiamond} from "../../src/diamond/libraries/LibDiamond.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -52,6 +53,7 @@ contract BackendOperationTestBase is Test {
     DiamondLoupeFacet public diamondLoupeFacet;
     OwnershipFacet public ownershipFacet;
     AccessManagerFacet public accessManagerFacet;
+    ERC1155ReceiverFacet public erc1155ReceiverFacet;
     MinigameExchangeFacet public minigameExchangeFacet;
     
     MockERC20 public mockERC20;
@@ -77,6 +79,7 @@ contract BackendOperationTestBase is Test {
         addOwnershipFacet();
         addDiamondLoupeFacet();
         addAccessManagerFacet();
+        addERC1155ReceiverFacet();
         addMinigameExchangeFacet();
         
         // Deploy mock tokens
@@ -183,6 +186,31 @@ contract BackendOperationTestBase is Test {
         });
         
         DiamondCutFacet(address(diamond)).diamondCut(cut, address(0), "");
+        vm.stopPrank();
+    }
+
+    function addERC1155ReceiverFacet() internal {
+        vm.startPrank(diamondOwner);
+        erc1155ReceiverFacet = new ERC1155ReceiverFacet();
+
+        bytes4[] memory functionSelectors = new bytes4[](3);
+        functionSelectors[0] = erc1155ReceiverFacet.onERC1155Received.selector;
+        functionSelectors[1] = erc1155ReceiverFacet.onERC1155BatchReceived.selector;
+        functionSelectors[2] = erc1155ReceiverFacet.initERC1155Receiver.selector;
+
+        LibDiamond.FacetCut[] memory cut = new LibDiamond.FacetCut[](1);
+        cut[0] = LibDiamond.FacetCut({
+            facetAddress: address(erc1155ReceiverFacet),
+            action: LibDiamond.FacetCutAction.Add,
+            functionSelectors: functionSelectors
+        });
+
+        // add facet and run initializer to set ERC165 support bits
+        DiamondCutFacet(address(diamond)).diamondCut(
+            cut,
+            address(erc1155ReceiverFacet),
+            abi.encodeWithSelector(erc1155ReceiverFacet.initERC1155Receiver.selector)
+        );
         vm.stopPrank();
     }
 
