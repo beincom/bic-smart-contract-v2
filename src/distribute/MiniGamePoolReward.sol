@@ -2,6 +2,10 @@
 pragma solidity ^0.8.23;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import {IERC1155} from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import {IERC1155Receiver} from "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
@@ -10,14 +14,11 @@ import {MiniGamePoolRewardErrors} from "../interfaces/MiniGamePoolRewardErrors.s
 
 /**
  * @title MiniGamePoolReward
- * @notice Contract for distributing ERC20 tokens using merkle trees with time-based claim periods
+ * @notice Contract for distributing ERC20, ERC721, and ERC1155 tokens using merkle trees with time-based claim periods
  * @dev Allows admin to add merkle roots with end times, users can claim rewards if they provide valid proofs
  */
-contract MiniGamePoolReward is Ownable, ReentrancyGuard, MiniGamePoolRewardErrors {
+contract MiniGamePoolReward is Ownable, ReentrancyGuard, IERC721Receiver, IERC1155Receiver, MiniGamePoolRewardErrors {
     using SafeERC20 for IERC20;
-
-    /// @notice The ERC20 token used for rewards
-    IERC20 public immutable rewardToken;
 
     /// @notice Structure to store merkle root information
     struct MerkleRootInfo {
@@ -46,21 +47,20 @@ contract MiniGamePoolReward is Ownable, ReentrancyGuard, MiniGamePoolRewardError
     event TokensClaimed(
         address indexed claimer,
         bytes32 indexed merkleRoot,
-        uint256 amount
+        address indexed token,
+        uint256 amount,
+        uint256 tokenId
     );
 
     /// @notice Emitted when tokens are withdrawn by admin
-    event TokensWithdrawn(address indexed to, uint256 amount);
+    event TokensWithdrawn(address indexed to, address indexed token, uint256 amount, uint256 tokenId);
 
     /**
      * @notice Constructor to initialize the contract
-     * @param _rewardToken The ERC20 token to be distributed as rewards
      * @param _owner The owner of the contract
      */
-    constructor(IERC20 _rewardToken, address _owner) Ownable(_owner) {
-        if (address(_rewardToken) == address(0)) revert ZeroAddress();
+    constructor(address _owner) Ownable(_owner) {
         if (_owner == address(0)) revert ZeroAddress();
-        rewardToken = _rewardToken;
     }
 
     /**
@@ -88,17 +88,20 @@ contract MiniGamePoolReward is Ownable, ReentrancyGuard, MiniGamePoolRewardError
     }
 
     /**
-     * @notice Claim tokens using a merkle proof
+     * @notice Claim ERC20 tokens using a merkle proof
      * @param _merkleRoot The merkle root to claim from
+     * @param _token The ERC20 token address
      * @param _amount The amount to claim
      * @param _merkleProof The merkle proof for the claim
      */
-    function claimTokens(
+    function claimERC20Tokens(
         bytes32 _merkleRoot,
+        address _token,
         uint256 _amount,
         bytes32[] calldata _merkleProof
     ) external nonReentrant {
         if (_amount == 0) revert ZeroAmount();
+        if (_token == address(0)) revert ZeroAddress();
 
         MerkleRootInfo storage rootInfo = merkleRoots[_merkleRoot];
         if (!rootInfo.exists) revert RootNotFound(_merkleRoot);
@@ -106,20 +109,96 @@ contract MiniGamePoolReward is Ownable, ReentrancyGuard, MiniGamePoolRewardError
         if (hasClaimed[_merkleRoot][msg.sender]) revert AlreadyClaimed(msg.sender, _merkleRoot);
 
         // Verify merkle proof
-        bytes32 leaf = keccak256(abi.encodePacked(msg.sender, _amount));
+        bytes32 leaf = keccak256(abi.encodePacked(msg.sender, _token, _amount, uint256(0))); // tokenId = 0 for ERC20
         if (!MerkleProof.verify(_merkleProof, _merkleRoot, leaf)) revert InvalidProof();
 
         // Check if contract has sufficient balance
-        uint256 contractBalance = rewardToken.balanceOf(address(this));
+        uint256 contractBalance = IERC20(_token).balanceOf(address(this));
         if (contractBalance < _amount) revert InsufficientBalance(_amount, contractBalance);
 
         // Mark as claimed
         hasClaimed[_merkleRoot][msg.sender] = true;
 
         // Transfer tokens
-        rewardToken.safeTransfer(msg.sender, _amount);
+        IERC20(_token).safeTransfer(msg.sender, _amount);
 
-        emit TokensClaimed(msg.sender, _merkleRoot, _amount);
+        emit TokensClaimed(msg.sender, _merkleRoot, _token, _amount, 0);
+    }
+
+    /**
+     * @notice Claim ERC721 tokens using a merkle proof
+     * @param _merkleRoot The merkle root to claim from
+     * @param _token The ERC721 token address
+     * @param _tokenId The token ID to claim
+     * @param _merkleProof The merkle proof for the claim
+     */
+    function claimERC721Tokens(
+        bytes32 _merkleRoot,
+        address _token,
+        uint256 _tokenId,
+        bytes32[] calldata _merkleProof
+    ) external nonReentrant {
+        if (_token == address(0)) revert ZeroAddress();
+
+        MerkleRootInfo storage rootInfo = merkleRoots[_merkleRoot];
+        if (!rootInfo.exists) revert RootNotFound(_merkleRoot);
+        if (block.timestamp > rootInfo.endTime) revert ClaimPeriodExpired(_merkleRoot, rootInfo.endTime);
+        if (hasClaimed[_merkleRoot][msg.sender]) revert AlreadyClaimed(msg.sender, _merkleRoot);
+
+        // Verify merkle proof
+        bytes32 leaf = keccak256(abi.encodePacked(msg.sender, _token, uint256(1), _tokenId)); // amount = 1 for ERC721
+        if (!MerkleProof.verify(_merkleProof, _merkleRoot, leaf)) revert InvalidProof();
+
+        // Check if contract owns the token
+        if (IERC721(_token).ownerOf(_tokenId) != address(this)) revert InsufficientBalance(1, 0);
+
+        // Mark as claimed
+        hasClaimed[_merkleRoot][msg.sender] = true;
+
+        // Transfer token
+        IERC721(_token).transferFrom(address(this), msg.sender, _tokenId);
+
+        emit TokensClaimed(msg.sender, _merkleRoot, _token, 1, _tokenId);
+    }
+
+    /**
+     * @notice Claim ERC1155 tokens using a merkle proof
+     * @param _merkleRoot The merkle root to claim from
+     * @param _token The ERC1155 token address
+     * @param _tokenId The token ID to claim
+     * @param _amount The amount to claim
+     * @param _merkleProof The merkle proof for the claim
+     */
+    function claimERC1155Tokens(
+        bytes32 _merkleRoot,
+        address _token,
+        uint256 _tokenId,
+        uint256 _amount,
+        bytes32[] calldata _merkleProof
+    ) external nonReentrant {
+        if (_amount == 0) revert ZeroAmount();
+        if (_token == address(0)) revert ZeroAddress();
+
+        MerkleRootInfo storage rootInfo = merkleRoots[_merkleRoot];
+        if (!rootInfo.exists) revert RootNotFound(_merkleRoot);
+        if (block.timestamp > rootInfo.endTime) revert ClaimPeriodExpired(_merkleRoot, rootInfo.endTime);
+        if (hasClaimed[_merkleRoot][msg.sender]) revert AlreadyClaimed(msg.sender, _merkleRoot);
+
+        // Verify merkle proof
+        bytes32 leaf = keccak256(abi.encodePacked(msg.sender, _token, _amount, _tokenId));
+        if (!MerkleProof.verify(_merkleProof, _merkleRoot, leaf)) revert InvalidProof();
+
+        // Check if contract has sufficient balance
+        uint256 contractBalance = IERC1155(_token).balanceOf(address(this), _tokenId);
+        if (contractBalance < _amount) revert InsufficientBalance(_amount, contractBalance);
+
+        // Mark as claimed
+        hasClaimed[_merkleRoot][msg.sender] = true;
+
+        // Transfer tokens
+        IERC1155(_token).safeTransferFrom(address(this), msg.sender, _tokenId, _amount, "");
+
+        emit TokensClaimed(msg.sender, _merkleRoot, _token, _amount, _tokenId);
     }
 
     /**
@@ -171,40 +250,137 @@ contract MiniGamePoolReward is Ownable, ReentrancyGuard, MiniGamePoolRewardError
     }
 
     /**
-     * @notice Get the contract's token balance
+     * @notice Get the contract's ERC20 token balance
+     * @param _token The ERC20 token address
      * @return The current token balance of the contract
      */
-    function getContractBalance() external view returns (uint256) {
-        return rewardToken.balanceOf(address(this));
+    function getERC20Balance(address _token) external view returns (uint256) {
+        return IERC20(_token).balanceOf(address(this));
     }
 
     /**
-     * @notice Withdraw tokens from the contract (admin only)
+     * @notice Get the contract's ERC1155 token balance
+     * @param _token The ERC1155 token address
+     * @param _tokenId The token ID
+     * @return The current token balance of the contract
+     */
+    function getERC1155Balance(address _token, uint256 _tokenId) external view returns (uint256) {
+        return IERC1155(_token).balanceOf(address(this), _tokenId);
+    }
+
+    /**
+     * @notice Withdraw ERC20 tokens from the contract (admin only)
+     * @param _token The ERC20 token address
      * @param _to The address to send tokens to
      * @param _amount The amount to withdraw
      */
-    function withdrawTokens(address _to, uint256 _amount) external onlyOwner {
+    function withdrawERC20Tokens(address _token, address _to, uint256 _amount) external onlyOwner {
         if (_to == address(0)) revert ZeroAddress();
+        if (_token == address(0)) revert ZeroAddress();
         if (_amount == 0) revert ZeroAmount();
 
-        uint256 contractBalance = rewardToken.balanceOf(address(this));
+        uint256 contractBalance = IERC20(_token).balanceOf(address(this));
         if (contractBalance < _amount) revert InsufficientBalance(_amount, contractBalance);
 
-        rewardToken.safeTransfer(_to, _amount);
-        emit TokensWithdrawn(_to, _amount);
+        IERC20(_token).safeTransfer(_to, _amount);
+        emit TokensWithdrawn(_to, _token, _amount, 0);
     }
 
     /**
-     * @notice Emergency withdraw all tokens (admin only)
+     * @notice Withdraw ERC721 tokens from the contract (admin only)
+     * @param _token The ERC721 token address
+     * @param _to The address to send tokens to
+     * @param _tokenId The token ID to withdraw
+     */
+    function withdrawERC721Tokens(address _token, address _to, uint256 _tokenId) external onlyOwner {
+        if (_to == address(0)) revert ZeroAddress();
+        if (_token == address(0)) revert ZeroAddress();
+
+        if (IERC721(_token).ownerOf(_tokenId) != address(this)) revert InsufficientBalance(1, 0);
+
+        IERC721(_token).transferFrom(address(this), _to, _tokenId);
+        emit TokensWithdrawn(_to, _token, 1, _tokenId);
+    }
+
+    /**
+     * @notice Withdraw ERC1155 tokens from the contract (admin only)
+     * @param _token The ERC1155 token address
+     * @param _to The address to send tokens to
+     * @param _tokenId The token ID to withdraw
+     * @param _amount The amount to withdraw
+     */
+    function withdrawERC1155Tokens(address _token, address _to, uint256 _tokenId, uint256 _amount) external onlyOwner {
+        if (_to == address(0)) revert ZeroAddress();
+        if (_token == address(0)) revert ZeroAddress();
+        if (_amount == 0) revert ZeroAmount();
+
+        uint256 contractBalance = IERC1155(_token).balanceOf(address(this), _tokenId);
+        if (contractBalance < _amount) revert InsufficientBalance(_amount, contractBalance);
+
+        IERC1155(_token).safeTransferFrom(address(this), _to, _tokenId, _amount, "");
+        emit TokensWithdrawn(_to, _token, _amount, _tokenId);
+    }
+
+    /**
+     * @notice Emergency withdraw all ERC20 tokens (admin only)
+     * @param _token The ERC20 token address
      * @param _to The address to send tokens to
      */
-    function emergencyWithdraw(address _to) external onlyOwner {
+    function emergencyWithdrawERC20(address _token, address _to) external onlyOwner {
         if (_to == address(0)) revert ZeroAddress();
+        if (_token == address(0)) revert ZeroAddress();
 
-        uint256 balance = rewardToken.balanceOf(address(this));
+        uint256 balance = IERC20(_token).balanceOf(address(this));
         if (balance > 0) {
-            rewardToken.safeTransfer(_to, balance);
-            emit TokensWithdrawn(_to, balance);
+            IERC20(_token).safeTransfer(_to, balance);
+            emit TokensWithdrawn(_to, _token, balance, 0);
         }
+    }
+
+    /**
+     * @notice ERC721Receiver interface implementation
+     */
+    function onERC721Received(
+        address operator,
+        address from,
+        uint256 tokenId,
+        bytes calldata data
+    ) external override returns (bytes4) {
+        return IERC721Receiver.onERC721Received.selector;
+    }
+
+    /**
+     * @notice ERC1155Receiver interface implementation
+     */
+    function onERC1155Received(
+        address operator,
+        address from,
+        uint256 id,
+        uint256 value,
+        bytes calldata data
+    ) external override returns (bytes4) {
+        return IERC1155Receiver.onERC1155Received.selector;
+    }
+
+    /**
+     * @notice ERC1155Receiver interface implementation for batch transfers
+     */
+    function onERC1155BatchReceived(
+        address operator,
+        address from,
+        uint256[] calldata ids,
+        uint256[] calldata values,
+        bytes calldata data
+    ) external override returns (bytes4) {
+        return IERC1155Receiver.onERC1155BatchReceived.selector;
+    }
+
+    /**
+     * @notice IERC165 interface implementation
+     */
+    function supportsInterface(bytes4 interfaceId) external pure returns (bool) {
+        return
+            interfaceId == type(IERC721Receiver).interfaceId ||
+            interfaceId == type(IERC1155Receiver).interfaceId;
     }
 }

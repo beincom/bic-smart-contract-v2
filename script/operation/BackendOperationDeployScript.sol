@@ -1,62 +1,45 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: UNLICENSED
+
 pragma solidity ^0.8.23;
 
-import {Test, console} from "forge-std/Test.sol";
-import {BackendOperationDiamond} from "../../src/operation/BackendOperationDiamond.sol";
-import {DiamondCutFacet} from "../../src/diamond/facets/DiamondCutFacet.sol";
-import {DiamondLoupeFacet} from "../../src/diamond/facets/DiamondLoupeFacet.sol";
-import {OwnershipFacet} from "../../src/diamond/facets/OwnershipFacet.sol";
-import {AccessManagerFacet} from "../../src/diamond/facets/AccessManagerFacet.sol";
-import {ERC1155ReceiverFacet} from "../../src/diamond/facets/ERC1155ReceiverFacet.sol";
-import {MinigameExchangeFacet} from "../../src/operation/facets/MinigameExchangeFacet.sol";
-import {LibDiamond} from "../../src/diamond/libraries/LibDiamond.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {MockERC20} from "../contracts/MockERC20.sol";
-import {MockERC721} from "../contracts/MockERC721.sol";
-import {MockERC1155} from "../contracts/MockERC1155.sol";
+import "../../src/diamond/facets/AccessManagerFacet.sol";
+import "../../src/diamond/facets/DiamondCutFacet.sol";
+import "../../src/diamond/facets/DiamondLoupeFacet.sol";
+import "../../src/diamond/facets/ERC1155ReceiverFacet.sol";
+import "../../src/diamond/facets/OwnershipFacet.sol";
+import "../../src/operation/BackendOperationDiamond.sol";
+import "../../src/operation/facets/MinigameExchangeFacet.sol";
+import {Script} from "forge-std/Script.sol";
+import {console} from "forge-std/console.sol";
 
-contract BackendOperationTestBase is Test {
+
+contract BackendOperationDeployScript is Script {
     BackendOperationDiamond public diamond;
     DiamondCutFacet public diamondCutFacet;
-    DiamondLoupeFacet public diamondLoupeFacet;
     OwnershipFacet public ownershipFacet;
+    DiamondLoupeFacet public diamondLoupeFacet;
     AccessManagerFacet public accessManagerFacet;
     ERC1155ReceiverFacet public erc1155ReceiverFacet;
     MinigameExchangeFacet public minigameExchangeFacet;
-    
-    MockERC20 public mockERC20;
-    MockERC721 public mockERC721;
-    MockERC1155 public mockERC1155;
-    
     address public diamondOwner;
     address public authorizedOperator;
-    address public unauthorizedUser;
-    address public recipient;
 
-    function setUp() public virtual {
-        diamondOwner = address(1234);
-        authorizedOperator = address(5678);
-        unauthorizedUser = address(9012);
-        recipient = address(3456);
-        
-        // Deploy diamond with diamond cut facet
+    function run() external {
+        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY_TESTNET");
+        diamondOwner = vm.envAddress("DIAMOND_OWNER");
+        authorizedOperator = vm.envAddress("AUTHORIZED_OPERATOR");
+        vm.startBroadcast(deployerPrivateKey);
+
         diamondCutFacet = new DiamondCutFacet();
         diamond = new BackendOperationDiamond(diamondOwner, address(diamondCutFacet));
-        
+
         // Add core facets
         addOwnershipFacet();
         addDiamondLoupeFacet();
         addAccessManagerFacet();
         addERC1155ReceiverFacet();
         addMinigameExchangeFacet();
-        
-        // Deploy mock tokens
-        mockERC20 = new MockERC20();
-        mockERC721 = new MockERC721();
-        mockERC1155 = new MockERC1155();
-        
-        // Set up access control for authorized operator
-        vm.startPrank(diamondOwner);
+
         AccessManagerFacet(address(diamond)).setCanExecute(
             MinigameExchangeFacet.transferNative.selector,
             authorizedOperator,
@@ -87,18 +70,10 @@ contract BackendOperationTestBase is Test {
             authorizedOperator,
             true
         );
-        vm.stopPrank();
-        
-        // Fund diamond and mint tokens
-        vm.deal(address(diamond), 10 ether);
-        mockERC20.mint(address(diamond), 1000e18);
-        mockERC721.mint(address(diamond));
-        mockERC1155.mint(address(diamond), 1, 100);
-        mockERC1155.mint(address(diamond), 2, 200);
+        vm.stopBroadcast();
     }
 
     function addOwnershipFacet() internal {
-        vm.startPrank(diamondOwner);
         ownershipFacet = new OwnershipFacet();
 
         bytes4[] memory functionSelectors = new bytes4[](2);
@@ -111,13 +86,11 @@ contract BackendOperationTestBase is Test {
             action: LibDiamond.FacetCutAction.Add,
             functionSelectors: functionSelectors
         });
-        
+
         DiamondCutFacet(address(diamond)).diamondCut(cut, address(0), "");
-        vm.stopPrank();
     }
-    
+
     function addDiamondLoupeFacet() internal {
-        vm.startPrank(diamondOwner);
         diamondLoupeFacet = new DiamondLoupeFacet();
 
         bytes4[] memory functionSelectors = new bytes4[](5);
@@ -133,13 +106,11 @@ contract BackendOperationTestBase is Test {
             action: LibDiamond.FacetCutAction.Add,
             functionSelectors: functionSelectors
         });
-        
+
         DiamondCutFacet(address(diamond)).diamondCut(cut, address(0), "");
-        vm.stopPrank();
     }
 
     function addAccessManagerFacet() internal {
-        vm.startPrank(diamondOwner);
         accessManagerFacet = new AccessManagerFacet();
 
         bytes4[] memory functionSelectors = new bytes4[](2);
@@ -152,13 +123,11 @@ contract BackendOperationTestBase is Test {
             action: LibDiamond.FacetCutAction.Add,
             functionSelectors: functionSelectors
         });
-        
+
         DiamondCutFacet(address(diamond)).diamondCut(cut, address(0), "");
-        vm.stopPrank();
     }
 
     function addERC1155ReceiverFacet() internal {
-        vm.startPrank(diamondOwner);
         erc1155ReceiverFacet = new ERC1155ReceiverFacet();
 
         bytes4[] memory functionSelectors = new bytes4[](3);
@@ -179,11 +148,9 @@ contract BackendOperationTestBase is Test {
             address(erc1155ReceiverFacet),
             abi.encodeWithSelector(erc1155ReceiverFacet.initERC1155Receiver.selector)
         );
-        vm.stopPrank();
     }
 
     function addMinigameExchangeFacet() internal {
-        vm.startPrank(diamondOwner);
         minigameExchangeFacet = new MinigameExchangeFacet();
 
         bytes4[] memory functionSelectors = new bytes4[](10);
@@ -204,9 +171,8 @@ contract BackendOperationTestBase is Test {
             action: LibDiamond.FacetCutAction.Add,
             functionSelectors: functionSelectors
         });
-        
+
         DiamondCutFacet(address(diamond)).diamondCut(cut, address(0), "");
-        vm.stopPrank();
     }
 
     function setAccessToSelector(
@@ -214,7 +180,6 @@ contract BackendOperationTestBase is Test {
         address executor,
         bool canAccess
     ) internal {
-        vm.prank(diamondOwner);
         AccessManagerFacet(address(diamond)).setCanExecute(selector, executor, canAccess);
     }
 }
