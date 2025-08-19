@@ -32,6 +32,7 @@ contract BackendOperationDeployScript is Script {
 
         diamondCutFacet = new DiamondCutFacet();
         diamond = new BackendOperationDiamond(diamondOwner, address(diamondCutFacet));
+        console.log("BackendOperationDiamond deployed at:", address(diamond));
 
         // Add core facets
         addOwnershipFacet();
