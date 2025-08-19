@@ -168,4 +168,367 @@ contract BicEditionTest is Test {
         assertEq(edition.uri(5), "https://base.uri/5");
     }
 
+    function testClaimReachesMaxClaimableSupply() public {
+        // Set claim condition with maxClaimableSupply = 5
+        vm.prank(owner);
+        IClaimCondition.ClaimCondition[] memory conditions = new IClaimCondition.ClaimCondition[](1);
+        conditions[0] = IClaimCondition.ClaimCondition({
+            startTimestamp: block.timestamp,
+            maxClaimableSupply: 5,
+            supplyClaimed: 0,
+            pricePerToken: 1000000000000000000,
+            currency: address(erc20),
+            merkleRoot: bytes32(0),
+            quantityLimitPerWallet: 10,
+            metadata: ""
+        });
+        edition.setClaimConditions(1, conditions, false);
+
+        // Mint tokens to users
+        erc20.mint(user, 10000000000000000000);
+        erc20.mint(recipient, 10000000000000000000);
+
+        // First user claims 3 tokens
+        vm.startPrank(user);
+        erc20.approve(address(edition), 3000000000000000000);
+        edition.claim(user, 1, 3, address(erc20), 1000000000000000000, IDrop1155.AllowlistProof({
+            proof: new bytes32[](0),
+            quantityLimitPerWallet: 10,
+            pricePerToken: 1000000000000000000,
+            currency: address(erc20)
+        }), "");
+        vm.stopPrank();
+
+        // Second user claims 2 tokens (reaches maxClaimableSupply)
+        vm.startPrank(recipient);
+        erc20.approve(address(edition), 2000000000000000000);
+        edition.claim(recipient, 1, 2, address(erc20), 1000000000000000000, IDrop1155.AllowlistProof({
+            proof: new bytes32[](0),
+            quantityLimitPerWallet: 10,
+            pricePerToken: 1000000000000000000,
+            currency: address(erc20)
+        }), "");
+        vm.stopPrank();
+
+        // Third user tries to claim 1 token but should revert due to maxClaimableSupply
+        address thirdUser = address(0x1234);
+        erc20.mint(thirdUser, 1000000000000000000);
+        vm.startPrank(thirdUser);
+        erc20.approve(address(edition), 1000000000000000000);
+        vm.expectRevert();
+        edition.claim(thirdUser, 1, 1, address(erc20), 1000000000000000000, IDrop1155.AllowlistProof({
+            proof: new bytes32[](0),
+            quantityLimitPerWallet: 10,
+            pricePerToken: 1000000000000000000,
+            currency: address(erc20)
+        }), "");
+        vm.stopPrank();
+
+        assertEq(edition.totalSupply(1), 5);
+        assertEq(edition.balanceOf(user, 1), 3);
+        assertEq(edition.balanceOf(recipient, 1), 2);
+    }
+
+    function testClaimReachesQuantityLimitPerWallet() public {
+        // Set claim condition with quantityLimitPerWallet = 3
+        vm.prank(owner);
+        IClaimCondition.ClaimCondition[] memory conditions = new IClaimCondition.ClaimCondition[](1);
+        conditions[0] = IClaimCondition.ClaimCondition({
+            startTimestamp: block.timestamp,
+            maxClaimableSupply: 100,
+            supplyClaimed: 0,
+            pricePerToken: 1000000000000000000,
+            currency: address(erc20),
+            merkleRoot: bytes32(0),
+            quantityLimitPerWallet: 3,
+            metadata: ""
+        });
+        edition.setClaimConditions(1, conditions, false);
+
+        // Mint tokens to user
+        erc20.mint(user, 10000000000000000000);
+
+        // User claims 3 tokens (reaches quantityLimitPerWallet)
+        vm.startPrank(user);
+        erc20.approve(address(edition), 3000000000000000000);
+        edition.claim(user, 1, 3, address(erc20), 1000000000000000000, IDrop1155.AllowlistProof({
+            proof: new bytes32[](0),
+            quantityLimitPerWallet: 3,
+            pricePerToken: 1000000000000000000,
+            currency: address(erc20)
+        }), "");
+        vm.stopPrank();
+
+        // User tries to claim 1 more token but should revert due to quantityLimitPerWallet
+        vm.startPrank(user);
+        erc20.approve(address(edition), 1000000000000000000);
+        vm.expectRevert();
+        edition.claim(user, 1, 1, address(erc20), 1000000000000000000, IDrop1155.AllowlistProof({
+            proof: new bytes32[](0),
+            quantityLimitPerWallet: 3,
+            pricePerToken: 1000000000000000000,
+            currency: address(erc20)
+        }), "");
+        vm.stopPrank();
+
+        assertEq(edition.totalSupply(1), 3);
+        assertEq(edition.balanceOf(user, 1), 3);
+    }
+
+    function testClaimUserNotEnoughERC20() public {
+        // Set claim condition
+        vm.prank(owner);
+        IClaimCondition.ClaimCondition[] memory conditions = new IClaimCondition.ClaimCondition[](1);
+        conditions[0] = IClaimCondition.ClaimCondition({
+            startTimestamp: block.timestamp,
+            maxClaimableSupply: 100,
+            supplyClaimed: 0,
+            pricePerToken: 1000000000000000000,
+            currency: address(erc20),
+            merkleRoot: bytes32(0),
+            quantityLimitPerWallet: 10,
+            metadata: ""
+        });
+        edition.setClaimConditions(1, conditions, false);
+
+        // Mint only 0.5 tokens worth to user (not enough for 1 token)
+        erc20.mint(user, 500000000000000000);
+
+        // User tries to claim 1 token but should revert due to insufficient ERC20
+        vm.startPrank(user);
+        erc20.approve(address(edition), 1000000000000000000);
+        vm.expectRevert();
+        edition.claim(user, 1, 1, address(erc20), 1000000000000000000, IDrop1155.AllowlistProof({
+            proof: new bytes32[](0),
+            quantityLimitPerWallet: 10,
+            pricePerToken: 1000000000000000000,
+            currency: address(erc20)
+        }), "");
+        vm.stopPrank();
+
+        assertEq(edition.totalSupply(1), 0);
+        assertEq(edition.balanceOf(user, 1), 0);
+    }
+
+    function testClaimWithWhitelistProof() public {
+        // Create a merkle tree with specific parameters for the user
+        // The leaf must match exactly: keccak256(abi.encodePacked(user, quantityLimitPerWallet, pricePerToken, currency))
+        bytes32 userLeaf = keccak256(abi.encodePacked(user, uint256(5), uint256(1000000000000000000), address(erc20)));
+        bytes32 merkleRoot = userLeaf; // For single leaf, root = leaf
+
+        // Set claim condition with merkle root (whitelist enabled) and very restrictive limits
+        vm.prank(owner);
+        IClaimCondition.ClaimCondition[] memory conditions = new IClaimCondition.ClaimCondition[](1);
+        conditions[0] = IClaimCondition.ClaimCondition({
+            startTimestamp: block.timestamp,
+            maxClaimableSupply: 100,
+            supplyClaimed: 0,
+            pricePerToken: 1000000000000000000,
+            currency: address(erc20),
+            merkleRoot: merkleRoot,
+            quantityLimitPerWallet: 1, // Very restrictive - only 1 token per wallet
+            metadata: ""
+        });
+        edition.setClaimConditions(1, conditions, false);
+
+        // Mint tokens to user
+        erc20.mint(user, 10000000000000000000);
+
+        // User claims with valid proof (matching the leaf exactly)
+        vm.startPrank(user);
+        erc20.approve(address(edition), 1000000000000000000);
+        edition.claim(user, 1, 1, address(erc20), 1000000000000000000, IDrop1155.AllowlistProof({
+            proof: new bytes32[](0), // Empty proof for single leaf
+            quantityLimitPerWallet: 5, // This matches the leaf hash
+            pricePerToken: 1000000000000000000,
+            currency: address(erc20)
+        }), "");
+        vm.stopPrank();
+
+        assertEq(edition.totalSupply(1), 1);
+        assertEq(edition.balanceOf(user, 1), 1);
+    }
+
+    function testClaimWithOpenClaimLimit() public {
+        // Set claim condition without merkle root (open claim)
+        vm.prank(owner);
+        IClaimCondition.ClaimCondition[] memory conditions = new IClaimCondition.ClaimCondition[](1);
+        conditions[0] = IClaimCondition.ClaimCondition({
+            startTimestamp: block.timestamp,
+            maxClaimableSupply: 100,
+            supplyClaimed: 0,
+            pricePerToken: 1000000000000000000,
+            currency: address(erc20),
+            merkleRoot: bytes32(0), // No merkle root - open claim
+            quantityLimitPerWallet: 5,
+            metadata: ""
+        });
+        edition.setClaimConditions(1, conditions, false);
+
+        // Mint tokens to user
+        erc20.mint(user, 10*10000000000000000000);
+
+        // User can claim through open claim limit
+        vm.startPrank(user);
+        erc20.approve(address(edition), 10*1000000000000000000);
+        edition.claim(user, 1, 5, address(erc20), 1000000000000000000, IDrop1155.AllowlistProof({
+            proof: new bytes32[](0),
+            quantityLimitPerWallet: 5,
+            pricePerToken: 1000000000000000000,
+            currency: address(erc20)
+        }), "");
+
+        assertEq(edition.totalSupply(1), 5);
+        assertEq(edition.balanceOf(user, 1), 5);
+
+        // User tries to claim 1 more token but should revert due to quantityLimitPerWallet
+        vm.startPrank(user);
+        erc20.approve(address(edition), 1000000000000000000);
+        vm.expectRevert();
+        edition.claim(user, 1, 1, address(erc20), 1000000000000000000, IDrop1155.AllowlistProof({
+            proof: new bytes32[](0),
+            quantityLimitPerWallet: 5,
+            pricePerToken: 1000000000000000000, 
+            currency: address(erc20)
+        }), "");
+        vm.stopPrank();
+
+        // After claim, the supply should be 5 and the balance of user should be 5
+        assertEq(edition.totalSupply(1), 5);
+        assertEq(edition.balanceOf(user, 1), 5);
+
+    }
+
+    function testClaimWithInvalidWhitelistProof() public {
+        // Create a merkle tree with specific parameters for the user
+        bytes32 userLeaf = keccak256(abi.encodePacked(user, uint256(5), uint256(1000000000000000000), address(erc20)));
+        bytes32 merkleRoot = userLeaf; // For single leaf, root = leaf
+
+        // Set claim condition with merkle root (whitelist enabled) and very restrictive limits
+        vm.prank(owner);
+        IClaimCondition.ClaimCondition[] memory conditions = new IClaimCondition.ClaimCondition[](1);
+        conditions[0] = IClaimCondition.ClaimCondition({
+            startTimestamp: block.timestamp,
+            maxClaimableSupply: 100,
+            supplyClaimed: 0,
+            pricePerToken: 1000000000000000000,
+            currency: address(erc20),
+            merkleRoot: merkleRoot,
+            quantityLimitPerWallet: 1, // Very restrictive - only 1 token per wallet
+            metadata: ""
+        });
+        edition.setClaimConditions(1, conditions, false);
+
+        // Mint tokens to user
+        erc20.mint(user, 10000000000000000000);
+
+        // User tries to claim with invalid proof (wrong quantityLimitPerWallet)
+        // This should fail because the merkle proof verification will fail and fall back to condition's limit
+        vm.startPrank(user);
+        erc20.approve(address(edition), 1000000000000000000);
+        vm.expectRevert();
+        edition.claim(user, 1, 1, address(erc20), 1000000000000000000, IDrop1155.AllowlistProof({
+            proof: new bytes32[](0),
+            quantityLimitPerWallet: 10, // Different from the leaf hash, so merkle proof fails
+            pricePerToken: 1000000000000000000,
+            currency: address(erc20)
+        }), "");
+        vm.stopPrank();
+
+        assertEq(edition.totalSupply(1), 0);
+        assertEq(edition.balanceOf(user, 1), 0);
+    }
+
+    function testWhitelistPreventsNonWhitelistedUser() public {
+        // Create a merkle tree with only the user address (whitelisted)
+        bytes32 userLeaf = keccak256(abi.encodePacked(user, uint256(5), uint256(1000000000000000000), address(erc20)));
+        bytes32 merkleRoot = userLeaf; // For single leaf, root = leaf
+
+        // Set claim condition with merkle root (whitelist enabled) and restrictive limits
+        vm.prank(owner);
+        IClaimCondition.ClaimCondition[] memory conditions = new IClaimCondition.ClaimCondition[](1);
+        conditions[0] = IClaimCondition.ClaimCondition({
+            startTimestamp: block.timestamp,
+            maxClaimableSupply: 100,
+            supplyClaimed: 0,
+            pricePerToken: 1000000000000000000,
+            currency: address(erc20),
+            merkleRoot: merkleRoot,
+            quantityLimitPerWallet: 1, // Very restrictive - only 1 token per wallet
+            metadata: ""
+        });
+        edition.setClaimConditions(1, conditions, false);
+
+        // Mint tokens to both users
+        erc20.mint(user, 10000000000000000000);
+        address nonWhitelistedUser = address(0x5678);
+        erc20.mint(nonWhitelistedUser, 1000000000000000000);
+
+        // Whitelisted user can claim with higher limit (5) due to valid merkle proof
+        vm.startPrank(user);
+        erc20.approve(address(edition), 1000000000000000000);
+        edition.claim(user, 1, 1, address(erc20), 1000000000000000000, IDrop1155.AllowlistProof({
+            proof: new bytes32[](0),
+            quantityLimitPerWallet: 5, // This overrides the condition's limit of 1
+            pricePerToken: 1000000000000000000,
+            currency: address(erc20)
+        }), "");
+        vm.stopPrank();
+
+        // Non-whitelisted user tries to claim with higher limit but should fail due to condition's restrictive limit
+        // The whitelist prevents them from overriding the condition's values
+        vm.startPrank(nonWhitelistedUser);
+        erc20.approve(address(edition), 1000000000000000000);
+        vm.expectRevert();
+        edition.claim(nonWhitelistedUser, 1, 1, address(erc20), 1000000000000000000, IDrop1155.AllowlistProof({
+            proof: new bytes32[](0),
+            quantityLimitPerWallet: 5, // This won't override because merkle proof fails
+            pricePerToken: 1000000000000000000,
+            currency: address(erc20)
+        }), "");
+        vm.stopPrank();
+
+        assertEq(edition.totalSupply(1), 1);
+        assertEq(edition.balanceOf(user, 1), 1);
+        assertEq(edition.balanceOf(nonWhitelistedUser, 1), 0);
+    }
+
+    function testWhitelistAllowsOverride() public {
+        // Create a merkle tree with only the user address (whitelisted)
+        bytes32 userLeaf = keccak256(abi.encodePacked(user, uint256(10), uint256(500000000000000000), address(erc20)));
+        bytes32 merkleRoot = userLeaf; // For single leaf, root = leaf
+
+        // Set claim condition with merkle root (whitelist enabled) and restrictive limits
+        vm.prank(owner);
+        IClaimCondition.ClaimCondition[] memory conditions = new IClaimCondition.ClaimCondition[](1);
+        conditions[0] = IClaimCondition.ClaimCondition({
+            startTimestamp: block.timestamp,
+            maxClaimableSupply: 100,
+            supplyClaimed: 0,
+            pricePerToken: 1000000000000000000, // High price
+            currency: address(erc20),
+            merkleRoot: merkleRoot,
+            quantityLimitPerWallet: 1, // Very restrictive - only 1 token per wallet
+            metadata: ""
+        });
+        edition.setClaimConditions(1, conditions, false);
+
+        // Mint tokens to user
+        erc20.mint(user, 10000000000000000000);
+
+        // Whitelisted user can claim with lower price (500000000000000000) due to valid merkle proof
+        vm.startPrank(user);
+        erc20.approve(address(edition), 500000000000000000);
+        edition.claim(user, 1, 1, address(erc20), 500000000000000000, IDrop1155.AllowlistProof({
+            proof: new bytes32[](0),
+            quantityLimitPerWallet: 10, // This overrides the condition's limit of 1
+            pricePerToken: 500000000000000000, // This overrides the condition's price
+            currency: address(erc20)
+        }), "");
+        vm.stopPrank();
+
+        assertEq(edition.totalSupply(1), 1);
+        assertEq(edition.balanceOf(user, 1), 1);
+        assertEq(erc20.balanceOf(user), 9500000000000000000); // Should have paid 500000000000000000
+    }
 } 
