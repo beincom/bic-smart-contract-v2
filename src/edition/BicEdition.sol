@@ -124,9 +124,6 @@ contract BicEdition is ERC1155Supply, Ownable, LazyMint, Drop1155 {
         address _currency,
         uint256 _pricePerToken
     ) internal override {
-        if (_pricePerToken == 0) {
-            revert DropClaimInvalidTokenPrice(_currency, _pricePerToken, address(0), 0);
-        }
         uint256 totalPrice = _quantityToClaim * _pricePerToken;
 
         if (_currency == address(0)) {
