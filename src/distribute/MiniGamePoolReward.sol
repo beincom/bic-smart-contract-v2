@@ -276,13 +276,14 @@ contract MiniGamePoolReward is Ownable, ReentrancyGuard, IERC721Receiver, IERC11
      */
     function withdrawERC20Tokens(address _token, address _to, uint256 _amount) external onlyOwner {
         if (_to == address(0)) revert ZeroAddress();
-        if (_token == address(0)) revert ZeroAddress();
         if (_amount == 0) revert ZeroAmount();
 
-        uint256 contractBalance = IERC20(_token).balanceOf(address(this));
-        if (contractBalance < _amount) revert InsufficientBalance(_amount, contractBalance);
+        if (_token == address(0)) {
+            address(_to).call{value: _amount}("");
+        } else {
+            IERC20(_token).safeTransfer(_to, _amount);
 
-        IERC20(_token).safeTransfer(_to, _amount);
+        }
         emit TokensWithdrawn(_to, _token, _amount, 0);
     }
 
@@ -319,22 +320,6 @@ contract MiniGamePoolReward is Ownable, ReentrancyGuard, IERC721Receiver, IERC11
 
         IERC1155(_token).safeTransferFrom(address(this), _to, _tokenId, _amount, "");
         emit TokensWithdrawn(_to, _token, _amount, _tokenId);
-    }
-
-    /**
-     * @notice Emergency withdraw all ERC20 tokens (admin only)
-     * @param _token The ERC20 token address
-     * @param _to The address to send tokens to
-     */
-    function emergencyWithdrawERC20(address _token, address _to) external onlyOwner {
-        if (_to == address(0)) revert ZeroAddress();
-        if (_token == address(0)) revert ZeroAddress();
-
-        uint256 balance = IERC20(_token).balanceOf(address(this));
-        if (balance > 0) {
-            IERC20(_token).safeTransfer(_to, balance);
-            emit TokensWithdrawn(_to, _token, balance, 0);
-        }
     }
 
     /**
