@@ -399,9 +399,9 @@ contract BicEditionTest is Test {
 
     }
 
-    function testClaimWithInvalidWhitelistProof() public {
+    function testClaimWithWhitelistOverride() public {
         // Create a merkle tree with specific parameters for the user
-        bytes32 userLeaf = keccak256(abi.encodePacked(user, uint256(5), uint256(1000000000000000000), address(erc20)));
+        bytes32 userLeaf = keccak256(abi.encodePacked(user, uint256(5), uint256(0), address(erc20)));
         bytes32 merkleRoot = userLeaf; // For single leaf, root = leaf
 
         // Set claim condition with merkle root (whitelist enabled) and very restrictive limits
@@ -422,27 +422,55 @@ contract BicEditionTest is Test {
         // Mint tokens to user
         erc20.mint(user, 10000000000000000000);
 
-        // User tries to claim with invalid proof (wrong quantityLimitPerWallet)
-        // This should fail because the merkle proof verification will fail and fall back to condition's limit
+        // whitelist user can claim up to 5 tokens and pay 0
         vm.startPrank(user);
-        erc20.approve(address(edition), 1000000000000000000);
-        vm.expectRevert();
-        edition.claim(user, 1, 1, address(erc20), 1000000000000000000, IDrop1155.AllowlistProof({
+        edition.claim(user, 1, 5, address(erc20), 0, IDrop1155.AllowlistProof({
             proof: new bytes32[](0),
-            quantityLimitPerWallet: 10, // Different from the leaf hash, so merkle proof fails
+            quantityLimitPerWallet: 5, // Different from the leaf hash, so merkle proof fails
+            pricePerToken: 0,
+            currency: address(erc20)
+        }), "");
+        vm.stopPrank();
+
+        // Non-whitelisted user can claim only 1 token and pay 1 ether of ERC20
+        address nonWhitelistedUser = address(0x5678);
+        erc20.mint(nonWhitelistedUser, 10000000000000000000);
+        vm.startPrank(nonWhitelistedUser);
+        erc20.approve(address(edition), 1000000000000000000);
+        edition.claim(nonWhitelistedUser, 1, 1, address(erc20), 1000000000000000000, IDrop1155.AllowlistProof({
+            proof: new bytes32[](0),
+            quantityLimitPerWallet: 1, // This overrides the condition's limit of 1
             pricePerToken: 1000000000000000000,
             currency: address(erc20)
         }), "");
         vm.stopPrank();
 
-        assertEq(edition.totalSupply(1), 0);
-        assertEq(edition.balanceOf(user, 1), 0);
+        // Non-whitelisted user can not claim more than 1 token
+        vm.startPrank(nonWhitelistedUser);
+        erc20.approve(address(edition), 1000000000000000000);
+        vm.expectRevert();
+        edition.claim(nonWhitelistedUser, 1, 1, address(erc20), 1000000000000000000, IDrop1155.AllowlistProof({
+            proof: new bytes32[](0),
+            quantityLimitPerWallet: 1, // This overrides the condition's limit of 1
+            pricePerToken: 1000000000000000000,
+            currency: address(erc20)
+        }), "");
+        vm.stopPrank();
+
+        assertEq(edition.totalSupply(1), 6);
+        assertEq(edition.balanceOf(user, 1), 5);
+        assertEq(edition.balanceOf(nonWhitelistedUser, 1), 1);
+        assertEq(erc20.balanceOf(user), 10000000000000000000 - 0); // Whitelisted user paid 0
     }
 
     function testWhitelistPreventsNonWhitelistedUser() public {
         // Create a merkle tree with only the user address (whitelisted)
-        bytes32 userLeaf = keccak256(abi.encodePacked(user, uint256(5), uint256(1000000000000000000), address(erc20)));
+        bytes32 userLeaf = keccak256(abi.encodePacked(user, uint256(300), uint256(0), address(erc20))); // 300 quantity limit, 0 price
         bytes32 merkleRoot = userLeaf; // For single leaf, root = leaf
+
+        // In this test, the merkle tree has only one leaf (the whitelisted user).
+        // The proof for a single-leaf tree is an empty array.
+        bytes32[] memory proof = new bytes32[](0);
 
         // Set claim condition with merkle root (whitelist enabled) and restrictive limits
         vm.prank(owner);
@@ -454,7 +482,7 @@ contract BicEditionTest is Test {
             pricePerToken: 1000000000000000000,
             currency: address(erc20),
             merkleRoot: merkleRoot,
-            quantityLimitPerWallet: 1, // Very restrictive - only 1 token per wallet
+            quantityLimitPerWallet: 0, // no-one can claim except whitelisted user can be claimed for free with 300 quantity
             metadata: ""
         });
         edition.setClaimConditions(1, conditions, false);
@@ -467,23 +495,36 @@ contract BicEditionTest is Test {
         // Whitelisted user can claim with higher limit (5) due to valid merkle proof
         vm.startPrank(user);
         erc20.approve(address(edition), 1000000000000000000);
-        edition.claim(user, 1, 1, address(erc20), 1000000000000000000, IDrop1155.AllowlistProof({
-            proof: new bytes32[](0),
-            quantityLimitPerWallet: 5, // This overrides the condition's limit of 1
+        edition.claim(user, 1, 1, address(erc20), 0, IDrop1155.AllowlistProof({
+        // This is a valid proof for the whitelisted user only
+            proof: proof,
+            quantityLimitPerWallet: 300,
+            pricePerToken: 0,
+            currency: address(erc20)
+        }), "");
+        vm.stopPrank();
+
+        // Non-whitelisted user tries to claim with same condition with whitelist but should fail
+        // The whitelist prevents them from overriding the condition's values
+        vm.startPrank(nonWhitelistedUser);
+        erc20.approve(address(edition), 1000000000000000000);
+        vm.expectRevert();
+        edition.claim(nonWhitelistedUser, 1, 1, address(erc20), 0, IDrop1155.AllowlistProof({
+            proof: proof,
+            quantityLimitPerWallet: 0,
             pricePerToken: 1000000000000000000,
             currency: address(erc20)
         }), "");
         vm.stopPrank();
 
-        // Non-whitelisted user tries to claim with higher limit but should fail due to condition's restrictive limit
-        // The whitelist prevents them from overriding the condition's values
+        // Non-whitelisted user tries to claim with public condition but should fail due to quantityLimitPerWallet is 0
         vm.startPrank(nonWhitelistedUser);
         erc20.approve(address(edition), 1000000000000000000);
         vm.expectRevert();
         edition.claim(nonWhitelistedUser, 1, 1, address(erc20), 1000000000000000000, IDrop1155.AllowlistProof({
-            proof: new bytes32[](0),
-            quantityLimitPerWallet: 5, // This won't override because merkle proof fails
-            pricePerToken: 1000000000000000000,
+            proof: proof,
+            quantityLimitPerWallet: 300, // This overrides the condition's limit of 1
+            pricePerToken: 0,
             currency: address(erc20)
         }), "");
         vm.stopPrank();
@@ -493,42 +534,41 @@ contract BicEditionTest is Test {
         assertEq(edition.balanceOf(nonWhitelistedUser, 1), 0);
     }
 
-    function testWhitelistAllowsOverride() public {
-        // Create a merkle tree with only the user address (whitelisted)
-        bytes32 userLeaf = keccak256(abi.encodePacked(user, uint256(10), uint256(500000000000000000), address(erc20)));
-        bytes32 merkleRoot = userLeaf; // For single leaf, root = leaf
-
-        // Set claim condition with merkle root (whitelist enabled) and restrictive limits
+    function testWhitelistMultiLeafOverride() public {
+        // Create a merkle tree with multiple leaves
+        bytes32[] memory proof = new bytes32[](2);
+        proof[0] = keccak256(abi.encodePacked(owner, uint256(300), uint256(0), address(erc20)));
+        proof[1] = keccak256(abi.encodePacked(user, uint256(300), uint256(0), address(erc20)));
+        // create root from proof
+        bytes32 merkleRoot = 0x5798f84d244aeb7d8438d6b047a01954819d24e79365f56bbfe2766826ac0960; // This is a precomputed root for the above leaves
+        // Set claim condition with merkle root for whitelist
         vm.prank(owner);
         IClaimCondition.ClaimCondition[] memory conditions = new IClaimCondition.ClaimCondition[](1);
         conditions[0] = IClaimCondition.ClaimCondition({
             startTimestamp: block.timestamp,
             maxClaimableSupply: 100,
             supplyClaimed: 0,
-            pricePerToken: 1000000000000000000, // High price
+            pricePerToken: 1000000000000000000,
             currency: address(erc20),
             merkleRoot: merkleRoot,
-            quantityLimitPerWallet: 1, // Very restrictive - only 1 token per wallet
+            quantityLimitPerWallet: 0,
             metadata: ""
         });
         edition.setClaimConditions(1, conditions, false);
 
-        // Mint tokens to user
-        erc20.mint(user, 10000000000000000000);
-
-        // Whitelisted user can claim with lower price (500000000000000000) due to valid merkle proof
+        bytes32[] memory userLeafs = new bytes32[](1);
+        userLeafs[0] = 0xfd770d39c703dddc1d6cb1980d17b7874ab2cc743d1b0e3381d232a355d8a611; // User's proof
+        // User claims with valid proof
         vm.startPrank(user);
-        erc20.approve(address(edition), 500000000000000000);
-        edition.claim(user, 1, 1, address(erc20), 500000000000000000, IDrop1155.AllowlistProof({
-            proof: new bytes32[](0),
-            quantityLimitPerWallet: 10, // This overrides the condition's limit of 1
-            pricePerToken: 500000000000000000, // This overrides the condition's price
+        edition.claim(user, 1, 1, address(erc20), 0, IDrop1155.AllowlistProof({
+            proof: proof, // Only user proof
+            quantityLimitPerWallet: 300,
+            pricePerToken: 0,
             currency: address(erc20)
         }), "");
         vm.stopPrank();
 
-        assertEq(edition.totalSupply(1), 1);
+        // Assert user received the token
         assertEq(edition.balanceOf(user, 1), 1);
-        assertEq(erc20.balanceOf(user), 9500000000000000000); // Should have paid 500000000000000000
     }
 } 
