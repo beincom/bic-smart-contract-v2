@@ -57,6 +57,10 @@ contract BicEditionTest is Test {
         edition.setMaxTotalSupply(1, 100);
     }
 
+    function _hashPair(bytes32 a, bytes32 b) internal pure returns (bytes32) {
+        return a < b ? keccak256(abi.encodePacked(a, b)) : keccak256(abi.encodePacked(b, a));
+    }
+
     function testOwnerCanSetPrimarySaleRecipient() public {
         vm.prank(owner);
         edition.setPrimarySaleRecipient(user);
@@ -535,13 +539,19 @@ contract BicEditionTest is Test {
     }
 
     function testWhitelistMultiLeafOverride() public {
-        // Create a merkle tree with multiple leaves
-        bytes32[] memory proof = new bytes32[](2);
-        proof[0] = keccak256(abi.encodePacked(owner, uint256(300), uint256(0), address(erc20)));
-        proof[1] = keccak256(abi.encodePacked(user, uint256(300), uint256(0), address(erc20)));
-        // create root from proof
-        bytes32 merkleRoot = 0x5798f84d244aeb7d8438d6b047a01954819d24e79365f56bbfe2766826ac0960; // This is a precomputed root for the above leaves
-        // Set claim condition with merkle root for whitelist
+        // Create merkle tree with two leaves: owner and user
+        bytes32[] memory leaves = new bytes32[](2);
+        leaves[0] = keccak256(abi.encodePacked(owner, uint256(300), uint256(0), address(erc20)));
+        leaves[1] = keccak256(abi.encodePacked(user, uint256(300), uint256(0), address(erc20)));
+        
+        // Calculate merkle root and proofs
+        bytes32 merkleRoot = _hashPair(leaves[0], leaves[1]);
+        
+        // For a 2-leaf tree, each leaf's proof is just the other leaf
+        bytes32[] memory userProof = new bytes32[](1);
+        userProof[0] = leaves[0]; // owner's leaf as proof for user
+        
+        // Set claim condition with calculated merkle root for whitelist
         vm.prank(owner);
         IClaimCondition.ClaimCondition[] memory conditions = new IClaimCondition.ClaimCondition[](1);
         conditions[0] = IClaimCondition.ClaimCondition({
@@ -556,12 +566,10 @@ contract BicEditionTest is Test {
         });
         edition.setClaimConditions(1, conditions, false);
 
-        bytes32[] memory userLeafs = new bytes32[](1);
-        userLeafs[0] = 0xfd770d39c703dddc1d6cb1980d17b7874ab2cc743d1b0e3381d232a355d8a611; // User's proof
-        // User claims with valid proof
+        // User claims with calculated proof
         vm.startPrank(user);
         edition.claim(user, 1, 1, address(erc20), 0, IDrop1155.AllowlistProof({
-            proof: proof, // Only user proof
+            proof: userProof,
             quantityLimitPerWallet: 300,
             pricePerToken: 0,
             currency: address(erc20)

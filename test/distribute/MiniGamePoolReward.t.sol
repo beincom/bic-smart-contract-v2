@@ -193,6 +193,53 @@ contract MiniGamePoolRewardTest is Test, MiniGamePoolRewardErrors {
         vm.stopPrank();
     }
 
+    function test_addMerkleRoot_revert_endtime_in_past() public {
+        uint256 pastTime = block.timestamp - 3600; // 1 hour ago
+        
+        vm.startPrank(owner);
+        vm.expectRevert(abi.encodeWithSelector(InvalidEndTime.selector, pastTime));
+        rewardContract.addMerkleRoot(merkleRoot, pastTime);
+        vm.stopPrank();
+    }
+
+    function test_addMerkleRoot_revert_endtime_equals_current_time() public {
+        uint256 currentTime = block.timestamp;
+        
+        vm.startPrank(owner);
+        vm.expectRevert(abi.encodeWithSelector(InvalidEndTime.selector, currentTime));
+        rewardContract.addMerkleRoot(merkleRoot, currentTime);
+        vm.stopPrank();
+    }
+
+    function test_addMerkleRoot_with_near_future_endtime_then_expire() public {
+        uint256 nearFutureTime = block.timestamp + 10; // 10 seconds in future
+        
+        vm.startPrank(owner);
+        // Should succeed when adding with future time
+        rewardContract.addMerkleRoot(merkleRoot, nearFutureTime);
+        
+        // Verify it was added successfully
+        (bytes32 root, uint256 endTime, bool exists) = rewardContract.getMerkleRootInfo(merkleRoot);
+        assertEq(root, merkleRoot);
+        assertEq(endTime, nearFutureTime);
+        assertTrue(exists);
+        assertTrue(rewardContract.isRootActive(merkleRoot));
+        
+        // Warp time past the end time
+        vm.warp(nearFutureTime + 1);
+        
+        // Root should no longer be active
+        assertFalse(rewardContract.isRootActive(merkleRoot));
+        
+        // Attempting to claim should fail due to expired time
+        vm.stopPrank();
+        
+        vm.startPrank(user1);
+        vm.expectRevert(abi.encodeWithSelector(ClaimPeriodExpired.selector, merkleRoot, nearFutureTime));
+        rewardContract.claimERC20Tokens(merkleRoot, address(erc20Token), USER1_AMOUNT, user1Proof);
+        vm.stopPrank();
+    }
+
     // ERC20 Claim tests
     function test_claimERC20Tokens_success() public {
         vm.prank(owner);
