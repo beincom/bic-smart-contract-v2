@@ -56,7 +56,6 @@ contract TokenStore is TokenBundle, ERC721Holder, ERC1155Holder {
 
     /// @dev Transfers multiple arbitrary ERC20 / ERC721 / ERC1155 tokens.
     function _transferTokenBatch(address _from, address _to, Token[] memory _tokens) internal {
-        uint256 nativeTokenValue;
         for (uint256 i = 0; i < _tokens.length; i += 1) {
             _transferToken(_from, _to, _tokens[i]);
         }
