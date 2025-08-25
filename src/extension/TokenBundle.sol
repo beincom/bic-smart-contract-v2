@@ -89,27 +89,55 @@ abstract contract TokenBundle is ITokenBundle {
     /// @dev Checks if the type of asset-contract is same as the TokenType specified.
     function _checkTokenType(Token memory _token) internal view {
         if (_token.tokenType == TokenType.ERC721) {
-            try IERC165(_token.assetContract).supportsInterface(0x80ac58cd) returns (bool supported721) {
-                require(supported721, "!TokenType");
-            } catch {
-                revert("!TokenType");
-            }
+            // For ERC721, check if it supports the ERC721 interface
+            require(_supportsInterface(_token.assetContract, 0x80ac58cd), "!TokenType");
         } else if (_token.tokenType == TokenType.ERC1155) {
-            try IERC165(_token.assetContract).supportsInterface(0xd9b67a26) returns (bool supported1155) {
-                require(supported1155, "!TokenType");
-            } catch {
-                revert("!TokenType");
-            }
+            // For ERC1155, check if it supports the ERC1155 interface
+            require(_supportsInterface(_token.assetContract, 0xd9b67a26), "!TokenType");
         } else if (_token.tokenType == TokenType.ERC20) {
-            // 0x36372b07
-            try IERC165(_token.assetContract).supportsInterface(0x80ac58cd) returns (bool supported721) {
-                require(!supported721, "!TokenType");
-
-                try IERC165(_token.assetContract).supportsInterface(0xd9b67a26) returns (bool supported1155) {
-                    require(!supported1155, "!TokenType");
-                } catch Error(string memory) {} catch {}
-            } catch Error(string memory) {} catch {}
+            // For ERC20, we validate by checking it has standard ERC20 functions
+            // This avoids calling supportsInterface which most ERC20s don't implement including OpenZeppelin's ERC20 (BIC)
+            require(_isValidERC20(_token.assetContract), "!TokenType");
         }
+    }
+
+    /// @dev Safely checks if a contract supports an interface (only for ERC721/ERC1155)
+    function _supportsInterface(address contractAddress, bytes4 interfaceId) internal view returns (bool) {
+        if (contractAddress.code.length == 0) {
+            return false;
+        }
+
+        try IERC165(contractAddress).supportsInterface(interfaceId) returns (bool result) {
+            return result;
+        } catch {
+            return false;
+        }
+    }
+
+    /// @dev Validates if a contract is a valid ERC20 by checking for required functions
+    function _isValidERC20(address contractAddress) internal view returns (bool) {
+        if (contractAddress.code.length == 0) {
+            return false;
+        }
+
+        // Check for totalSupply() function (required by ERC20)
+        // This is a safer check than supportsInterface for ERC20 tokens
+        try this._checkERC20Function(contractAddress) returns (bool) {
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    /// @dev External function to check ERC20 totalSupply - used for safe validation
+    function _checkERC20Function(address token) external view returns (bool) {
+        // Call totalSupply() - all ERC20 tokens must have this function
+        // This is a safer check than supportsInterface for ERC20 tokens which OpenZeppelin's ERC20 does not implement
+        // Reason why we use this instead of supportsInterface is because most ERC20 tokens do not implement supportsInterface
+        // And if check for transfer(address,uint256) and transferFrom(address,address,uint256) functions
+        // Its need to have input parameters to call the function which is not possible to do with supportsInterface
+        (bool success,) = token.staticcall(abi.encodeWithSignature("totalSupply()"));
+        return success;
     }
 
     /// @dev Lets the calling contract set/update the uri of a particular bundle.

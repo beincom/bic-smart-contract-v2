@@ -3,23 +3,10 @@ pragma solidity ^0.8.23;
 
 import "forge-std/Test.sol";
 import {BicPack} from "src/pack/BicPack.sol";
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {BicTokenPaymasterWithoutPreSetupExchange} from "test/contracts/BicTokenPaymasterWithoutPreSetupExchange.sol";
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {ERC1155} from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import {ITokenBundle} from "src/extension/interface/ITokenBundle.sol";
-
-// Mock ERC20 Token
-contract MockERC20 is ERC20 {
-
-    constructor() ERC20("MockToken", "MTK") {
-        _mint(msg.sender, 1000 * 10**18); // Initial mint for testing
-    }
-
-    function mint(address to, uint256 amount) external {
-        require(to != address(0), "Invalid address");
-        _mint(to, amount);
-    }
-}
 
 // Mock ERC721 Token
 contract MockERC721 is ERC721 {
@@ -46,7 +33,7 @@ contract MockERC1155 is ERC1155 {
 
 contract BicPackTest is Test {
     BicPack public pack;
-    MockERC20 public erc20;
+    BicTokenPaymasterWithoutPreSetupExchange public bicToken;
     MockERC721 public erc721;
     MockERC1155 public erc1155;
     
@@ -58,14 +45,20 @@ contract BicPackTest is Test {
     uint256[] public numOfRewardUnits;
 
     function setUp() public {
-        erc20 = new MockERC20();
+        // Deploy the real BIC token with required constructor parameters
+        address entryPoint = address(0x123); // Mock entry point
+        address superController = owner;
+        address[] memory signers = new address[](1);
+        signers[0] = owner;
+        
+        bicToken = new BicTokenPaymasterWithoutPreSetupExchange(entryPoint, superController, signers);
         erc721 = new MockERC721();
         erc1155 = new MockERC1155();
         
         pack = new BicPack("BicPack", "BIC-PACK", "https://pack.uri/", owner);
         
         // Setup mock tokens with balances
-        erc20.mint(owner, 1000 * 10**18);
+        // BIC token already minted to superController (owner) in constructor
         erc721.mint(owner, 1);
         erc721.mint(owner, 2);
         erc1155.mint(owner, 1, 150);
@@ -73,7 +66,7 @@ contract BicPackTest is Test {
         
         // Approve pack contract to spend tokens
         vm.prank(owner);
-        erc20.approve(address(pack), type(uint256).max);
+        bicToken.approve(address(pack), type(uint256).max);
         vm.prank(owner);
         erc721.setApprovalForAll(address(pack), true);
         vm.prank(owner);
@@ -81,7 +74,7 @@ contract BicPackTest is Test {
         
         // Also approve for recipient
         vm.prank(recipient);
-        erc20.approve(address(pack), type(uint256).max);
+        bicToken.approve(address(pack), type(uint256).max);
         vm.prank(recipient);
         erc721.setApprovalForAll(address(pack), true);
         vm.prank(recipient);
@@ -92,7 +85,7 @@ contract BicPackTest is Test {
         // Setup pack contents with ERC20 tokens
         contents = new ITokenBundle.Token[](1);
         contents[0] = ITokenBundle.Token({
-            assetContract: address(erc20),
+            assetContract: address(bicToken),
             tokenType: ITokenBundle.TokenType.ERC20,
             tokenId: 0,
             totalAmount: 100 * 10**18
@@ -121,7 +114,7 @@ contract BicPackTest is Test {
         // Setup pack contents with multiple token types
         contents = new ITokenBundle.Token[](3);
         contents[0] = ITokenBundle.Token({
-            assetContract: address(erc20),
+            assetContract: address(bicToken),
             tokenType: ITokenBundle.TokenType.ERC20,
             tokenId: 0,
             totalAmount: 100 * 10**18
@@ -178,7 +171,7 @@ contract BicPackTest is Test {
     function testCreatePackRevertsWhenNotOwner() public {
         contents = new ITokenBundle.Token[](1);
         contents[0] = ITokenBundle.Token({
-            assetContract: address(erc20),
+            assetContract: address(bicToken),
             tokenType: ITokenBundle.TokenType.ERC20,
             tokenId: 0,
             totalAmount: 100 * 10**18
@@ -218,7 +211,7 @@ contract BicPackTest is Test {
     function testCreatePackRevertsWithMismatchedLengths() public {
         contents = new ITokenBundle.Token[](2);
         contents[0] = ITokenBundle.Token({
-            assetContract: address(erc20),
+            assetContract: address(bicToken),
             tokenType: ITokenBundle.TokenType.ERC20,
             tokenId: 0,
             totalAmount: 100 * 10**18
@@ -249,7 +242,7 @@ contract BicPackTest is Test {
         // First create a pack
         contents = new ITokenBundle.Token[](2);
         contents[0] = ITokenBundle.Token({
-            assetContract: address(erc20),
+            assetContract: address(bicToken),
             tokenType: ITokenBundle.TokenType.ERC20,
             tokenId: 0,
             totalAmount: 90 * 10**18
@@ -279,9 +272,9 @@ contract BicPackTest is Test {
         vm.prank(recipient);
         pack.safeTransferFrom(recipient, user, packId, 1, "");
 
-        uint256 tBalance = erc20.balanceOf(address (pack));
+        uint256 tBalance = bicToken.balanceOf(address (pack));
         // Check initial balance of pack
-        assertEq(tBalance, 90 * 10**18); // Pack holds 90 MTK
+        assertEq(tBalance, 90 * 10**18); // Pack holds 90 BIC
         // User opens pack
         vm.prank(user);
         ITokenBundle.Token[] memory rewardUnits = pack.openPack(packId, 1);
@@ -295,7 +288,7 @@ contract BicPackTest is Test {
         // Create pack
         contents = new ITokenBundle.Token[](1);
         contents[0] = ITokenBundle.Token({
-            assetContract: address(erc20),
+            assetContract: address(bicToken),
             tokenType: ITokenBundle.TokenType.ERC20,
             tokenId: 0,
             totalAmount: 100 * 10**18
@@ -328,7 +321,7 @@ contract BicPackTest is Test {
         // Create pack with future open start time
         contents = new ITokenBundle.Token[](1);
         contents[0] = ITokenBundle.Token({
-            assetContract: address(erc20),
+            assetContract: address(bicToken),
             tokenType: ITokenBundle.TokenType.ERC20,
             tokenId: 0,
             totalAmount: 100 * 10**18
@@ -361,7 +354,7 @@ contract BicPackTest is Test {
         // Create pack with current open start time
         contents = new ITokenBundle.Token[](1);
         contents[0] = ITokenBundle.Token({
-            assetContract: address(erc20),
+            assetContract: address(bicToken),
             tokenType: ITokenBundle.TokenType.ERC20,
             tokenId: 0,
             totalAmount: 100 * 10**18
@@ -399,7 +392,7 @@ contract BicPackTest is Test {
         // Create pack
         contents = new ITokenBundle.Token[](1);
         contents[0] = ITokenBundle.Token({
-            assetContract: address(erc20),
+            assetContract: address(bicToken),
             tokenType: ITokenBundle.TokenType.ERC20,
             tokenId: 0,
             totalAmount: 100 * 10**18
@@ -434,7 +427,7 @@ contract BicPackTest is Test {
         // Create pack
         contents = new ITokenBundle.Token[](2);
         contents[0] = ITokenBundle.Token({
-            assetContract: address(erc20),
+            assetContract: address(bicToken),
             tokenType: ITokenBundle.TokenType.ERC20,
             tokenId: 0,
             totalAmount: 90 * 10**18
@@ -464,7 +457,7 @@ contract BicPackTest is Test {
         (ITokenBundle.Token[] memory retrievedContents, uint256[] memory perUnitAmounts) = pack.getPackContents(packId);
 
         assertEq(retrievedContents.length, 2);
-        assertEq(retrievedContents[0].assetContract, address(erc20));
+        assertEq(retrievedContents[0].assetContract, address(bicToken));
         assertTrue(retrievedContents[0].tokenType == ITokenBundle.TokenType.ERC20);
         assertEq(retrievedContents[0].totalAmount, 90 * 10**18);
         assertEq(retrievedContents[1].assetContract, address(erc721));
@@ -481,7 +474,7 @@ contract BicPackTest is Test {
         // Create pack
         contents = new ITokenBundle.Token[](1);
         contents[0] = ITokenBundle.Token({
-            assetContract: address(erc20),
+            assetContract: address(bicToken),
             tokenType: ITokenBundle.TokenType.ERC20,
             tokenId: 0,
             totalAmount: 100 * 10**18
