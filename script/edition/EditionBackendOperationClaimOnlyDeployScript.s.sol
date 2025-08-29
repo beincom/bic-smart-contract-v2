@@ -14,33 +14,43 @@ contract EditionBackendOperationClaimOnlyDeployScript is Script {
         address editionOwner = vm.envAddress("EDITION_OWNER_TESTNET");
         address editionTreasury = vm.envAddress("EDITION_TREASURY_TESTNET");
         address currency = vm.envAddress("DROP_CURRENCY_TESTNET");
+        address operator = vm.envAddress("OPERATOR_ADDRESS_TESTNET");
 
         address deployOwner = vm.addr(deployerPrivateKey);
-        vm.startBroadcast(deployerPrivateKey);
-        BicEdition bicEdition = new BicEdition(
-            "dev version - Beincom Birthday",
-            "dev-BD1111",
-            editionUri,
-            deployOwner,
-            editionTreasury
-        );
-
-        console.log("BicEdition deployed at:", address(bicEdition));
-        createDropConditions(bicEdition, currency);
-
-        vm.stopBroadcast();
+        bytes32 userLeaf = keccak256(abi.encodePacked(operator, uint256(99999999), uint256(0), address(currency))); // 99999999 quantity limit, 0 price
+        bytes32 merkleRoot = userLeaf; // For single leaf, root = leaf
+        console.logBytes32(merkleRoot);
+//        vm.startBroadcast(deployerPrivateKey);
+//        BicEdition bicEdition = new BicEdition(
+////            "dev version - Beincom Birthday",
+////            "dev-BD1111",
+//            "dev version - Hall Of Fame",
+//            "dev-HOF",
+//            editionUri,
+//            deployOwner,
+//            editionTreasury
+//        );
+//
+//        console.log("BicEdition deployed at:", address(bicEdition));
+//        createDropConditions(bicEdition, currency, operator);
+//
+//        vm.stopBroadcast();
     }
     function createDropConditions(
         BicEdition bicEdition,
-        address currency
+        address currency,
+        address operator
     ) internal {
+        bytes32 userLeaf = keccak256(abi.encodePacked(operator, uint256(99999999), uint256(0), address(currency))); // 99999999 quantity limit, 0 price
+        bytes32 merkleRoot = userLeaf; // For single leaf, root = leaf
+
         IClaimCondition.ClaimCondition[] memory conditionsForId0 = new IClaimCondition.ClaimCondition[](1);
         conditionsForId0[0] = IClaimCondition.ClaimCondition({
             startTimestamp: block.timestamp,
-            maxClaimableSupply: 99999999,
+            maxClaimableSupply: 0,
             supplyClaimed: 0,
-            quantityLimitPerWallet: 99999999,
-            merkleRoot: bytes32(0),
+            quantityLimitPerWallet: 0,
+            merkleRoot: merkleRoot,
             pricePerToken: 0,
             currency: currency,
             metadata: ""
