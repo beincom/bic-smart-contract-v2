@@ -17,24 +17,21 @@ contract EditionBackendOperationClaimOnlyDeployScript is Script {
         address operator = vm.envAddress("OPERATOR_ADDRESS_TESTNET");
 
         address deployOwner = vm.addr(deployerPrivateKey);
-        bytes32 userLeaf = keccak256(abi.encodePacked(operator, uint256(99999999), uint256(0), address(currency))); // 99999999 quantity limit, 0 price
-        bytes32 merkleRoot = userLeaf; // For single leaf, root = leaf
-        console.logBytes32(merkleRoot);
-//        vm.startBroadcast(deployerPrivateKey);
-//        BicEdition bicEdition = new BicEdition(
-////            "dev version - Beincom Birthday",
-////            "dev-BD1111",
-//            "dev version - Hall Of Fame",
-//            "dev-HOF",
-//            editionUri,
-//            deployOwner,
-//            editionTreasury
-//        );
-//
-//        console.log("BicEdition deployed at:", address(bicEdition));
-//        createDropConditions(bicEdition, currency, operator);
-//
-//        vm.stopBroadcast();
+        vm.startBroadcast(deployerPrivateKey);
+        BicEdition bicEdition = new BicEdition(
+//            "staging version - Beincom Birthday",
+//            "staging-BD1111",
+            "dev version - Hall Of Fame",
+            "dev-HOF",
+            editionUri,
+            deployOwner,
+            editionTreasury
+        );
+
+        console.log("BicEdition deployed at:", address(bicEdition));
+        createDropConditions(bicEdition, currency, operator);
+
+        vm.stopBroadcast();
     }
     function createDropConditions(
         BicEdition bicEdition,
@@ -47,7 +44,7 @@ contract EditionBackendOperationClaimOnlyDeployScript is Script {
         IClaimCondition.ClaimCondition[] memory conditionsForId0 = new IClaimCondition.ClaimCondition[](1);
         conditionsForId0[0] = IClaimCondition.ClaimCondition({
             startTimestamp: block.timestamp,
-            maxClaimableSupply: 0,
+            maxClaimableSupply: 99999999,
             supplyClaimed: 0,
             quantityLimitPerWallet: 0,
             merkleRoot: merkleRoot,
