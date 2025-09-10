@@ -10,8 +10,9 @@ contract MiniGamePoolRewardDeployScript is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY_TESTNET");
         address owner = vm.envAddress("AFTER_DEPLOY_OWNER");
+        address authorizedOperator = vm.envAddress("AUTHORIZED_OPERATOR");
         vm.startBroadcast(deployerPrivateKey);
-        MiniGamePoolReward rewardContract = new MiniGamePoolReward(owner);
+        MiniGamePoolReward rewardContract = new MiniGamePoolReward(authorizedOperator, owner);
         console.log("MiniGamePoolReward deployed at:", address(rewardContract));
         vm.stopBroadcast();
     }

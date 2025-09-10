@@ -18,18 +18,25 @@ The `MiniGamePoolReward` contract is designed for distributing ERC20, ERC721, an
 
 ### Constructor
 ```solidity
-constructor(address _owner)
+constructor(address _operator, address _owner)
 ```
+- `_operator`: The operator that can manage merkle roots
 - `_owner`: The owner/admin of the contract
 
 ### Key Functions
 
-#### Adding Merkle Roots (Owner Only)
+#### Adding Merkle Roots (Operator Only)
 ```solidity
-function addMerkleRoot(bytes32 _merkleRoot, uint256 _endTime) external onlyOwner
+function addMerkleRoot(bytes32 _merkleRoot, uint256 _endTime) external onlyOperator
 ```
 - Adds a new merkle root with an expiration time
 - Can update existing roots with new end times
+
+#### Operator Management (Owner Only)
+```solidity
+function updateOperator(address _newOperator) external onlyOwner
+```
+- Owner can assign a dedicated operator account to manage merkle roots
 
 #### Claiming ERC20 Tokens
 ```solidity
@@ -196,8 +203,8 @@ keccak256(abi.encodePacked(userAddress, tokenAddress, amount, tokenId))
 ## Security Features
 
 ### Access Control
-- Only owner can add merkle roots
-- Only owner can withdraw tokens
+- Only operator can add merkle roots
+- Only owner can update operator and withdraw tokens
 - Users can only claim with valid proofs
 
 ### Reentrancy Protection

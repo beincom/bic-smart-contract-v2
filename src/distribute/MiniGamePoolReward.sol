@@ -20,6 +20,9 @@ import {MiniGamePoolRewardErrors} from "../interfaces/MiniGamePoolRewardErrors.s
 contract MiniGamePoolReward is Ownable, ReentrancyGuard, IERC721Receiver, IERC1155Receiver, MiniGamePoolRewardErrors {
     using SafeERC20 for IERC20;
 
+    /// @notice Address that is allowed to operate certain admin functions
+    address public operator;
+
     /// @notice Structure to store merkle root information
     struct MerkleRootInfo {
         bytes32 root;
@@ -55,12 +58,36 @@ contract MiniGamePoolReward is Ownable, ReentrancyGuard, IERC721Receiver, IERC11
     /// @notice Emitted when tokens are withdrawn by admin
     event TokensWithdrawn(address indexed to, address indexed token, uint256 amount, uint256 tokenId);
 
+    /// @notice Emitted when operator is updated by the owner
+    event OperatorUpdated(address indexed previousOperator, address indexed newOperator);
+
     /**
      * @notice Constructor to initialize the contract
+     * @param _operator The operator address for managing merkle roots
      * @param _owner The owner of the contract
      */
-    constructor(address _owner) Ownable(_owner) {
+    constructor(address _operator, address _owner) Ownable(_owner) {
         if (_owner == address(0)) revert ZeroAddress();
+        if (_operator == address(0)) revert ZeroAddress();
+        operator = _operator;
+        emit OperatorUpdated(address(0), _operator);
+    }
+
+    /// @notice Restricts function to current operator only
+    modifier onlyOperator() {
+        if (msg.sender != operator) revert();
+        _;
+    }
+
+    /**
+     * @notice Update the operator address (owner only)
+     * @param _newOperator The new operator address
+     */
+    function updateOperator(address _newOperator) external onlyOwner {
+        if (_newOperator == address(0)) revert ZeroAddress();
+        address previousOperator = operator;
+        operator = _newOperator;
+        emit OperatorUpdated(previousOperator, _newOperator);
     }
 
     /**
@@ -68,7 +95,7 @@ contract MiniGamePoolReward is Ownable, ReentrancyGuard, IERC721Receiver, IERC11
      * @param _merkleRoot The merkle root to add
      * @param _endTime The timestamp when claims for this root expire
      */
-    function addMerkleRoot(bytes32 _merkleRoot, uint256 _endTime) external onlyOwner {
+    function addMerkleRoot(bytes32 _merkleRoot, uint256 _endTime) external onlyOperator {
         if (_merkleRoot == bytes32(0)) revert InvalidMerkleRoot();
         if (_endTime <= block.timestamp) revert InvalidEndTime(_endTime);
 

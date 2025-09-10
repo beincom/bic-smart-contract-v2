@@ -53,7 +53,7 @@ contract MiniGamePoolRewardTest is Test, MiniGamePoolRewardErrors {
         erc721Token = new MockERC721();
         erc1155Token = new MockERC1155();
 
-        rewardContract = new MiniGamePoolReward(owner);
+        rewardContract = new MiniGamePoolReward(owner, owner);
 
         // Mint tokens to the contract for testing
         uint256 totalAmount = USER1_AMOUNT + USER2_AMOUNT + USER3_AMOUNT + 1000 ether;
@@ -122,13 +122,14 @@ contract MiniGamePoolRewardTest is Test, MiniGamePoolRewardErrors {
 
     // Constructor tests
     function test_constructor_success() public {
-        MiniGamePoolReward newContract = new MiniGamePoolReward(owner);
+        MiniGamePoolReward newContract = new MiniGamePoolReward(owner, owner);
         assertEq(newContract.owner(), owner);
+        assertEq(newContract.operator(), owner);
     }
 
     function test_constructor_revert_zero_owner() public {
         vm.expectRevert();
-        new MiniGamePoolReward(address(0));
+        new MiniGamePoolReward(owner, address(0));
     }
 
     // Add merkle root tests
@@ -176,6 +177,30 @@ contract MiniGamePoolRewardTest is Test, MiniGamePoolRewardErrors {
         vm.startPrank(user1);
         vm.expectRevert();
         rewardContract.addMerkleRoot(merkleRoot, END_TIME);
+        vm.stopPrank();
+    }
+
+    function test_updateOperator_success_and_usage() public {
+        // owner sets operator to user1
+        vm.prank(owner);
+        rewardContract.updateOperator(user1);
+
+        // operator can add merkle root
+        vm.startPrank(user1);
+        rewardContract.addMerkleRoot(merkleRoot, END_TIME);
+        vm.stopPrank();
+
+        // owner (no longer operator) cannot add root now
+        vm.startPrank(owner);
+        vm.expectRevert();
+        rewardContract.addMerkleRoot(bytes32(uint256(123)), END_TIME);
+        vm.stopPrank();
+    }
+
+    function test_updateOperator_revert_zero_address() public {
+        vm.startPrank(owner);
+        vm.expectRevert(ZeroAddress.selector);
+        rewardContract.updateOperator(address(0));
         vm.stopPrank();
     }
 
