@@ -4,6 +4,7 @@ pragma solidity ^0.8.23;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {BicEdition} from "src/edition/BicEdition.sol";
 import {ITokenBundle} from "src/extension/interface/ITokenBundle.sol";
+import {PackSaleStore} from "src/pack/PackSaleStore.sol";
 import {BicPack} from "src/pack/BicPack.sol";
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
@@ -23,30 +24,34 @@ contract BamzoDeployer is Script {
         string memory lootboxUri = vm.envString("LOOTBOX_URI");
         address lootboxOwner = vm.envAddress("LOOTBOX_OWNER_TESTNET");
 
+        // address packStoreOperator = vm.envAddress("HANDLE_CONTROLLER_VERIFIER_ADDRESS");
+        address packStoreOperator = vm.envAddress("PACK_STORE_OPERATOR_ADDRESS_TESTNET");
+
         vm.startBroadcast(deployerPrivateKey);
-        BicEdition bamzo = new BicEdition(
-            "Original Bamzo",
-            "OGBZ",
-            bamzoUri,
-            deployOwner,
-            bamzoTreasury
-        );
+        // BicEdition bamzo = new BicEdition(
+        //     "Original Bamzo",
+        //     "OGBZ",
+        //     bamzoUri,
+        //     deployOwner,
+        //     bamzoTreasury
+        // );
 
-        BicPack lootbox = new BicPack(
-            "Dev - Original Bamzo Lootbox",
-            "dev - OGBZLB",
-            lootboxUri,
-            deployOwner
-        );
-        IERC20(bic).approve(
-            address(lootbox),
-            21645 ether
-        );
-        bamzo.setApprovalForAll(address(lootbox), true);
+        // BicPack lootbox = new BicPack(
+        //     "Dev - Original Bamzo Lootbox",
+        //     "dev - OGBZLB",
+        //     lootboxUri,
+        //     deployOwner
+        // );
+        // IERC20(bic).approve(
+        //     address(lootbox),
+        //     21645 ether
+        // );
+        // bamzo.setApprovalForAll(address(lootbox), true);
 
-        mintBamzoAndCreateLootbox(bic, bamzo, lootbox);
+        // mintBamzoAndCreateLootbox(bic, bamzo, lootbox);
 
-        // createPackStore(bic, lootbox);
+        BicPack lootbox = BicPack(vm.envAddress("LOOTBOX_ADDRESS_TESTNET"));
+        createPackStore(bic, lootbox, packStoreOperator);
 
         // transferOwnership(bamzo, bamzoOwner, lootbox, lootboxOwner);
 
@@ -275,6 +280,31 @@ contract BamzoDeployer is Script {
             console.log("platinumBox pack total supply:", platinumBoxPackTotalSupply);
         }
 
+    }
+
+    function createPackStore(address bic, BicPack lootbox, address packStoreOperator) internal {
+        PackSaleStore packStore = new PackSaleStore(deployOwner, packStoreOperator);
+        lootbox.setApprovalForAll(address(packStore), true);
+        ITokenBundle.Token[] memory packageAssets = new ITokenBundle.Token[](2);
+        packageAssets[0] = ITokenBundle.Token({
+            assetContract: address(lootbox),
+            tokenType: ITokenBundle.TokenType.ERC1155,
+            tokenId: 1,
+            totalAmount: 2
+        });
+        packageAssets[1] = ITokenBundle.Token({
+            assetContract: address(lootbox),
+            tokenType: ITokenBundle.TokenType.ERC1155,
+            tokenId: 2,
+            totalAmount: 1
+        });
+        packStore.registerPackage(
+            30, 
+            packageAssets, 
+            100 ether, 
+            address(bic)
+        );
+        console.log("packStore deployed at:", address(packStore));
     }
 
 }
