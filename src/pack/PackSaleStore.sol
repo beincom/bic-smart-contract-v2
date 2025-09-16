@@ -47,6 +47,9 @@ contract PackSaleStore is Ownable, ReentrancyGuard, TokenStore {
     /// @notice Address authorized to sign purchase transactions
     address public operator;
 
+    /// @notice Address that receives sale proceeds (ETH / ERC20)
+    address public saleRecipient;
+
     /// @notice Counter for generating unique package IDs
     uint256 public nextPackageId;
 
@@ -81,6 +84,9 @@ contract PackSaleStore is Ownable, ReentrancyGuard, TokenStore {
     /// @notice Emitted when the operator is updated
     event OperatorUpdated(address indexed oldOperator, address indexed newOperator);
 
+    /// @notice Emitted when the sale recipient is updated
+    event SaleRecipientUpdated(address indexed oldRecipient, address indexed newRecipient);
+
     /// @notice Emitted when a package is deactivated
     event PackageDeactivated(uint256 indexed packageId);
 
@@ -110,10 +116,13 @@ contract PackSaleStore is Ownable, ReentrancyGuard, TokenStore {
      * @notice Initialize the PackSaleStore contract
      * @param _owner Address that will own the contract
      * @param _operator Address authorized to sign purchase transactions
+     * @param _saleRecipient Address to receive sale proceeds
      */
-    constructor(address _owner, address _operator) Ownable(_owner) {
+    constructor(address _owner, address _operator, address _saleRecipient) Ownable(_owner) {
         if (_operator == address(0)) revert ZeroAddress();
+        if (_saleRecipient == address(0)) revert ZeroAddress();
         operator = _operator;
+        saleRecipient = _saleRecipient;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -139,8 +148,8 @@ contract PackSaleStore is Ownable, ReentrancyGuard, TokenStore {
 
         packageId = nextPackageId++;
 
-        // Store the package assets as a bundle
-        _storeTokens(msg.sender, _assets, "", packageId);
+        // Store the assets and multiply amounts by capacity
+        _storeTokensWithMultiplier(msg.sender, _assets, "", packageId, _capacity);
 
         // Set package information
         packages[packageId] = PackageInfo({
@@ -163,6 +172,17 @@ contract PackSaleStore is Ownable, ReentrancyGuard, TokenStore {
         address oldOperator = operator;
         operator = _newOperator;
         emit OperatorUpdated(oldOperator, _newOperator);
+    }
+
+    /**
+     * @notice Update the sale recipient address
+     * @param _newRecipient New sale recipient address
+     */
+    function setSaleRecipient(address _newRecipient) external onlyOwner {
+        if (_newRecipient == address(0)) revert ZeroAddress();
+        address oldRecipient = saleRecipient;
+        saleRecipient = _newRecipient;
+        emit SaleRecipientUpdated(oldRecipient, _newRecipient);
     }
 
     /**
@@ -228,8 +248,8 @@ contract PackSaleStore is Ownable, ReentrancyGuard, TokenStore {
         // Process payment
         _processPayment(package.currency, package.price);
 
-        // Transfer assets to buyer
-        _releaseTokens(msg.sender, _packageId);
+        // Transfer one package worth of assets to buyer
+        _releasePackageTokens(msg.sender, _packageId);
 
         // Update sold count
         package.sold++;
@@ -343,10 +363,13 @@ contract PackSaleStore is Ownable, ReentrancyGuard, TokenStore {
             if (msg.value > _amount) {
                 payable(msg.sender).transfer(msg.value - _amount);
             }
+            // Forward payment to sale recipient
+            (bool success, ) = payable(saleRecipient).call{value: _amount}("");
+            require(success, "ETH_TRANSFER_FAIL");
         } else {
             // ERC20 token payment
             if (msg.value > 0) revert InsufficientPayment(); // Should not send ETH for ERC20 payment
-            IERC20(_currency).safeTransferFrom(msg.sender, address(this), _amount);
+            IERC20(_currency).safeTransferFrom(msg.sender, saleRecipient, _amount);
         }
     }
 
@@ -389,7 +412,7 @@ contract PackSaleStore is Ownable, ReentrancyGuard, TokenStore {
     }
 
     /**
-     * @notice Emergency function to release stuck assets
+     * @notice Emergency function to release all remaining assets from a package
      * @param _packageId Package ID to release assets from
      * @param _to Address to send assets to
      */
@@ -397,6 +420,95 @@ contract PackSaleStore is Ownable, ReentrancyGuard, TokenStore {
         if (_packageId >= nextPackageId) revert InvalidPackageId();
         if (_to == address(0)) revert ZeroAddress();
         
+        // Release all remaining assets
         _releaseTokens(_to, _packageId);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                       INTERNAL HELPER FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Store tokens with a multiplier for total amounts
+     * @param _tokenOwner Address that owns the tokens
+     * @param _tokens Array of tokens to store
+     * @param _uriForTokens URI for the token bundle
+     * @param _idForTokens ID for the token bundle
+     * @param _multiplier Multiplier to apply to token amounts
+     */
+    function _storeTokensWithMultiplier(
+        address _tokenOwner,
+        Token[] calldata _tokens,
+        string memory _uriForTokens,
+        uint256 _idForTokens,
+        uint256 _multiplier
+    ) internal {
+        // Create bundle with original tokens
+        _createBundle(_tokens, _idForTokens);
+        _setUriOfBundle(_uriForTokens, _idForTokens);
+        
+        // Create multiplied tokens array for transfer
+        Token[] memory tokensToTransfer = new Token[](_tokens.length);
+        for (uint256 i = 0; i < _tokens.length; i++) {
+            tokensToTransfer[i] = Token({
+                assetContract: _tokens[i].assetContract,
+                tokenType: _tokens[i].tokenType,
+                tokenId: _tokens[i].tokenId,
+                totalAmount: _tokens[i].totalAmount * _multiplier
+            });
+        }
+        
+        // Transfer the multiplied amounts
+        _transferTokenBatch(_tokenOwner, address(this), tokensToTransfer);
+        
+        // Update bundle with multiplied amounts
+        for (uint256 i = 0; i < _tokens.length; i++) {
+            Token memory updatedToken = Token({
+                assetContract: _tokens[i].assetContract,
+                tokenType: _tokens[i].tokenType,
+                tokenId: _tokens[i].tokenId,
+                totalAmount: _tokens[i].totalAmount * _multiplier
+            });
+            _updateTokenInBundle(updatedToken, _idForTokens, i);
+        }
+    }
+
+    /**
+     * @notice Release one package worth of tokens to recipient
+     * @param _recipient Address to receive the tokens
+     * @param _packageId Package ID to release tokens from
+     */
+    function _releasePackageTokens(address _recipient, uint256 _packageId) internal {
+        PackageInfo storage package = packages[_packageId];
+        uint256 count = getTokenCountOfBundle(_packageId);
+        Token[] memory tokensToRelease = new Token[](count);
+
+        // Calculate how much of each token type to release for one package
+        for (uint256 i = 0; i < count; i++) {
+            Token memory bundleToken = getTokenOfBundle(_packageId, i);
+            
+            // Calculate per-package amount (total stored / capacity)
+            uint256 perPackageAmount = bundleToken.totalAmount / package.capacity;
+            
+            tokensToRelease[i] = Token({
+                assetContract: bundleToken.assetContract,
+                tokenType: bundleToken.tokenType,
+                tokenId: bundleToken.tokenId,
+                totalAmount: perPackageAmount
+            });
+
+            // Update the bundle to reduce the total amount
+            Token memory updatedToken = Token({
+                assetContract: bundleToken.assetContract,
+                tokenType: bundleToken.tokenType,
+                tokenId: bundleToken.tokenId,
+                totalAmount: bundleToken.totalAmount - perPackageAmount
+            });
+            
+            _updateTokenInBundle(updatedToken, _packageId, i);
+        }
+
+        // Transfer the calculated amounts
+        _transferTokenBatch(address(this), _recipient, tokensToRelease);
     }
 }

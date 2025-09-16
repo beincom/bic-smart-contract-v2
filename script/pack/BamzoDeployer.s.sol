@@ -283,7 +283,9 @@ contract BamzoDeployer is Script {
     }
 
     function createPackStore(address bic, BicPack lootbox, address packStoreOperator) internal {
-        PackSaleStore packStore = new PackSaleStore(deployOwner, packStoreOperator);
+        // Use edition treasury as sale recipient
+        address saleRecipient = vm.envAddress("EDITION_TREASURY_TESTNET");
+        PackSaleStore packStore = new PackSaleStore(deployOwner, packStoreOperator, saleRecipient);
         lootbox.setApprovalForAll(address(packStore), true);
         ITokenBundle.Token[] memory packageAssets = new ITokenBundle.Token[](2);
         packageAssets[0] = ITokenBundle.Token({
