@@ -57,7 +57,7 @@ contract PackSaleStore is Ownable, ReentrancyGuard, TokenStore {
     mapping(uint256 => PackageInfo) public packages;
 
     /// @notice Mapping to track used transaction hashes to prevent replay attacks
-    mapping(bytes32 => bool) public usedHashes;
+    mapping(bytes32 => bool) public usedOrderIds;
 
     /*//////////////////////////////////////////////////////////////
                                 EVENTS
@@ -78,7 +78,7 @@ contract PackSaleStore is Ownable, ReentrancyGuard, TokenStore {
         address indexed buyer,
         uint256 price,
         address currency,
-        bytes32 transactionHash
+        string orderId
     );
 
     /// @notice Emitted when the operator is updated
@@ -217,6 +217,7 @@ contract PackSaleStore is Ownable, ReentrancyGuard, TokenStore {
      * @param _signature Operator's signature authorizing the purchase
      */
     function buyPackage(
+        string memory orderId,
         uint256 _packageId,
         uint256 _validUntil,
         uint256 _validAfter,
@@ -236,14 +237,14 @@ contract PackSaleStore is Ownable, ReentrancyGuard, TokenStore {
             revert InvalidTimeWindow();
         }
 
-        // Generate and verify transaction hash
-        bytes32 transactionHash = _generateHash(_packageId, _validUntil, _validAfter);
-        
-        if (usedHashes[transactionHash]) revert HashAlreadyUsed();
-        if (!_verifySignature(transactionHash, _signature)) revert InvalidSignature();
+        // Generate and verify message hash
+        bytes32 messageHash = _generateHash(orderId, _packageId, _validUntil, _validAfter);
+        bytes32 hashOrderId = keccak256(abi.encodePacked(orderId));
+        if (usedOrderIds[hashOrderId]) revert HashAlreadyUsed();
+        if (!_verifySignature(messageHash, _signature)) revert InvalidSignature();
 
         // Mark hash as used
-        usedHashes[transactionHash] = true;
+        usedOrderIds[hashOrderId] = true;
 
         // Process payment
         _processPayment(package.currency, package.price);
@@ -254,7 +255,7 @@ contract PackSaleStore is Ownable, ReentrancyGuard, TokenStore {
         // Update sold count
         package.sold++;
 
-        emit PackagePurchased(_packageId, msg.sender, package.price, package.currency, transactionHash);
+        emit PackagePurchased(_packageId, msg.sender, package.price, package.currency, orderId);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -289,33 +290,30 @@ contract PackSaleStore is Ownable, ReentrancyGuard, TokenStore {
 
     /**
      * @notice Check if a transaction hash has been used
-     * @param _packageId Package ID
-     * @param _validUntil Valid until timestamp
-     * @param _validAfter Valid after timestamp
-     * @return Whether the hash has been used
+     * @param orderId Order ID
      */
-    function isHashUsed(
-        uint256 _packageId,
-        uint256 _validUntil,
-        uint256 _validAfter
+    function isOrderIdUsed(
+        string memory orderId
     ) external view returns (bool) {
-        bytes32 hash = _generateHash(_packageId, _validUntil, _validAfter);
-        return usedHashes[hash];
+        bytes32 hashOrderId = keccak256(abi.encodePacked(orderId));
+        return usedOrderIds[hashOrderId];
     }
 
     /**
      * @notice Generate transaction hash for given parameters
+     * @param _orderId Order ID
      * @param _packageId Package ID
      * @param _validUntil Valid until timestamp
      * @param _validAfter Valid after timestamp
      * @return Transaction hash
      */
     function generateHash(
+        string memory _orderId,
         uint256 _packageId,
         uint256 _validUntil,
         uint256 _validAfter
     ) external pure returns (bytes32) {
-        return _generateHash(_packageId, _validUntil, _validAfter);
+        return _generateHash(_orderId, _packageId, _validUntil, _validAfter);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -324,17 +322,19 @@ contract PackSaleStore is Ownable, ReentrancyGuard, TokenStore {
 
     /**
      * @notice Generate transaction hash
+     * @param _orderId Order ID
      * @param _packageId Package ID
      * @param _validUntil Valid until timestamp
      * @param _validAfter Valid after timestamp
      * @return Transaction hash
      */
     function _generateHash(
+        string memory _orderId,
         uint256 _packageId,
         uint256 _validUntil,
         uint256 _validAfter
     ) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(_packageId, _validUntil, _validAfter));
+        return keccak256(abi.encodePacked(_orderId, _packageId, _validUntil, _validAfter));
     }
 
     /**

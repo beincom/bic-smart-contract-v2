@@ -8,6 +8,7 @@ import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {ERC1155} from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import {ITokenBundle} from "src/extension/interface/ITokenBundle.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 // Mock ERC721 Token
@@ -33,6 +34,7 @@ contract MockERC1155 is ERC1155 {
 contract PackSaleStoreTest is Test {
     using ECDSA for bytes32;
     using MessageHashUtils for bytes32;
+    using Strings for uint256;
 
     PackSaleStore public packStore;
     BicTokenPaymasterWithoutPreSetupExchange public bicToken;
@@ -49,6 +51,8 @@ contract PackSaleStoreTest is Test {
     uint256 public attackerPrivateKey = 0x9876543210987654321098765432109876543210987654321098765432109876;
 
     ITokenBundle.Token[] public packageAssets;
+
+    string orderIdTest = 'abc123';
 
     function setUp() public {
         // Set operator address to match private key
@@ -226,14 +230,14 @@ contract PackSaleStoreTest is Test {
         
         uint256 validAfter = block.timestamp;
         uint256 validUntil = block.timestamp + 1 hours;
-        bytes memory signature = _createSignature(packageId, validUntil, validAfter, operatorPrivateKey);
+        bytes memory signature = _createSignature(orderIdTest, packageId, validUntil, validAfter, operatorPrivateKey);
 
         uint256 userBalanceBefore = user.balance;
         uint256 recipientBalanceBefore = saleRecipient.balance;
         uint256 userBicBalanceBefore = bicToken.balanceOf(user);
 
         vm.prank(user);
-        packStore.buyPackage{value: 1 ether}(packageId, validUntil, validAfter, signature);
+        packStore.buyPackage{value: 1 ether}(orderIdTest, packageId, validUntil, validAfter, signature);
 
         // Check balances: user paid 1 ETH to saleRecipient
         assertEq(user.balance, userBalanceBefore - 1 ether);
@@ -253,13 +257,13 @@ contract PackSaleStoreTest is Test {
         
         uint256 validAfter = block.timestamp;
         uint256 validUntil = block.timestamp + 1 hours;
-        bytes memory signature = _createSignature(packageId, validUntil, validAfter, operatorPrivateKey);
+        bytes memory signature = _createSignature(orderIdTest, packageId, validUntil, validAfter, operatorPrivateKey);
 
         uint256 userBalanceBefore = bicToken.balanceOf(user);
         uint256 recipientTokenBalanceBefore = bicToken.balanceOf(saleRecipient);
 
         vm.prank(user);
-        packStore.buyPackage(packageId, validUntil, validAfter, signature);
+        packStore.buyPackage(orderIdTest, packageId, validUntil, validAfter, signature);
 
         // Check balances: tokens transferred to saleRecipient
         assertEq(bicToken.balanceOf(user), userBalanceBefore - 50 * 10**18);
@@ -274,11 +278,11 @@ contract PackSaleStoreTest is Test {
         uint256 invalidPackageId = 999;
         uint256 validAfter = block.timestamp;
         uint256 validUntil = block.timestamp + 1 hours;
-        bytes memory signature = _createSignature(invalidPackageId, validUntil, validAfter, operatorPrivateKey);
+        bytes memory signature = _createSignature(orderIdTest, invalidPackageId, validUntil, validAfter, operatorPrivateKey);
 
         vm.prank(user);
         vm.expectRevert(PackSaleStore.InvalidPackageId.selector);
-        packStore.buyPackage{value: 1 ether}(invalidPackageId, validUntil, validAfter, signature);
+        packStore.buyPackage{value: 1 ether}(orderIdTest, invalidPackageId, validUntil, validAfter, signature);
     }
 
     function testBuyPackageRevertsWhenInactive() public {
@@ -290,11 +294,11 @@ contract PackSaleStoreTest is Test {
 
         uint256 validAfter = block.timestamp;
         uint256 validUntil = block.timestamp + 1 hours;
-        bytes memory signature = _createSignature(packageId, validUntil, validAfter, operatorPrivateKey);
+        bytes memory signature = _createSignature(orderIdTest, packageId, validUntil, validAfter, operatorPrivateKey);
 
         vm.prank(user);
         vm.expectRevert(PackSaleStore.PackageNotActive.selector);
-        packStore.buyPackage{value: 1 ether}(packageId, validUntil, validAfter, signature);
+        packStore.buyPackage{value: 1 ether}(orderIdTest, packageId, validUntil, validAfter, signature);
     }
 
     function testBuyPackageRevertsWhenSoldOut() public {
@@ -313,17 +317,17 @@ contract PackSaleStoreTest is Test {
         // Buy the only package
         uint256 validAfter = block.timestamp;
         uint256 validUntil = block.timestamp + 1 hours;
-        bytes memory signature = _createSignature(packageId, validUntil, validAfter, operatorPrivateKey);
+        bytes memory signature = _createSignature(orderIdTest, packageId, validUntil, validAfter, operatorPrivateKey);
 
         vm.prank(user);
-        packStore.buyPackage{value: 1 ether}(packageId, validUntil, validAfter, signature);
+        packStore.buyPackage{value: 1 ether}(orderIdTest, packageId, validUntil, validAfter, signature);
 
         // Try to buy again - should fail
-        signature = _createSignature(packageId, validUntil + 1, validAfter, operatorPrivateKey);
+        signature = _createSignature(orderIdTest, packageId, validUntil + 1, validAfter, operatorPrivateKey);
         
         vm.prank(user);
         vm.expectRevert(PackSaleStore.PackageSoldOut.selector);
-        packStore.buyPackage{value: 1 ether}(packageId, validUntil + 1, validAfter, signature);
+        packStore.buyPackage{value: 1 ether}(orderIdTest, packageId, validUntil + 1, validAfter, signature);
     }
 
     function testBuyPackageRevertsWithInvalidTimeWindow() public {
@@ -332,21 +336,21 @@ contract PackSaleStoreTest is Test {
         // Test with validAfter > current time
         uint256 validAfter = block.timestamp + 1 hours;
         uint256 validUntil = block.timestamp + 2 hours;
-        bytes memory signature = _createSignature(packageId, validUntil, validAfter, operatorPrivateKey);
+        bytes memory signature = _createSignature(orderIdTest, packageId, validUntil, validAfter, operatorPrivateKey);
 
         vm.prank(user);
         vm.expectRevert(PackSaleStore.InvalidTimeWindow.selector);
-        packStore.buyPackage{value: 1 ether}(packageId, validUntil, validAfter, signature);
+        packStore.buyPackage{value: 1 ether}(orderIdTest, packageId, validUntil, validAfter, signature);
 
         // Test with validUntil < current time - skip warp to avoid underflow
         vm.warp(block.timestamp + 3 hours); // Move forward in time
         validAfter = block.timestamp - 2 hours;
         validUntil = block.timestamp - 1 hours;
-        signature = _createSignature(packageId, validUntil, validAfter, operatorPrivateKey);
+        signature = _createSignature(orderIdTest, packageId, validUntil, validAfter, operatorPrivateKey);
 
         vm.prank(user);
         vm.expectRevert(PackSaleStore.InvalidTimeWindow.selector);
-        packStore.buyPackage{value: 1 ether}(packageId, validUntil, validAfter, signature);
+        packStore.buyPackage{value: 1 ether}(orderIdTest, packageId, validUntil, validAfter, signature);
     }
 
     function testBuyPackageRevertsWithUsedHash() public {
@@ -354,16 +358,16 @@ contract PackSaleStoreTest is Test {
         
         uint256 validAfter = block.timestamp;
         uint256 validUntil = block.timestamp + 1 hours;
-        bytes memory signature = _createSignature(packageId, validUntil, validAfter, operatorPrivateKey);
+        bytes memory signature = _createSignature(orderIdTest, packageId, validUntil, validAfter, operatorPrivateKey);
 
         // First purchase should succeed
         vm.prank(user);
-        packStore.buyPackage{value: 1 ether}(packageId, validUntil, validAfter, signature);
+        packStore.buyPackage{value: 1 ether}(orderIdTest, packageId, validUntil, validAfter, signature);
 
         // Second purchase with same parameters should fail
         vm.prank(user);
         vm.expectRevert(PackSaleStore.HashAlreadyUsed.selector);
-        packStore.buyPackage{value: 1 ether}(packageId, validUntil, validAfter, signature);
+        packStore.buyPackage{value: 1 ether}(orderIdTest, packageId, validUntil, validAfter, signature);
     }
 
     function testBuyPackageRevertsWithInvalidSignature() public {
@@ -371,11 +375,11 @@ contract PackSaleStoreTest is Test {
         
         uint256 validAfter = block.timestamp;
         uint256 validUntil = block.timestamp + 1 hours;
-        bytes memory invalidSignature = _createSignature(packageId, validUntil, validAfter, attackerPrivateKey);
+        bytes memory invalidSignature = _createSignature(orderIdTest, packageId, validUntil, validAfter, attackerPrivateKey);
 
         vm.prank(user);
         vm.expectRevert(PackSaleStore.InvalidSignature.selector);
-        packStore.buyPackage{value: 1 ether}(packageId, validUntil, validAfter, invalidSignature);
+        packStore.buyPackage{value: 1 ether}(orderIdTest, packageId, validUntil, validAfter, invalidSignature);
     }
 
     function testBuyPackageRevertsWithInsufficientETH() public {
@@ -383,11 +387,11 @@ contract PackSaleStoreTest is Test {
         
         uint256 validAfter = block.timestamp;
         uint256 validUntil = block.timestamp + 1 hours;
-        bytes memory signature = _createSignature(packageId, validUntil, validAfter, operatorPrivateKey);
+        bytes memory signature = _createSignature(orderIdTest, packageId, validUntil, validAfter, operatorPrivateKey);
 
         vm.prank(user);
         vm.expectRevert(PackSaleStore.InsufficientPayment.selector);
-        packStore.buyPackage{value: 0.5 ether}(packageId, validUntil, validAfter, signature);
+        packStore.buyPackage{value: 0.5 ether}(orderIdTest, packageId, validUntil, validAfter, signature);
     }
 
     function testBuyPackageRefundsExcessETH() public {
@@ -395,14 +399,14 @@ contract PackSaleStoreTest is Test {
         
         uint256 validAfter = block.timestamp;
         uint256 validUntil = block.timestamp + 1 hours;
-        bytes memory signature = _createSignature(packageId, validUntil, validAfter, operatorPrivateKey);
+        bytes memory signature = _createSignature(orderIdTest, packageId, validUntil, validAfter, operatorPrivateKey);
 
         uint256 userBalanceBefore = user.balance;
         uint256 recipientBalanceBefore = saleRecipient.balance;
         uint256 excessAmount = 0.5 ether;
 
         vm.prank(user);
-        packStore.buyPackage{value: 1 ether + excessAmount}(packageId, validUntil, validAfter, signature);
+        packStore.buyPackage{value: 1 ether + excessAmount}(orderIdTest, packageId, validUntil, validAfter, signature);
 
         // Should only charge 1 ether, refund the excess to the user, send 1 ether to saleRecipient
         assertEq(user.balance, userBalanceBefore - 1 ether);
@@ -414,11 +418,11 @@ contract PackSaleStoreTest is Test {
         
         uint256 validAfter = block.timestamp;
         uint256 validUntil = block.timestamp + 1 hours;
-        bytes memory signature = _createSignature(packageId, validUntil, validAfter, operatorPrivateKey);
+        bytes memory signature = _createSignature(orderIdTest, packageId, validUntil, validAfter, operatorPrivateKey);
 
         vm.prank(user);
         vm.expectRevert(PackSaleStore.InsufficientPayment.selector);
-        packStore.buyPackage{value: 1 ether}(packageId, validUntil, validAfter, signature);
+        packStore.buyPackage{value: 1 ether}(orderIdTest, packageId, validUntil, validAfter, signature);
     }
 
     function testGetPackageAssets() public {
@@ -435,22 +439,22 @@ contract PackSaleStoreTest is Test {
         assertEq(assets[1].totalAmount, 1 * 10); // 1 ERC1155 × 10 capacity
     }
 
-    function testIsHashUsed() public {
+    function testIsOrderIdUsed() public {
         uint256 packageId = _createTestPackage();
         
         uint256 validAfter = block.timestamp;
         uint256 validUntil = block.timestamp + 1 hours;
         
         // Hash should not be used initially
-        assertFalse(packStore.isHashUsed(packageId, validUntil, validAfter));
+        assertFalse(packStore.isOrderIdUsed(orderIdTest));
         
-        bytes memory signature = _createSignature(packageId, validUntil, validAfter, operatorPrivateKey);
+        bytes memory signature = _createSignature(orderIdTest, packageId, validUntil, validAfter, operatorPrivateKey);
         
         vm.prank(user);
-        packStore.buyPackage{value: 1 ether}(packageId, validUntil, validAfter, signature);
+        packStore.buyPackage{value: 1 ether}(orderIdTest, packageId, validUntil, validAfter, signature);
         
         // Hash should be used after purchase
-        assertTrue(packStore.isHashUsed(packageId, validUntil, validAfter));
+        assertTrue(packStore.isOrderIdUsed(orderIdTest));
     }
 
     function testGenerateHash() public {
@@ -458,8 +462,8 @@ contract PackSaleStoreTest is Test {
         uint256 validUntil = block.timestamp + 1 hours;
         uint256 validAfter = block.timestamp;
         
-        bytes32 expectedHash = keccak256(abi.encodePacked(packageId, validUntil, validAfter));
-        bytes32 actualHash = packStore.generateHash(packageId, validUntil, validAfter);
+        bytes32 expectedHash = keccak256(abi.encodePacked(orderIdTest, packageId, validUntil, validAfter));
+        bytes32 actualHash = packStore.generateHash(orderIdTest, packageId, validUntil, validAfter);
         
         assertEq(actualHash, expectedHash);
     }
@@ -512,10 +516,10 @@ contract PackSaleStoreTest is Test {
         for (uint256 i = 0; i < 3; i++) {
             uint256 validAfter = block.timestamp;
             uint256 validUntil = block.timestamp + 1 hours;
-            bytes memory signature = _createSignature(packageId, validUntil + i, validAfter, operatorPrivateKey);
+            bytes memory signature = _createSignature(i.toString(), packageId, validUntil + i, validAfter, operatorPrivateKey);
             
             vm.prank(user);
-            packStore.buyPackage{value: 1 ether}(packageId, validUntil + i, validAfter, signature);
+            packStore.buyPackage{value: 1 ether}(i.toString(), packageId, validUntil + i, validAfter, signature);
         }
         
         address recipient = address(0x9999);
@@ -568,12 +572,13 @@ contract PackSaleStoreTest is Test {
     }
 
     function _createSignature(
+        string memory orderId,
         uint256 packageId,
         uint256 validUntil,
         uint256 validAfter,
         uint256 privateKey
     ) internal pure returns (bytes memory) {
-        bytes32 hash = keccak256(abi.encodePacked(packageId, validUntil, validAfter));
+        bytes32 hash = keccak256(abi.encodePacked(orderId, packageId, validUntil, validAfter));
         bytes32 ethSignedMessageHash = MessageHashUtils.toEthSignedMessageHash(hash);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, ethSignedMessageHash);
         return abi.encodePacked(r, s, v);
