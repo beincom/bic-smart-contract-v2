@@ -51,7 +51,7 @@ contract MiniGameFacetDeployScript is Script {
         functionSelectors[2] = miniGameFacet.updateMiniGameTreasury.selector;
         functionSelectors[3] = miniGameFacet.updateMiniGamePaymentToken.selector;
         functionSelectors[4] = miniGameFacet.updateMiniGameBufferPostOp.selector;
-        functionSelectors[5] = miniGameFacet.updateRewardConfig.selector;
+        functionSelectors[5] = miniGameFacet.updateMiniGameRewardConfig.selector;
         functionSelectors[6] = miniGameFacet.buyToolPack.selector;
         functionSelectors[7] = miniGameFacet.callBuyToolPack.selector;
 

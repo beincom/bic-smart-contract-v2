@@ -168,7 +168,7 @@ contract MiniGameFacet {
      * @param rewardPool The reward pool address
      * @param rewardPercent The percentage for reward pool
      */
-    function updateRewardConfig(address rewardPool, uint256 rewardPercent) external {
+    function updateMiniGameRewardConfig(address rewardPool, uint256 rewardPercent) external {
         LibDiamond.enforceIsContractOwner();
 
         if (rewardPercent > 10000) {
