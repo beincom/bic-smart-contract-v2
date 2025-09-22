@@ -107,7 +107,7 @@ contract PackSaleStore is Ownable, ReentrancyGuard, TokenStore {
     error EmptyAssets();
     error ZeroAddress();
     error InvalidCapacity();
-
+    error InvalidAssetCapacity();
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
@@ -146,10 +146,13 @@ contract PackSaleStore is Ownable, ReentrancyGuard, TokenStore {
         if (_capacity == 0) revert InvalidCapacity();
         if (_assets.length == 0) revert EmptyAssets();
 
+        for (uint256 i = 0; i < _assets.length; i++) {
+            if (_assets[i].totalAmount % _capacity != 0) revert InvalidAssetCapacity();
+        }
         packageId = nextPackageId++;
 
-        // Store the assets and multiply amounts by capacity
-        _storeTokensWithMultiplier(msg.sender, _assets, "", packageId, _capacity);
+        // Store the package assets as a bundle
+        _storeTokens(msg.sender, _assets, "", packageId);
 
         // Set package information
         packages[packageId] = PackageInfo({
@@ -239,12 +242,9 @@ contract PackSaleStore is Ownable, ReentrancyGuard, TokenStore {
 
         // Generate and verify message hash
         bytes32 messageHash = _generateHash(orderId, _packageId, _validUntil, _validAfter);
-        bytes32 hashOrderId = keccak256(abi.encodePacked(orderId));
+        bytes32 hashOrderId = keccak256(abi.encode(orderId));
         if (usedOrderIds[hashOrderId]) revert HashAlreadyUsed();
         if (!_verifySignature(messageHash, _signature)) revert InvalidSignature();
-
-        // Mark hash as used
-        usedOrderIds[hashOrderId] = true;
 
         // Process payment
         _processPayment(package.currency, package.price);
@@ -252,6 +252,8 @@ contract PackSaleStore is Ownable, ReentrancyGuard, TokenStore {
         // Transfer one package worth of assets to buyer
         _releasePackageTokens(msg.sender, _packageId);
 
+        // Mark hash as used
+        usedOrderIds[hashOrderId] = true;
         // Update sold count
         package.sold++;
 
@@ -295,7 +297,7 @@ contract PackSaleStore is Ownable, ReentrancyGuard, TokenStore {
     function isOrderIdUsed(
         string memory orderId
     ) external view returns (bool) {
-        bytes32 hashOrderId = keccak256(abi.encodePacked(orderId));
+        bytes32 hashOrderId = keccak256(abi.encode(orderId));
         return usedOrderIds[hashOrderId];
     }
 
@@ -334,7 +336,7 @@ contract PackSaleStore is Ownable, ReentrancyGuard, TokenStore {
         uint256 _validUntil,
         uint256 _validAfter
     ) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(_orderId, _packageId, _validUntil, _validAfter));
+        return keccak256(abi.encode(_orderId, _packageId, _validUntil, _validAfter));
     }
 
     /**
@@ -428,50 +430,6 @@ contract PackSaleStore is Ownable, ReentrancyGuard, TokenStore {
                        INTERNAL HELPER FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /**
-     * @notice Store tokens with a multiplier for total amounts
-     * @param _tokenOwner Address that owns the tokens
-     * @param _tokens Array of tokens to store
-     * @param _uriForTokens URI for the token bundle
-     * @param _idForTokens ID for the token bundle
-     * @param _multiplier Multiplier to apply to token amounts
-     */
-    function _storeTokensWithMultiplier(
-        address _tokenOwner,
-        Token[] calldata _tokens,
-        string memory _uriForTokens,
-        uint256 _idForTokens,
-        uint256 _multiplier
-    ) internal {
-        // Create bundle with original tokens
-        _createBundle(_tokens, _idForTokens);
-        _setUriOfBundle(_uriForTokens, _idForTokens);
-        
-        // Create multiplied tokens array for transfer
-        Token[] memory tokensToTransfer = new Token[](_tokens.length);
-        for (uint256 i = 0; i < _tokens.length; i++) {
-            tokensToTransfer[i] = Token({
-                assetContract: _tokens[i].assetContract,
-                tokenType: _tokens[i].tokenType,
-                tokenId: _tokens[i].tokenId,
-                totalAmount: _tokens[i].totalAmount * _multiplier
-            });
-        }
-        
-        // Transfer the multiplied amounts
-        _transferTokenBatch(_tokenOwner, address(this), tokensToTransfer);
-        
-        // Update bundle with multiplied amounts
-        for (uint256 i = 0; i < _tokens.length; i++) {
-            Token memory updatedToken = Token({
-                assetContract: _tokens[i].assetContract,
-                tokenType: _tokens[i].tokenType,
-                tokenId: _tokens[i].tokenId,
-                totalAmount: _tokens[i].totalAmount * _multiplier
-            });
-            _updateTokenInBundle(updatedToken, _idForTokens, i);
-        }
-    }
 
     /**
      * @notice Release one package worth of tokens to recipient
@@ -487,8 +445,11 @@ contract PackSaleStore is Ownable, ReentrancyGuard, TokenStore {
         for (uint256 i = 0; i < count; i++) {
             Token memory bundleToken = getTokenOfBundle(_packageId, i);
             
-            // Calculate per-package amount (total stored / capacity)
-            uint256 perPackageAmount = bundleToken.totalAmount / package.capacity;
+            // Calculate remaining packages
+            uint256 remainingPackages = package.capacity - package.sold;
+            
+            // Calculate per-package amount (remaining total / remaining packages)
+            uint256 perPackageAmount = bundleToken.totalAmount / remainingPackages;
             
             tokensToRelease[i] = Token({
                 assetContract: bundleToken.assetContract,

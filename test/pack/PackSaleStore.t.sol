@@ -116,13 +116,13 @@ contract PackSaleStoreTest is Test {
             assetContract: address(bicToken),
             tokenType: ITokenBundle.TokenType.ERC20,
             tokenId: 0,
-            totalAmount: 100 * 10**18
+            totalAmount: 1000 * 10**18 // 100 BIC per package * 10 capacity = 1000 BIC total
         });
         packageAssets[1] = ITokenBundle.Token({
             assetContract: address(erc1155),
             tokenType: ITokenBundle.TokenType.ERC1155,
             tokenId: 1,
-            totalAmount: 1
+            totalAmount: 10 // 1 ERC1155 per package * 10 capacity = 10 total
         });
 
         uint256 ownerBicBalanceBefore = bicToken.balanceOf(owner);
@@ -145,8 +145,8 @@ contract PackSaleStoreTest is Test {
         assertEq(packageInfo.currency, address(0));
         assertTrue(packageInfo.active);
 
-        // Check that total assets (capacity × per package) were transferred
-        assertEq(bicToken.balanceOf(owner), ownerBicBalanceBefore - (100 * 10**18 * 10));
+        // Check that total assets were transferred
+        assertEq(bicToken.balanceOf(owner), ownerBicBalanceBefore - (1000 * 10**18));
         assertEq(erc1155.balanceOf(address(packStore), 1), 10);
     }
 
@@ -432,11 +432,11 @@ contract PackSaleStoreTest is Test {
         
         assertEq(assets.length, 2);
         assertEq(assets[0].assetContract, address(bicToken));
-        // Should be total amount (per package × capacity = 100 * 10**18 * 10)
-        assertEq(assets[0].totalAmount, 100 * 10**18 * 10);
+        // Should be total amount as registered
+        assertEq(assets[0].totalAmount, 1000 * 10**18);
         assertEq(assets[1].assetContract, address(erc1155));
         assertEq(assets[1].tokenId, 1);
-        assertEq(assets[1].totalAmount, 1 * 10); // 1 ERC1155 × 10 capacity
+        assertEq(assets[1].totalAmount, 10); // Total ERC1155 tokens for all packages
     }
 
     function testIsOrderIdUsed() public {
@@ -462,7 +462,7 @@ contract PackSaleStoreTest is Test {
         uint256 validUntil = block.timestamp + 1 hours;
         uint256 validAfter = block.timestamp;
         
-        bytes32 expectedHash = keccak256(abi.encodePacked(orderIdTest, packageId, validUntil, validAfter));
+        bytes32 expectedHash = keccak256(abi.encode(orderIdTest, packageId, validUntil, validAfter));
         bytes32 actualHash = packStore.generateHash(orderIdTest, packageId, validUntil, validAfter);
         
         assertEq(actualHash, expectedHash);
@@ -532,9 +532,10 @@ contract PackSaleStoreTest is Test {
         uint256 remainingBic = bicToken.balanceOf(recipient);
         uint256 remainingERC1155 = erc1155.balanceOf(recipient, 1);
         
-        // Verify that we got the remaining assets (may have rounding due to integer division)
-        assertTrue(remainingBic > 0, "Should have received remaining BIC tokens");
-        assertTrue(remainingERC1155 > 0, "Should have received remaining ERC1155 tokens");
+        // With 100 BIC per package and 3 sold, should have 700 BIC remaining
+        assertEq(remainingBic, 700 * 10**18);
+        // With 1 ERC1155 per package and 3 sold, should have 7 ERC1155 remaining
+        assertEq(remainingERC1155, 7);
     }
 
     // Helper functions
@@ -545,13 +546,13 @@ contract PackSaleStoreTest is Test {
             assetContract: address(bicToken),
             tokenType: ITokenBundle.TokenType.ERC20,
             tokenId: 0,
-            totalAmount: 100 * 10**18
+            totalAmount: 1000 * 10**18 // 100 BIC per package * 10 capacity = 1000 BIC total
         });
         packageAssets[1] = ITokenBundle.Token({
             assetContract: address(erc1155),
             tokenType: ITokenBundle.TokenType.ERC1155,
             tokenId: 1,
-            totalAmount: 1
+            totalAmount: 10 // 1 ERC1155 per package * 10 capacity = 10 total
         });
 
         vm.prank(owner);
@@ -564,7 +565,7 @@ contract PackSaleStoreTest is Test {
             assetContract: address(erc1155),
             tokenType: ITokenBundle.TokenType.ERC1155,
             tokenId: 2,
-            totalAmount: 50
+            totalAmount: 250 // 50 per package * 5 capacity = 250 total
         });
 
         vm.prank(owner);
@@ -578,7 +579,7 @@ contract PackSaleStoreTest is Test {
         uint256 validAfter,
         uint256 privateKey
     ) internal pure returns (bytes memory) {
-        bytes32 hash = keccak256(abi.encodePacked(orderId, packageId, validUntil, validAfter));
+        bytes32 hash = keccak256(abi.encode(orderId, packageId, validUntil, validAfter));
         bytes32 ethSignedMessageHash = MessageHashUtils.toEthSignedMessageHash(hash);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, ethSignedMessageHash);
         return abi.encodePacked(r, s, v);
