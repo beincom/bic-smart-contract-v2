@@ -28,29 +28,29 @@ contract BamzoDeployer is Script {
         address packStoreOperator = vm.envAddress("PACK_STORE_OPERATOR_ADDRESS_TESTNET");
 
         vm.startBroadcast(deployerPrivateKey);
-        // BicEdition bamzo = new BicEdition(
-        //     "Original Bamzo",
-        //     "OGBZ",
-        //     bamzoUri,
-        //     deployOwner,
-        //     bamzoTreasury
-        // );
+         BicEdition bamzo = new BicEdition(
+             "Original Bamzo",
+             "OGBZ",
+             bamzoUri,
+             deployOwner,
+             bamzoTreasury
+         );
 
-        // BicPack lootbox = new BicPack(
-        //     "Dev - Original Bamzo Lootbox",
-        //     "dev - OGBZLB",
-        //     lootboxUri,
-        //     deployOwner
-        // );
-        // IERC20(bic).approve(
-        //     address(lootbox),
-        //     21645 ether
-        // );
-        // bamzo.setApprovalForAll(address(lootbox), true);
+         BicPack lootbox = new BicPack(
+             "Dev - Original Bamzo Lootbox",
+             "dev - OGBZLB",
+             lootboxUri,
+             deployOwner
+         );
+         IERC20(bic).approve(
+             address(lootbox),
+             21645 ether
+         );
+         bamzo.setApprovalForAll(address(lootbox), true);
 
-        // mintBamzoAndCreateLootbox(bic, bamzo, lootbox);
+         mintBamzoAndCreateLootbox(bic, bamzo, lootbox);
 
-        BicPack lootbox = BicPack(vm.envAddress("LOOTBOX_ADDRESS_TESTNET"));
+//        BicPack lootbox = BicPack(vm.envAddress("LOOTBOX_ADDRESS_TESTNET"));
         createPackStore(bic, lootbox, packStoreOperator);
 
         // transferOwnership(bamzo, bamzoOwner, lootbox, lootboxOwner);
@@ -287,26 +287,96 @@ contract BamzoDeployer is Script {
         address saleRecipient = vm.envAddress("EDITION_TREASURY_TESTNET");
         PackSaleStore packStore = new PackSaleStore(deployOwner, packStoreOperator, saleRecipient);
         lootbox.setApprovalForAll(address(packStore), true);
-        ITokenBundle.Token[] memory packageAssets = new ITokenBundle.Token[](2);
-        packageAssets[0] = ITokenBundle.Token({
+
+        uint256 capacity0 = 300;
+        ITokenBundle.Token[] memory packageAssets0 = new ITokenBundle.Token[](2);
+        packageAssets0[0] = ITokenBundle.Token({
             assetContract: address(lootbox),
             tokenType: ITokenBundle.TokenType.ERC1155,
             tokenId: 1,
-            totalAmount: 2
+            totalAmount: 2 * capacity0
         });
-        packageAssets[1] = ITokenBundle.Token({
+        packageAssets0[1] = ITokenBundle.Token({
             assetContract: address(lootbox),
             tokenType: ITokenBundle.TokenType.ERC1155,
             tokenId: 2,
-            totalAmount: 1
+            totalAmount: 1 * capacity0
         });
         packStore.registerPackage(
-            30, 
-            packageAssets, 
-            100 ether, 
+            capacity0,
+            packageAssets0,
+            4_889 ether,
             address(bic)
         );
-        console.log("packStore deployed at:", address(packStore));
+
+        uint256 capacity1 = 300;
+        ITokenBundle.Token[] memory packageAssets1 = new ITokenBundle.Token[](3);
+        packageAssets1[0] = ITokenBundle.Token({
+            assetContract: address(lootbox),
+            tokenType: ITokenBundle.TokenType.ERC1155,
+            tokenId: 1,
+            totalAmount: 1 * capacity1
+        });
+        packageAssets1[1] = ITokenBundle.Token({
+            assetContract: address(lootbox),
+            tokenType: ITokenBundle.TokenType.ERC1155,
+            tokenId: 2,
+            totalAmount: 1 * capacity1
+        });
+        packageAssets1[2] = ITokenBundle.Token({
+            assetContract: address(lootbox),
+            tokenType: ITokenBundle.TokenType.ERC1155,
+            tokenId: 3,
+            totalAmount: 1 * capacity1
+        });
+        packStore.registerPackage(
+            capacity1,
+            packageAssets1,
+            6_222 ether,
+            address(bic)
+        );
+
+        uint256 capacity2 = 250;
+        ITokenBundle.Token[] memory packageAssets2 = new ITokenBundle.Token[](2);
+        packageAssets2[0] = ITokenBundle.Token({
+            assetContract: address(lootbox),
+            tokenType: ITokenBundle.TokenType.ERC1155,
+            tokenId: 2,
+            totalAmount: 2 * capacity2
+        });
+        packageAssets2[1] = ITokenBundle.Token({
+            assetContract: address(lootbox),
+            tokenType: ITokenBundle.TokenType.ERC1155,
+            tokenId: 3,
+            totalAmount: 1 * capacity2
+        });
+        packStore.registerPackage(
+            capacity2,
+            packageAssets2,
+            10_667 ether,
+            address(bic)
+        );
+
+        uint256 capacity3 = 150;
+        ITokenBundle.Token[] memory packageAssets3 = new ITokenBundle.Token[](2);
+        packageAssets3[0] = ITokenBundle.Token({
+            assetContract: address(lootbox),
+            tokenType: ITokenBundle.TokenType.ERC1155,
+            tokenId: 2,
+            totalAmount: 1 * capacity3
+        });
+        packageAssets3[1] = ITokenBundle.Token({
+            assetContract: address(lootbox),
+            tokenType: ITokenBundle.TokenType.ERC1155,
+            tokenId: 3,
+            totalAmount: 2 * capacity3
+        });
+        packStore.registerPackage(
+            capacity3,
+            packageAssets3,
+            17_778 ether,
+            address(bic)
+        );
     }
 
 }
