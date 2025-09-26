@@ -108,6 +108,7 @@ contract PackSaleStore is Ownable, ReentrancyGuard, TokenStore {
     error ZeroAddress();
     error InvalidCapacity();
     error InvalidAssetCapacity();
+    error EthTransferFail();
     /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
@@ -363,11 +364,12 @@ contract PackSaleStore is Ownable, ReentrancyGuard, TokenStore {
             
             // Refund excess ETH
             if (msg.value > _amount) {
-                payable(msg.sender).transfer(msg.value - _amount);
+                (bool refundSuccess, ) = payable(msg.sender).call{value: msg.value - _amount}("");
+                if (!refundSuccess) revert EthTransferFail();
             }
             // Forward payment to sale recipient
             (bool success, ) = payable(saleRecipient).call{value: _amount}("");
-            require(success, "ETH_TRANSFER_FAIL");
+            if (!success) revert EthTransferFail();
         } else {
             // ERC20 token payment
             if (msg.value > 0) revert InsufficientPayment(); // Should not send ETH for ERC20 payment
@@ -392,7 +394,8 @@ contract PackSaleStore is Ownable, ReentrancyGuard, TokenStore {
         
         if (withdrawAmount > balance) revert InsufficientPayment();
         
-        _to.transfer(withdrawAmount);
+        (bool success, ) = _to.call{value: withdrawAmount}("");
+        if (!success) revert EthTransferFail();
     }
 
     /**
