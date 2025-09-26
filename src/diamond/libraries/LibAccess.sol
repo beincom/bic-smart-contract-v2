@@ -9,7 +9,7 @@ library LibAccess {
 
     /// Types ///
     bytes32 internal constant ACCESS_STORAGE_POSITION =
-        keccak256("1CP.access.storage");
+        keccak256("access.storage");
 
     /// Storage ///
     struct AccessStorage {

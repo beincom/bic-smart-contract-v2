@@ -153,23 +153,11 @@ contract MiniGamePoolRewardTest is Test, MiniGamePoolRewardErrors {
         vm.stopPrank();
     }
 
-    function test_addMerkleRoot_update_existing() public {
+    function test_addMerkleRoot_revert_already_exists() public {
         vm.startPrank(owner);
-
         rewardContract.addMerkleRoot(merkleRoot, END_TIME);
-
-        uint256 newEndTime = END_TIME + 1000;
-        vm.expectEmit(true, false, false, true);
-        emit MiniGamePoolReward.MerkleRootUpdated(merkleRoot, newEndTime);
-
-        rewardContract.addMerkleRoot(merkleRoot, newEndTime);
-
-        (, uint256 endTime,) = rewardContract.getMerkleRootInfo(merkleRoot);
-        assertEq(endTime, newEndTime);
-
-        // Should not add another entry to the list
-        assertEq(rewardContract.getMerkleRootsCount(), 1);
-
+        vm.expectRevert(abi.encodeWithSelector(RootAlreadyExists.selector, merkleRoot));
+        rewardContract.addMerkleRoot(merkleRoot, END_TIME + 1000);
         vm.stopPrank();
     }
 
@@ -194,6 +182,31 @@ contract MiniGamePoolRewardTest is Test, MiniGamePoolRewardErrors {
         vm.startPrank(owner);
         vm.expectRevert();
         rewardContract.addMerkleRoot(bytes32(uint256(123)), END_TIME);
+        vm.stopPrank();
+    }
+
+    function test_updateMerkleRoot_success_owner_only() public {
+        vm.prank(owner);
+        rewardContract.addMerkleRoot(merkleRoot, END_TIME);
+
+        uint256 newEndTime = END_TIME + 1000;
+        vm.startPrank(owner);
+        vm.expectEmit(true, false, false, true);
+        emit MiniGamePoolReward.MerkleRootUpdated(merkleRoot, newEndTime);
+        rewardContract.updateMerkleRoot(merkleRoot, newEndTime);
+        vm.stopPrank();
+
+        (, uint256 endTime,) = rewardContract.getMerkleRootInfo(merkleRoot);
+        assertEq(endTime, newEndTime);
+    }
+
+    function test_updateMerkleRoot_revert_not_owner() public {
+        vm.prank(owner);
+        rewardContract.addMerkleRoot(merkleRoot, END_TIME);
+
+        vm.startPrank(user1);
+        vm.expectRevert();
+        rewardContract.updateMerkleRoot(merkleRoot, END_TIME + 1);
         vm.stopPrank();
     }
 
@@ -283,6 +296,26 @@ contract MiniGamePoolRewardTest is Test, MiniGamePoolRewardErrors {
         assertEq(balanceAfter - balanceBefore, USER1_AMOUNT);
 
         assertTrue(rewardContract.hasClaimedFromRoot(merkleRoot, user1));
+    }
+
+    function test_claim_revert_when_paused_per_root_and_unpause() public {
+        vm.prank(owner);
+        rewardContract.addMerkleRoot(merkleRoot, END_TIME);
+
+        vm.prank(owner);
+        rewardContract.setMerkleRootPaused(merkleRoot, true);
+
+        vm.startPrank(user1);
+        vm.expectRevert(MerkleProofPaused.selector);
+        rewardContract.claimERC20Tokens(merkleRoot, address(erc20Token), USER1_AMOUNT, user1Proof);
+        vm.stopPrank();
+
+        // unpause and ensure success
+        vm.prank(owner);
+        rewardContract.setMerkleRootPaused(merkleRoot, false);
+
+        vm.prank(user1);
+        rewardContract.claimERC20Tokens(merkleRoot, address(erc20Token), USER1_AMOUNT, user1Proof);
     }
 
     function test_claimERC20Tokens_revert_zero_amount() public {

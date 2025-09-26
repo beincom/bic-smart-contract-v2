@@ -13,4 +13,6 @@ interface MiniGamePoolRewardErrors {
     error ZeroAmount();
     error ZeroAddress();
     error RootNotFound(bytes32 merkleRoot);
+    error RootAlreadyExists(bytes32 merkleRoot);
+    error MerkleProofPaused();
 } 

@@ -40,6 +40,9 @@ contract MiniGamePoolReward is Ownable, ReentrancyGuard, IERC721Receiver, IERC11
     /// @notice Array to keep track of all merkle roots for enumeration
     bytes32[] public merkleRootsList;
 
+    /// @notice Per-root pause switch to deactivate/reactivate specific merkle roots
+    mapping(bytes32 => bool) public merkleRootPaused;
+
     /// @notice Emitted when a new merkle root is added
     event MerkleRootAdded(bytes32 indexed root, uint256 endTime);
 
@@ -60,6 +63,9 @@ contract MiniGamePoolReward is Ownable, ReentrancyGuard, IERC721Receiver, IERC11
 
     /// @notice Emitted when operator is updated by the owner
     event OperatorUpdated(address indexed previousOperator, address indexed newOperator);
+
+    /// @notice Emitted when a specific merkle root is paused or unpaused
+    event MerkleRootPauseUpdated(bytes32 indexed root, bool paused);
 
     /**
      * @notice Constructor to initialize the contract
@@ -99,19 +105,41 @@ contract MiniGamePoolReward is Ownable, ReentrancyGuard, IERC721Receiver, IERC11
         if (_merkleRoot == bytes32(0)) revert InvalidMerkleRoot();
         if (_endTime <= block.timestamp) revert InvalidEndTime(_endTime);
 
-        // If root already exists, update it
-        if (merkleRoots[_merkleRoot].exists) {
-            merkleRoots[_merkleRoot].endTime = _endTime;
-            emit MerkleRootUpdated(_merkleRoot, _endTime);
-        } else {
-            merkleRoots[_merkleRoot] = MerkleRootInfo({
-                root: _merkleRoot,
-                endTime: _endTime,
-                exists: true
-            });
-            merkleRootsList.push(_merkleRoot);
-            emit MerkleRootAdded(_merkleRoot, _endTime);
-        }
+        if (merkleRoots[_merkleRoot].exists) revert RootAlreadyExists(_merkleRoot);
+
+        merkleRoots[_merkleRoot] = MerkleRootInfo({
+            root: _merkleRoot,
+            endTime: _endTime,
+            exists: true
+        });
+        merkleRootsList.push(_merkleRoot);
+        emit MerkleRootAdded(_merkleRoot, _endTime);
+    }
+
+    /**
+     * @notice Update an existing merkle root end time (owner only)
+     * @param _merkleRoot The merkle root to update
+     * @param _newEndTime The new end time (must be in the future)
+     */
+    function updateMerkleRoot(bytes32 _merkleRoot, uint256 _newEndTime) external onlyOwner {
+        if (_merkleRoot == bytes32(0)) revert InvalidMerkleRoot();
+        if (_newEndTime <= block.timestamp) revert InvalidEndTime(_newEndTime);
+        MerkleRootInfo storage info = merkleRoots[_merkleRoot];
+        if (!info.exists) revert RootNotFound(_merkleRoot);
+        info.endTime = _newEndTime;
+        emit MerkleRootUpdated(_merkleRoot, _newEndTime);
+    }
+
+    /**
+     * @notice Pause or unpause a specific merkle root (owner only)
+     * @param _merkleRoot The merkle root to pause/unpause
+     * @param _paused True to pause, false to unpause
+     */
+    function setMerkleRootPaused(bytes32 _merkleRoot, bool _paused) external onlyOwner {
+        if (_merkleRoot == bytes32(0)) revert InvalidMerkleRoot();
+        if (!merkleRoots[_merkleRoot].exists) revert RootNotFound(_merkleRoot);
+        merkleRootPaused[_merkleRoot] = _paused;
+        emit MerkleRootPauseUpdated(_merkleRoot, _paused);
     }
 
     /**
@@ -127,6 +155,7 @@ contract MiniGamePoolReward is Ownable, ReentrancyGuard, IERC721Receiver, IERC11
         uint256 _amount,
         bytes32[] calldata _merkleProof
     ) external nonReentrant {
+        if (merkleRootPaused[_merkleRoot]) revert MerkleProofPaused();
         if (_amount == 0) revert ZeroAmount();
         if (_token == address(0)) revert ZeroAddress();
 
@@ -165,6 +194,7 @@ contract MiniGamePoolReward is Ownable, ReentrancyGuard, IERC721Receiver, IERC11
         uint256 _tokenId,
         bytes32[] calldata _merkleProof
     ) external nonReentrant {
+        if (merkleRootPaused[_merkleRoot]) revert MerkleProofPaused();
         if (_token == address(0)) revert ZeroAddress();
 
         MerkleRootInfo storage rootInfo = merkleRoots[_merkleRoot];
@@ -203,6 +233,7 @@ contract MiniGamePoolReward is Ownable, ReentrancyGuard, IERC721Receiver, IERC11
         uint256 _amount,
         bytes32[] calldata _merkleProof
     ) external nonReentrant {
+        if (merkleRootPaused[_merkleRoot]) revert MerkleProofPaused();
         if (_amount == 0) revert ZeroAmount();
         if (_token == address(0)) revert ZeroAddress();
 
@@ -273,7 +304,7 @@ contract MiniGamePoolReward is Ownable, ReentrancyGuard, IERC721Receiver, IERC11
      */
     function isRootActive(bytes32 _merkleRoot) external view returns (bool) {
         MerkleRootInfo storage info = merkleRoots[_merkleRoot];
-        return info.exists && block.timestamp <= info.endTime;
+        return info.exists && !merkleRootPaused[_merkleRoot] && block.timestamp <= info.endTime;
     }
 
     /**
