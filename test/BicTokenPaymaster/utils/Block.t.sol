@@ -74,4 +74,11 @@ contract BlockTest is BicTokenPaymasterTestBase {
         assertEq(bic.owner(), owner);
         vm.stopPrank();
     }
+
+    function test_update_bic() public {
+        BicTokenPaymaster newBicAddress = new BicTokenPaymaster(address(entrypoint), owner, signers);
+        vm.prank(owner);
+        multiBlock.updateBic(address(newBicAddress));
+        assertEq(multiBlock.bic(), address(newBicAddress));
+    }
 }
