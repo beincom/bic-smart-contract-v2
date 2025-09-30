@@ -16,3 +16,6 @@ docs/
 lcov.info
 genhtml.perl
 coverage/
+
+node_modules
+yarn.lock
