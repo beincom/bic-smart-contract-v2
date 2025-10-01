@@ -1,12 +1,12 @@
 const { createPublicClient, http, padHex, toHex, keccak256, hexToBigInt} = require('viem');
-const { arbitrumSepolia } = require('viem/chains');
+const { arbitrumSepolia, arbitrum } = require('viem/chains');
 const marketplaceAbi = require('./abis/marketplace.json');
 
-const marketplaceAddress = '0xc8B727586901E1222f72c56804EC98a3F85C4dad';
-const fromBlock = 133750967n;
+const marketplaceAddress = '0x8BB4994846c42E644d368F6fCe0C84c195Ec22d2';
+const fromBlock = 329342289n;
 
 const client = createPublicClient({
-  chain: arbitrumSepolia,
+  chain: arbitrum,
   transport: http(),
 });
 

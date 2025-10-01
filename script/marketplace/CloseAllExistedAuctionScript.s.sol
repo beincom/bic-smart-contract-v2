@@ -48,8 +48,8 @@ contract CloseAllExistedAuctionScript is Script {
         uint256[] memory auctionIdsNeedToClosePayout = jsonResult.readUintArray(".auctionIdsNeedToClosePayout");
         uint256[] memory auctionIdsNeedToCloseTokens = jsonResult.readUintArray(".auctionIdsNeedToCloseTokens");
         
-        console.log("Number of auctions needing payout closure:", auctionIdsNeedToClosePayout.length);
-        console.log("Number of auctions needing token closure:", auctionIdsNeedToCloseTokens.length);
+        console.log("Number of auctions needed to payout (tokens):", auctionIdsNeedToClosePayout.length);
+        console.log("Number of auctions needed to release NFTs:", auctionIdsNeedToCloseTokens.length);
         
         // Build all Call3 arrays first
         uint256 totalCalls = auctionIdsNeedToClosePayout.length + auctionIdsNeedToCloseTokens.length;
@@ -79,66 +79,66 @@ contract CloseAllExistedAuctionScript is Script {
         console.log("Total calls to execute:", totalCalls);
         console.log("Batch size:", BATCH_SIZE);
         
-        if (totalCalls > 0) {
-            // Calculate number of batches
-            uint256 numBatches = (totalCalls + BATCH_SIZE - 1) / BATCH_SIZE; // Ceiling division
-            console.log("Number of batches:", numBatches);
+        // if (totalCalls > 0) {
+        //     // Calculate number of batches
+        //     uint256 numBatches = (totalCalls + BATCH_SIZE - 1) / BATCH_SIZE; // Ceiling division
+        //     console.log("Number of batches:", numBatches);
             
-            vm.startBroadcast(deployerPrivateKey);
+        //     vm.startBroadcast(deployerPrivateKey);
             
-            uint256 totalSuccessCount = 0;
-            uint256 totalFailureCount = 0;
+        //     uint256 totalSuccessCount = 0;
+        //     uint256 totalFailureCount = 0;
 
-            // Execute in batches
-            for (uint256 batchIndex = 0; batchIndex < numBatches; batchIndex++) {
-                uint256 startIndex = batchIndex * BATCH_SIZE;
-                uint256 endIndex = startIndex + BATCH_SIZE;
-                if (endIndex > totalCalls) {
-                    endIndex = totalCalls;
-                }
-                uint256 batchSize = endIndex - startIndex;
+        //     // Execute in batches
+        //     for (uint256 batchIndex = 0; batchIndex < numBatches; batchIndex++) {
+        //         uint256 startIndex = batchIndex * BATCH_SIZE;
+        //         uint256 endIndex = startIndex + BATCH_SIZE;
+        //         if (endIndex > totalCalls) {
+        //             endIndex = totalCalls;
+        //         }
+        //         uint256 batchSize = endIndex - startIndex;
                 
-                console.log("Executing batch", batchIndex + 1, "of", numBatches);
-                console.log("Batch calls:", batchSize);
-                console.log("Index range:", startIndex, "to", endIndex - 1);
+        //         console.log("Executing batch", batchIndex + 1, "of", numBatches);
+        //         console.log("Batch calls:", batchSize);
+        //         console.log("Index range:", startIndex, "to", endIndex - 1);
                 
-                // Create batch array
-                IMulticall3.Call3[] memory batchCalls = new IMulticall3.Call3[](batchSize);
-                for (uint256 i = 0; i < batchSize; i++) {
-                    batchCalls[i] = allCalls[startIndex + i];
-                }
+        //         // Create batch array
+        //         IMulticall3.Call3[] memory batchCalls = new IMulticall3.Call3[](batchSize);
+        //         for (uint256 i = 0; i < batchSize; i++) {
+        //             batchCalls[i] = allCalls[startIndex + i];
+        //         }
                 
-                // Execute batch
-                IMulticall3.Result[] memory batchResults = multicall.aggregate3(batchCalls);
+        //         // Execute batch
+        //         IMulticall3.Result[] memory batchResults = multicall.aggregate3(batchCalls);
                 
-                // Count results for this batch
-                uint256 batchSuccessCount = 0;
-                uint256 batchFailureCount = 0;
+        //         // Count results for this batch
+        //         uint256 batchSuccessCount = 0;
+        //         uint256 batchFailureCount = 0;
                 
-                for (uint256 i = 0; i < batchResults.length; i++) {
-                    if (batchResults[i].success) {
-                        batchSuccessCount++;
-                    } else {
-                        batchFailureCount++;
-                        console.log("Call failed in batch", batchIndex + 1, "at index:", i);
-                    }
-                }
+        //         for (uint256 i = 0; i < batchResults.length; i++) {
+        //             if (batchResults[i].success) {
+        //                 batchSuccessCount++;
+        //             } else {
+        //                 batchFailureCount++;
+        //                 console.log("Call failed in batch", batchIndex + 1, "at index:", i);
+        //             }
+        //         }
                 
-                console.log("Batch", batchIndex + 1, "results:");
-                console.log("Success:", batchSuccessCount, "Failed:", batchFailureCount);
+        //         console.log("Batch", batchIndex + 1, "results:");
+        //         console.log("Success:", batchSuccessCount, "Failed:", batchFailureCount);
                 
-                totalSuccessCount += batchSuccessCount;
-                totalFailureCount += batchFailureCount;
-            }
+        //         totalSuccessCount += batchSuccessCount;
+        //         totalFailureCount += batchFailureCount;
+        //     }
             
-            vm.stopBroadcast();
+        //     vm.stopBroadcast();
             
-            console.log("=== FINAL RESULTS ===");
-            console.log("Total successful calls:", totalSuccessCount);
-            console.log("Total failed calls:", totalFailureCount);
-            console.log("Total calls executed:", totalSuccessCount + totalFailureCount);
-        } else {
-            console.log("No auctions to close.");
-        }
+        //     console.log("=== FINAL RESULTS ===");
+        //     console.log("Total successful calls:", totalSuccessCount);
+        //     console.log("Total failed calls:", totalFailureCount);
+        //     console.log("Total calls executed:", totalSuccessCount + totalFailureCount);
+        // } else {
+        //     console.log("No auctions to close.");
+        // }
     }
 }
