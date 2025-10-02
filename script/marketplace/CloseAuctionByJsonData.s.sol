@@ -35,7 +35,6 @@ contract CloseAuctionByJsonData is Script {
         console.log("Number of auctions needed to payout (tokens):", auctionIdsNeedToClosePayout.length);
         console.log("Number of auctions needed to release NFTs:", auctionIdsNeedToCloseTokens.length);
 
-        console.log("Starting CloseAllExistedAuctionScript...");
         address marketplaceAddress = vm.envAddress("MARKETPLACE_ADDRESS");
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         IMulticall3 multicall = IMulticall3(0xcA11bde05977b3631167028862bE2a173976CA11); // same on both arbitrum one and arbitrum sepolia
