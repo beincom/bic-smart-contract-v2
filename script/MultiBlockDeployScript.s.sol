@@ -14,9 +14,6 @@ contract MultiBlockDeployScript is Script {
         vm.startBroadcast(deployerPrivateKey);
         BicMultiBlock multiBlock = new BicMultiBlock(multiBlockOwner, bic);
         console.log("Bic Token Paymaster deployed contract:", address(multiBlock));
-
-        BicTokenPaymaster(payable(bic)).transferOwnership(address(multiBlock));
-        console.log("Bic Token Paymaster ownership transferred to MultiBlock contract");
         vm.stopBroadcast();
     }
 }
