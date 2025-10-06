@@ -15,7 +15,8 @@ contract ForkMainnetMultiBlockTest is Test {
     address constant BIC_TOKEN_PAYMASTER = 0xB1C3960aeeAf4C255A877da04b06487BBa698386;
     address constant ORIGINAL_OWNER = 0xb99f671B24B8E1dA7a67EfbdB0B627BEF9068c65;
 
-    address constant MULTI_BLOCK_OWNER = 0x1234567890123456789012345678901234567890;
+    address constant MULTI_BLOCK_CONTRACT = 0x61f654Ba9E565849Eefa0dc02780233BdEC2213f;
+    address constant MULTI_BLOCK_OWNER = 0xb99f671B24B8E1dA7a67EfbdB0B627BEF9068c65;
     
     // Test addresses to block
     address constant TEST_ADDRESS_1 = 0x1111111111111111111111111111111111111111;
@@ -42,7 +43,7 @@ contract ForkMainnetMultiBlockTest is Test {
         bicToken = BicTokenPaymaster(payable(BIC_TOKEN_PAYMASTER));
         
         // Deploy MultiBlock contract with original owner and BIC token
-        multiBlock = new BicMultiBlock(MULTI_BLOCK_OWNER, BIC_TOKEN_PAYMASTER);
+        multiBlock = BicMultiBlock(MULTI_BLOCK_CONTRACT);
         
         // Verify initial state
         assertEq(multiBlock.owner(), MULTI_BLOCK_OWNER, "MultiBlock owner should be MULTI_BLOCK_OWNER");
