@@ -16,3 +16,5 @@ docs/
 lcov.info
 genhtml.perl
 coverage/
+node_modules
+package-lock.json
