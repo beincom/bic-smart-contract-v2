@@ -1,11 +1,14 @@
-// SPDX-License-Identifier: GPL-3.0
+// SPDX-License-Identifier: MIT
 
 pragma solidity ^0.8.23;
 
 import { LibDiamond } from "../diamond/libraries/LibDiamond.sol";
 import { IDiamondCut } from "../diamond/interfaces/IDiamondCut.sol";
 
-contract OneCPDiamond {
+/// @title BackendOperationDiamond
+/// @notice A diamond proxy contract for backend operations including token transfers
+/// @dev This contract uses the EIP-2535 Diamond Standard for modular functionality
+contract BackendOperationDiamond {
     constructor(address _contractOwner, address _diamondCutFacet) payable {
         LibDiamond.setContractOwner(_contractOwner);
 
